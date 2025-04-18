@@ -3,14 +3,65 @@ layout: default
 title: Indie-script
 ---
 
-# Тестовая страница
+<div class="file-navigation">
+  <div class="file-tree">
+    <ul>
+      {% assign sorted_paths = site.pages | map: "path" | sort %}
+      {% assign directories = "" | split: "" %}
+      {% for path in sorted_paths %}
+        {% assign path_parts = path | split: "/" %}
+        {% if path_parts.size > 1 and path_parts[0] != "_" %}
+          {% assign dir = path_parts[0] %}
+          {% unless directories contains dir %}
+            {% assign directories = directories | push: dir %}
+          {% endunless %}
+        {% endif %}
+      {% endfor %}
+      
+      {% for dir in directories %}
+        <li class="directory">
+          <details>
+            <summary>{{ dir }}</summary>
+            <ul>
+              {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+              {% for page in dir_pages %}
+                {% assign page_path_parts = page.path | split: "/" %}
+                {% if page_path_parts[0] == dir %}
+                  <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+                    <a href="{{ site.baseurl }}{{ page.url }}">{{ page_path_parts | last }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </details>
+        </li>
+      {% endfor %}
+      
+      {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false and item.path != 'index.md'" | sort: "path" %}
+      {% for page in root_pages %}
+        <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+          <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
 
-Простой текст для проверки отображения.
+## Directories:
+{% for dir in directories %}
+### {{ dir }}
 <ul>
-  {% for pg in site.pages %}
-    <li>{{ pg.path }} - {{ pg.title }}</li>
+  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+  {% for page in dir_pages %}
+    {% assign page_path_parts = page.path | split: "/" %}
+    {% if page_path_parts[0] == dir %}
+      <li>
+        <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+      </li>
+    {% endif %}
   {% endfor %}
 </ul>
+{% endfor %}
 
 
 # Indie Language Code Examples

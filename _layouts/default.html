@@ -14,6 +14,8 @@
       --border-color: #e1e4e8;
       --link-color: #0366d6;
       --header-color: #24292e;
+      --nav-bg: #f6f8fa;
+      --nav-hover: #e1e4e8;
     }
     
     [data-theme="dark"] {
@@ -23,10 +25,12 @@
       --border-color: #30363d;
       --link-color: #58a6ff;
       --header-color: #f0f6fc;
+      --nav-bg: #161b22;
+      --nav-hover: #30363d;
     }
     
     body {
-      max-width: 800px;
+      max-width: 1000px;
       margin: auto;
       padding: 2rem;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -34,6 +38,76 @@
       background-color: var(--bg-color);
       color: var(--text-color);
       transition: background-color 0.3s, color 0.3s;
+    }
+    
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    
+    .sidebar {
+      flex: 0 0 250px;
+      margin-right: 20px;
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+    
+    .main-content {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .file-tree {
+      background-color: var(--nav-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .file-tree ul {
+      list-style-type: none;
+      padding-left: 15px;
+    }
+    
+    .file-tree > ul {
+      padding-left: 0;
+    }
+    
+    .file-tree summary {
+      cursor: pointer;
+      padding: 3px 0;
+    }
+    
+    .file-tree summary:hover {
+      background-color: var(--nav-hover);
+    }
+    
+    .file-tree a {
+      display: block;
+      padding: 3px 0;
+      text-decoration: none;
+      color: var(--link-color);
+    }
+    
+    .file-tree a:hover {
+      background-color: var(--nav-hover);
+    }
+    
+    .directory > summary {
+      font-weight: bold;
+    }
+    
+    .file.markdown::before {
+      content: "📄";
+      margin-right: 5px;
+    }
+    
+    .directory > summary::before {
+      content: "📁";
+      margin-right: 5px;
     }
     
     h1, h2, h3, h4, h5, h6 {
@@ -126,6 +200,97 @@
     .theme-switch button:hover {
       background-color: var(--border-color);
     }
+    
+    /* Стиль для изображений */
+    .markdown-body img {
+      max-width: 70%;
+      display: block;
+      margin: 0 auto;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    /* Модальное окно для изображений */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    
+    .modal-content {
+      margin: auto;
+      display: block;
+      max-width: 90%;
+      max-height: 90vh;
+      object-fit: contain;
+    }
+    
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 25px;
+      color: #f1f1f1;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    /* Хлебные крошки */
+    .breadcrumbs {
+      display: flex;
+      flex-wrap: wrap;
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px 0;
+      font-size: 14px;
+    }
+    
+    .breadcrumbs li {
+      display: inline-block;
+    }
+    
+    .breadcrumbs li:not(:last-child)::after {
+      content: "/";
+      margin: 0 5px;
+      color: var(--border-color);
+    }
+    
+    .breadcrumbs a {
+      color: var(--link-color);
+    }
+    
+    /* Адаптивность */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        flex: 1 0 auto;
+        margin-right: 0;
+        margin-bottom: 20px;
+        position: static;
+        max-height: none;
+      }
+      
+      .main-content {
+        flex: 1 0 auto;
+      }
+      
+      .markdown-body img {
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -134,8 +299,86 @@
     <button onclick="toggleTheme()">Сменить тему</button>
   </div>
   
-  <h1>{{ page.title }}</h1>
-  {{ content }}
+  <div class="container">
+    <div class="sidebar">
+      <div class="file-tree">
+        <ul>
+          <li>
+            <a href="{{ site.baseurl }}/">Главная</a>
+          </li>
+          {% assign sorted_paths = site.pages | map: "path" | sort %}
+          {% assign directories = "" | split: "" %}
+          {% for path in sorted_paths %}
+            {% assign path_parts = path | split: "/" %}
+            {% if path_parts.size > 1 and path_parts[0] != "_" %}
+              {% assign dir = path_parts[0] %}
+              {% unless directories contains dir %}
+                {% assign directories = directories | push: dir %}
+              {% endunless %}
+            {% endif %}
+          {% endfor %}
+          
+          {% for dir in directories %}
+            <li class="directory">
+              <details>
+                <summary>{{ dir }}</summary>
+                <ul>
+                  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+                  {% for page in dir_pages %}
+                    {% assign page_path_parts = page.path | split: "/" %}
+                    {% if page_path_parts[0] == dir %}
+                      <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+                        <a href="{{ site.baseurl }}{{ page.url }}">{{ page_path_parts | last }}</a>
+                      </li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </details>
+            </li>
+          {% endfor %}
+          
+          {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false and item.path != 'index.md'" | sort: "path" %}
+          {% for page in root_pages %}
+            <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+              <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    
+    <div class="main-content markdown-body">
+      {% assign path_parts = page.path | split: "/" %}
+      {% if path_parts.size > 1 %}
+        <ul class="breadcrumbs">
+          <li><a href="{{ site.baseurl }}/">Главная</a></li>
+          {% for i in (0..path_parts.size | minus: 2) %}
+            {% assign current_path = "" %}
+            {% for j in (0..i) %}
+              {% assign current_path = current_path | append: path_parts[j] | append: "/" %}
+            {% endfor %}
+            <li>
+              {% if i == path_parts.size | minus: 2 %}
+                {{ path_parts[i] }}
+              {% else %}
+                <a href="{{ site.baseurl }}/{{ current_path }}">{{ path_parts[i] }}</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+          <li>{{ path_parts | last }}</li>
+        </ul>
+      {% endif %}
+      
+      <h1>{{ page.title }}</h1>
+      {{ content }}
+    </div>
+  </div>
+  
+  <!-- Модальное окно для изображений -->
+  <div id="imageModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImage">
+  </div>
 
   <script>
     // Подсветка синтаксиса кода
@@ -143,7 +386,48 @@
       document.querySelectorAll('pre code').forEach((block) => {
         hljs.highlightBlock(block);
       });
+      
+      // Открытие папки в навигации, если текущая страница находится в ней
+      const currentPath = window.location.pathname;
+      const pathParts = currentPath.split('/').filter(Boolean);
+      
+      if (pathParts.length > 1) {
+        const dirElement = document.querySelector(`.directory > summary:contains("${pathParts[0]}")`);
+        if (dirElement) {
+          dirElement.parentElement.open = true;
+        }
+      }
+      
+      // Добавление функциональности модального окна для изображений
+      const images = document.querySelectorAll('.markdown-body img');
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      const closeBtn = document.querySelector('.close');
+      
+      images.forEach(img => {
+        img.onclick = function() {
+          modal.style.display = "flex";
+          modalImg.src = this.src;
+        }
+      });
+      
+      // Закрытие модального окна при клике на крестик
+      closeBtn.onclick = function() {
+        modal.style.display = "none";
+      }
+      
+      // Закрытие модального окна при клике вне изображения
+      window.onclick = function(event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      }
     });
+    
+    // Расширяем прототип для поиска содержимого
+    Element.prototype.contains = function(text) {
+      return this.textContent.includes(text);
+    };
     
     // Переключение темы
     function toggleTheme() {
