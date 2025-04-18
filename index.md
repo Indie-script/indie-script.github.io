@@ -26,7 +26,7 @@ title: Indie-script
           <details>
             <summary>{{ dir }}</summary>
             <ul>
-              {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+              {% assign dir_pages = site.pages | where: "path", "/#{dir}/" | sort: "path" %}
               {% for page in dir_pages %}
                 {% assign page_path_parts = page.path | split: "/" %}
                 {% if page_path_parts[0] == dir %}
@@ -55,7 +55,7 @@ title: Indie-script
 {% for dir in directories %}
 ### {{ dir }}
 <ul>
-  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+  {% assign dir_pages = site.pages | where: "path", "/#{dir}/" | sort: "path" %}
   {% for page in dir_pages %}
     {% assign page_path_parts = page.path | split: "/" %}
     {% if page_path_parts[0] == dir %}
