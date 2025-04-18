@@ -4,7 +4,7 @@ title: Indie-script
 ---
 
 # Indie Language Code Examples
-## Unofficial Indie language community page
+## Unofficial Indie language community page.
 
 <div class="file-navigation">
   <div class="file-tree">
