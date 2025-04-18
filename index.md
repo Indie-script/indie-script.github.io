@@ -40,13 +40,14 @@ title: Indie-script
         </li>
       {% endfor %}
       
-      {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false" %}
-      {% assign filtered_pages = root_pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
-      {% for page in filtered_pages %}
-        <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-          <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
-        </li>
-      {% endfor %}
+{% assign root_pages = site.pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
+{% for page in root_pages %}
+  {% unless page.path contains '/' %}
+    <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+      <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+    </li>
+  {% endunless %}
+{% endfor %}
     </ul>
   </div>
 </div>
