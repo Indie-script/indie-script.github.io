@@ -328,7 +328,7 @@
                     {% assign page_path_parts = page.path | split: "/" %}
                     {% if page_path_parts[0] == dir %}
                       <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-                        <a href="{{ site.baseurl }}{{ page.url }}">{{ page_path_parts | last }}</a>
+                        <a href="{{ site.baseurl }}{{ page.url }}">{{ page_path_parts | last | replace: '.md', '' }}</a>
                       </li>
                     {% endif %}
                   {% endfor %}
@@ -344,10 +344,10 @@
     {% assign root_pages = root_pages | push: item %}
   {% endunless %}
 {% endfor %}
-          {% assign filtered_pages = root_pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
+          {% assign filtered_pages = root_pages | where_exp: "item", "item.path contains '.md'" | sort: "path" %}
           {% for page in filtered_pages %}
             <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-              <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+              <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path | replace: '.md', '' }}</a>
             </li>
           {% endfor %}
         </ul>
