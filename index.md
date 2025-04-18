@@ -20,13 +20,13 @@ title: Indie-script
           {% endunless %}
         {% endif %}
       {% endfor %}
-      
+
       {% for dir in directories %}
         <li class="directory">
           <details>
             <summary>{{ dir }}</summary>
             <ul>
-              {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+              {% assign dir_pages = site.pages | where_exp: "item", "item.path contains '" | append: dir | append: "'" | sort: "path" %}
               {% for page in dir_pages %}
                 {% assign page_path_parts = page.path | split: "/" %}
                 {% if page_path_parts[0] == dir %}
@@ -39,15 +39,15 @@ title: Indie-script
           </details>
         </li>
       {% endfor %}
-      
-{% assign root_pages = site.pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
-{% for page in root_pages %}
-  {% unless page.path contains '/' %}
-    <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-      <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
-    </li>
-  {% endunless %}
-{% endfor %}
+
+      {% assign root_pages = site.pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
+      {% for page in root_pages %}
+        {% unless page.path contains '/' %}
+          <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
+            <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
+          </li>
+        {% endunless %}
+      {% endfor %}
     </ul>
   </div>
 </div>
@@ -56,7 +56,7 @@ title: Indie-script
 {% for dir in directories %}
 ### {{ dir }}
 <ul>
-  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
+  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains '" | append: dir | append: "'" | sort: "path" %}
   {% for page in dir_pages %}
     {% assign page_path_parts = page.path | split: "/" %}
     {% if page_path_parts[0] == dir %}
@@ -67,7 +67,6 @@ title: Indie-script
   {% endfor %}
 </ul>
 {% endfor %}
-
 
 # Indie Language Code Examples
 # Unofficial Indie language community page
