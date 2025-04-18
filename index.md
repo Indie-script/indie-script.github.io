@@ -9,10 +9,9 @@ title: Indie-script
 <div class="file-navigation">
   <div class="file-tree">
     <ul>
-      {% assign sorted_paths = site.pages | map: "path" | sort %}
-      {% for path in sorted_paths %}
+      {% for page in site.pages %}
         <li class="file">
-          <a href="{{ site.baseurl }}{{ path }}">{{ path }}</a>
+          <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
         </li>
       {% endfor %}
     </ul>
