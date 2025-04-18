@@ -337,7 +337,7 @@
             </li>
           {% endfor %}
           
-          {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false" %}
+          {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' != true" %}
           {% assign filtered_pages = root_pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
           {% for page in filtered_pages %}
             <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
@@ -430,7 +430,7 @@
       }
     }
     
-    // Восстановление темы из localStoragec
+    // Восстановление темы из localStorage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
