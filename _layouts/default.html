@@ -310,9 +310,9 @@
           {% assign directories = "" | split: "" %}
           {% for path in sorted_paths %}
             {% assign path_parts = path | split: "/" %}
-            {% if path_parts.size > 1 and path_parts[0] != "_" %}
+            {% if path_parts.size > 1 %}
               {% assign dir = path_parts[0] %}
-              {% unless directories contains dir %}
+              {% unless directories contains dir or dir == "_" %}
                 {% assign directories = directories | push: dir %}
               {% endunless %}
             {% endif %}
@@ -337,8 +337,9 @@
             </li>
           {% endfor %}
           
-          {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false and item.path != 'index.md'" | sort: "path" %}
-          {% for page in root_pages %}
+          {% assign root_pages = site.pages | where_exp: "item", "item.path contains '/' == false" %}
+          {% assign filtered_pages = root_pages | where_exp: "item", "item.path != 'index.md'" | sort: "path" %}
+          {% for page in filtered_pages %}
             <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
               <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
             </li>
@@ -358,7 +359,7 @@
               {% assign current_path = current_path | append: path_parts[j] | append: "/" %}
             {% endfor %}
             <li>
-              {% if i == path_parts.size | minus: 2 %}
+              {% if forloop.last %}
                 {{ path_parts[i] }}
               {% else %}
                 <a href="{{ site.baseurl }}/{{ current_path }}">{{ path_parts[i] }}</a>
@@ -387,17 +388,6 @@
         hljs.highlightBlock(block);
       });
       
-      // Открытие папки в навигации, если текущая страница находится в ней
-      const currentPath = window.location.pathname;
-      const pathParts = currentPath.split('/').filter(Boolean);
-      
-      if (pathParts.length > 1) {
-        const dirElement = document.querySelector(`.directory > summary:contains("${pathParts[0]}")`);
-        if (dirElement) {
-          dirElement.parentElement.open = true;
-        }
-      }
-      
       // Добавление функциональности модального окна для изображений
       const images = document.querySelectorAll('.markdown-body img');
       const modal = document.getElementById('imageModal');
@@ -423,11 +413,6 @@
         }
       }
     });
-    
-    // Расширяем прототип для поиска содержимого
-    Element.prototype.contains = function(text) {
-      return this.textContent.includes(text);
-    };
     
     // Переключение темы
     function toggleTheme() {
