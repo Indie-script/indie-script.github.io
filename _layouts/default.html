@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css" id="code-style">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/ruby.min.js"></script>
   <style>
     :root {
       --bg-color: #ffffff;
@@ -16,6 +18,7 @@
       --header-color: #24292e;
       --nav-bg: #f6f8fa;
       --nav-hover: #e1e4e8;
+      --active-item: #0366d612;
     }
     
     [data-theme="dark"] {
@@ -27,12 +30,13 @@
       --header-color: #f0f6fc;
       --nav-bg: #161b22;
       --nav-hover: #30363d;
+      --active-item: #58a6ff22;
     }
     
     body {
-      max-width: 1000px;
+      max-width: 1200px;
       margin: auto;
-      padding: 2rem;
+      padding: 1rem;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       line-height: 1.6;
       background-color: var(--bg-color);
@@ -46,17 +50,28 @@
     }
     
     .sidebar {
-      flex: 0 0 250px;
+      flex: 0 0 280px;
       margin-right: 20px;
       position: sticky;
       top: 20px;
       max-height: calc(100vh - 40px);
       overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .sidebar::-webkit-scrollbar-thumb {
+      background-color: var(--border-color);
+      border-radius: 3px;
     }
     
     .main-content {
       flex: 1;
       min-width: 300px;
+      overflow-wrap: break-word;
     }
     
     .file-tree {
@@ -70,6 +85,7 @@
     .file-tree ul {
       list-style-type: none;
       padding-left: 15px;
+      margin: 0;
     }
     
     .file-tree > ul {
@@ -78,7 +94,9 @@
     
     .file-tree summary {
       cursor: pointer;
-      padding: 3px 0;
+      padding: 5px 0;
+      display: flex;
+      align-items: center;
     }
     
     .file-tree summary:hover {
@@ -87,27 +105,87 @@
     
     .file-tree a {
       display: block;
-      padding: 3px 0;
+      padding: 5px 0 5px 5px;
       text-decoration: none;
-      color: var(--link-color);
+      color: var(--text-color);
+      border-radius: 3px;
     }
     
     .file-tree a:hover {
       background-color: var(--nav-hover);
+      text-decoration: none;
+    }
+    
+    .file-tree a.active {
+      background-color: var(--active-item);
+      font-weight: 600;
+    }
+    
+    .directory-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    
+    .directory-link {
+      display: flex;
+      align-items: center;
+      flex-grow: 1;
+      text-decoration: none;
+      color: var(--text-color);
+    }
+    
+    .directory-link:hover {
+      text-decoration: none;
+      color: var(--link-color);
+    }
+    
+    .toggle-btn {
+      margin-left: 5px;
+      cursor: pointer;
+      padding: 0 8px;
+      border-radius: 3px;
+    }
+    
+    .toggle-btn:hover {
+      background-color: var(--nav-hover);
+    }
+    
+    details {
+      margin-bottom: 3px;
+    }
+    
+    details[open] > summary {
+      margin-bottom: 5px;
     }
     
     .directory > summary {
       font-weight: bold;
     }
     
-    .file.markdown::before {
+    .file-item {
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .file-item::before {
       content: "📄";
+      position: absolute;
+      left: 0;
+    }
+    
+    .readme-item {
+      font-weight: 500;
+    }
+    
+    .directory-item::before {
+      content: "📁";
       margin-right: 5px;
     }
     
-    .directory > summary::before {
-      content: "📁";
-      margin-right: 5px;
+    details[open] .directory-item::before {
+      content: "📂";
     }
     
     h1, h2, h3, h4, h5, h6 {
@@ -165,6 +243,8 @@
       border-collapse: collapse;
       width: 100%;
       margin-bottom: 16px;
+      display: block;
+      overflow-x: auto;
     }
     
     table th, table td {
@@ -181,13 +261,19 @@
       background-color: var(--code-bg);
     }
     
-    .theme-switch {
+    .header-controls {
       display: flex;
+      justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
     }
     
-    .theme-switch button {
+    .theme-switch {
+      display: flex;
+      align-items: center;
+    }
+    
+    button {
       background-color: var(--code-bg);
       border: 1px solid var(--border-color);
       color: var(--text-color);
@@ -195,13 +281,14 @@
       border-radius: 4px;
       cursor: pointer;
       margin-left: 10px;
+      transition: background-color 0.2s;
     }
     
-    .theme-switch button:hover {
-      background-color: var(--border-color);
+    button:hover {
+      background-color: var(--nav-hover);
     }
     
-    /* Стиль для изображений */
+    /* Styles for images */
     .markdown-body img {
       max-width: 70%;
       display: block;
@@ -212,7 +299,7 @@
       transition: all 0.3s ease;
     }
     
-    /* Модальное окно для изображений */
+    /* Modal window for images */
     .modal {
       display: none;
       position: fixed;
@@ -245,7 +332,7 @@
       cursor: pointer;
     }
     
-    /* Хлебные крошки */
+    /* Breadcrumbs */
     .breadcrumbs {
       display: flex;
       flex-wrap: wrap;
@@ -253,6 +340,9 @@
       padding: 0;
       margin: 0 0 20px 0;
       font-size: 14px;
+      background-color: var(--code-bg);
+      border-radius: 4px;
+      padding: 8px 12px;
     }
     
     .breadcrumbs li {
@@ -269,7 +359,108 @@
       color: var(--link-color);
     }
     
-    /* Адаптивность */
+    .breadcrumbs li:last-child {
+      color: var(--text-color);
+      font-weight: 600;
+    }
+    
+    /* Mobile hamburger menu */
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-color);
+    }
+    
+    /* Search bar */
+    .search-container {
+      margin-bottom: 15px;
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-size: 14px;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: var(--link-color);
+      box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
+    }
+    
+    .search-results {
+      display: none;
+      background-color: var(--nav-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-top: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .search-results.show {
+      display: block;
+    }
+    
+    .search-result-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+    
+    .search-result-item:hover {
+      background-color: var(--nav-hover);
+    }
+    
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+    
+    .highlight-file {
+      animation: highlight 2s ease-in-out;
+    }
+    
+    @keyframes highlight {
+      0% { background-color: var(--link-color); }
+      100% { background-color: transparent; }
+    }
+    
+    /* Table of contents */
+    .toc {
+      background-color: var(--nav-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .toc-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    
+    .toc-list ul {
+      padding-left: 20px;
+    }
+    
+    .toc-list li {
+      margin: 5px 0;
+    }
+    
+    .toc-h2 { padding-left: 10px; }
+    .toc-h3 { padding-left: 20px; }
+    .toc-h4 { padding-left: 30px; }
+    .toc-h5 { padding-left: 40px; }
+    .toc-h6 { padding-left: 50px; }
+    
+    /* Responsive design */
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -279,76 +470,218 @@
         flex: 1 0 auto;
         margin-right: 0;
         margin-bottom: 20px;
-        position: static;
-        max-height: none;
+        position: fixed;
+        left: -300px;
+        top: 0;
+        height: 100vh;
+        background-color: var(--bg-color);
+        width: 280px;
+        z-index: 1000;
+        transition: left 0.3s;
+        border-right: 1px solid var(--border-color);
+        padding: 15px;
+      }
+      
+      .sidebar.active {
+        left: 0;
       }
       
       .main-content {
         flex: 1 0 auto;
+        padding-top: 60px;
       }
       
       .markdown-body img {
         max-width: 100%;
       }
+      
+      .menu-toggle {
+        display: block;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1001;
+      }
+      
+      .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+      
+      .overlay.active {
+        display: block;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="theme-switch">
-    <span>Тема:</span>
-    <button onclick="toggleTheme()">Сменить тему</button>
+  <div class="header-controls">
+    <div class="theme-switch">
+      <span>Theme:</span>
+      <button onclick="toggleTheme()">Toggle theme</button>
+    </div>
   </div>
+  
+  <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="overlay" onclick="toggleSidebar()"></div>
   
   <div class="container">
     <div class="sidebar">
+      <div class="search-container">
+        <input type="text" class="search-input" placeholder="Search files...">
+        <div class="search-results"></div>
+      </div>
+      
       <div class="file-tree">
         <ul>
           <li>
-            <a href="{{ site.baseurl }}/">Главная</a>
+            <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
           </li>
-          {% assign sorted_paths = site.pages | map: "path" | sort %}
-          {% assign directories = "" | split: "" %}
-          {% for path in sorted_paths %}
-            {% assign path_parts = path | split: "/" %}
+          
+          <!-- Improved directory and file handling -->
+          {% assign sorted_pages = site.pages | sort: "path" %}
+          {% assign all_paths = sorted_pages | map: "path" %}
+          
+          {% comment %}Build directory structure{% endcomment %}
+          {% assign dir_tree = "" | split: "" %}
+          {% for page_path in all_paths %}
+            {% assign path_parts = page_path | split: "/" %}
             {% if path_parts.size > 1 %}
-              {% assign dir = path_parts[0] %}
-              {% unless directories contains dir or dir == "_" %}
-                {% assign directories = directories | push: dir %}
-              {% endunless %}
+              {% assign current_path = "" %}
+              {% for i in (0..path_parts.size | minus: 2) %}
+                {% assign current_path = current_path | append: path_parts[i] | append: "/" %}
+                {% unless dir_tree contains current_path %}
+                  {% assign dir_tree = dir_tree | push: current_path %}
+                {% endunless %}
+              {% endfor %}
             {% endif %}
           {% endfor %}
           
-          {% for dir in directories %}
-            <li class="directory">
-              <details>
-                <summary>{{ dir }}</summary>
-                <ul>
-                  {% assign dir_pages = site.pages | where_exp: "item", "item.path contains dir" | sort: "path" %}
-                  {% for page in dir_pages %}
-                    {% assign page_path_parts = page.path | split: "/" %}
-                    {% if page_path_parts[0] == dir %}
-                      <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-                        <a href="{{ site.baseurl }}{{ page.url }}">{{ page_path_parts | last | replace: '.md', '' }}</a>
-                      </li>
-                    {% endif %}
-                  {% endfor %}
-                </ul>
-              </details>
-            </li>
+          {% assign dir_tree = dir_tree | sort %}
+          
+          {% comment %}Process root directories{% endcomment %}
+          {% for dir_path in dir_tree %}
+            {% assign path_parts = dir_path | split: "/" %}
+            {% if path_parts.size == 1 and path_parts[0] != "_" and path_parts[0] != "." %}
+              <li class="directory">
+                <details {% if page.path contains dir_path %}open{% endif %}>
+                  <summary>
+                    <div class="directory-container">
+                      {% assign has_readme = false %}
+                      {% assign readme_page = nil %}
+                      {% for p in sorted_pages %}
+                        {% if p.path == path_parts[0] | append: "/README.md" or p.path == path_parts[0] | append: "/index.md" %}
+                          {% assign has_readme = true %}
+                          {% assign readme_page = p %}
+                          {% break %}
+                        {% endif %}
+                      {% endfor %}
+                      
+                      {% if has_readme %}
+                        <a href="{{ site.baseurl }}{{ readme_page.url }}" class="directory-link directory-item">
+                          {{ path_parts[0] }}
+                        </a>
+                        <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                      {% else %}
+                        <span class="directory-item">{{ path_parts[0] }}</span>
+                      {% endif %}
+                    </div>
+                  </summary>
+                  
+                  <ul>
+                    {% comment %}Add files directly in this directory{% endcomment %}
+                    {% for page in sorted_pages %}
+                      {% assign page_dir = page.path | split: "/" | first %}
+                      {% assign filename = page.path | split: "/" | last %}
+                      
+                      {% if page_dir == path_parts[0] and page.path | split: "/" | size == 2 %}
+                        {% assign is_readme = filename == "README.md" or filename == "index.md" %}
+                        {% if is_readme == false %}
+                          <li class="file-item">
+                            <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
+                              {{ filename | replace: '.md', '' | replace: '.html', '' }}
+                            </a>
+                          </li>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %}Add subdirectories{% endcomment %}
+                    {% for subdir_path in dir_tree %}
+                      {% if subdir_path contains dir_path and subdir_path != dir_path %}
+                        {% assign subdir_parts = subdir_path | split: "/" %}
+                        {% assign parent_dir = subdir_parts | pop | join: "/" | append: "/" %}
+                        
+                        {% if parent_dir == dir_path and subdir_parts.size == path_parts.size | plus: 1 %}
+                          <li class="directory">
+                            <details {% if page.path contains subdir_path %}open{% endif %}>
+                              <summary>
+                                <div class="directory-container">
+                                  {% assign has_readme = false %}
+                                  {% assign readme_page = nil %}
+                                  {% for p in sorted_pages %}
+                                    {% if p.path == subdir_path | append: "README.md" or p.path == subdir_path | append: "index.md" %}
+                                      {% assign has_readme = true %}
+                                      {% assign readme_page = p %}
+                                      {% break %}
+                                    {% endif %}
+                                  {% endfor %}
+                                  
+                                  {% if has_readme %}
+                                    <a href="{{ site.baseurl }}{{ readme_page.url }}" class="directory-link directory-item">
+                                      {{ subdir_parts | last }}
+                                    </a>
+                                    <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                                  {% else %}
+                                    <span class="directory-item">{{ subdir_parts | last }}</span>
+                                  {% endif %}
+                                </div>
+                              </summary>
+                              
+                              <ul>
+                                {% comment %}Add files in subdirectory{% endcomment %}
+                                {% for page in sorted_pages %}
+                                  {% if page.path contains subdir_path and page.path | split: "/" | size == subdir_parts.size | plus: 1 %}
+                                    {% assign filename = page.path | split: "/" | last %}
+                                    {% assign is_readme = filename == "README.md" or filename == "index.md" %}
+                                    {% if is_readme == false %}
+                                      <li class="file-item">
+                                        <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
+                                          {{ filename | replace: '.md', '' | replace: '.html', '' }}
+                                        </a>
+                                      </li>
+                                    {% endif %}
+                                  {% endif %}
+                                {% endfor %}
+                              </ul>
+                            </details>
+                          </li>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  </ul>
+                </details>
+              </li>
+            {% endif %}
           {% endfor %}
           
-          {% assign all_pages = site.pages %}
-{% assign root_pages = "" | split: "" %}
-{% for item in all_pages %}
-  {% unless item.path contains '/' %}
-    {% assign root_pages = root_pages | push: item %}
-  {% endunless %}
-{% endfor %}
-          {% assign filtered_pages = root_pages | where_exp: "item", "item.path contains '.md'" | sort: "path" %}
-          {% for page in filtered_pages %}
-            <li class="file {% if page.path contains '.md' %}markdown{% endif %}">
-              <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path | replace: '.md', '' }}</a>
-            </li>
+          {% comment %}Add root markdown files{% endcomment %}
+          {% for page in sorted_pages %}
+            {% unless page.path contains "/" or page.path contains "_" %}
+              {% if page.path contains '.md' or page.path contains '.markdown' %}
+                <li class="file-item">
+                  <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
+                    {{ page.path | replace: '.md', '' | replace: '.markdown', '' }}
+                  </a>
+                </li>
+              {% endif %}
+            {% endunless %}
           {% endfor %}
         </ul>
       </div>
@@ -358,43 +691,54 @@
       {% assign path_parts = page.path | split: "/" %}
       {% if path_parts.size > 1 %}
         <ul class="breadcrumbs">
-          <li><a href="{{ site.baseurl }}/">Главная</a></li>
+          <li>
+            <a href="{{ site.baseurl }}/">Home</a>
+          </li>
+          {% assign current_path = "" %}
           {% for i in (0..path_parts.size | minus: 2) %}
-            {% assign current_path = "" %}
-            {% for j in (0..i) %}
-              {% assign current_path = current_path | append: path_parts[j] | append: "/" %}
-            {% endfor %}
+            {% assign current_path = current_path | append: path_parts[i] | append: "/" %}
             <li>
-              {% if forloop.last %}
-                {{ path_parts[i] }}
-              {% else %}
-                <a href="{{ site.baseurl }}/{{ current_path }}">{{ path_parts[i] }}</a>
-              {% endif %}
+              <a href="{{ site.baseurl }}/{{ current_path }}">{{ path_parts[i] }}</a>
             </li>
           {% endfor %}
-          <li>{{ path_parts | last }}</li>
+          <li>{{ path_parts | last | replace: '.md', '' | replace: '.html', '' }}</li>
         </ul>
       {% endif %}
       
-      <h1>{{ page.title }}</h1>
+      <h1>{{ page.title | default: page.path | split: "/" | last | replace: '.md', '' | replace: '.html', '' }}</h1>
+      
+      {% if page.content contains '<h2' or page.content contains '##' %}
+      <div class="toc">
+        <h3>Table of Contents</h3>
+        <div id="toc-container" class="toc-list"></div>
+      </div>
+      {% endif %}
+      
       {{ content }}
+      
+      {% if page.last_modified_at %}
+      <p class="last-updated">
+        Last updated: {{ page.last_modified_at | date: "%B %d, %Y" }}
+      </p>
+      {% endif %}
     </div>
   </div>
   
-  <!-- Модальное окно для изображений -->
+  <!-- Modal window for images -->
   <div id="imageModal" class="modal">
     <span class="close">&times;</span>
     <img class="modal-content" id="modalImage">
   </div>
 
   <script>
-    // Подсветка синтаксиса кода
+    // Code syntax highlighting
     document.addEventListener('DOMContentLoaded', (event) => {
+      // Highlight code blocks
       document.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightBlock(block);
+        hljs.highlightElement(block);
       });
       
-      // Добавление функциональности модального окна для изображений
+      // Add functionality for modal image viewing
       const images = document.querySelectorAll('.markdown-body img');
       const modal = document.getElementById('imageModal');
       const modalImg = document.getElementById('modalImage');
@@ -407,20 +751,26 @@
         }
       });
       
-      // Закрытие модального окна при клике на крестик
+      // Close modal when clicking the X
       closeBtn.onclick = function() {
         modal.style.display = "none";
       }
       
-      // Закрытие модального окна при клике вне изображения
+      // Close modal when clicking outside the image
       window.onclick = function(event) {
         if (event.target == modal) {
           modal.style.display = "none";
         }
       }
+      
+      // Generate table of contents
+      generateTableOfContents();
+      
+      // Setup search functionality
+      setupSearch();
     });
     
-    // Переключение темы
+    // Toggle theme function
     function toggleTheme() {
       const currentTheme = document.documentElement.getAttribute('data-theme');
       const codeStyle = document.getElementById('code-style');
@@ -436,7 +786,109 @@
       }
     }
     
-    // Восстановление темы из localStorage
+    // Toggle sidebar (for mobile)
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.querySelector('.overlay');
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+    
+    // Handle toggle click separately from directory link
+    function toggleDetailsClick(element) {
+      const details = element.closest('details');
+      details.open = !details.open;
+    }
+    
+    // Generate table of contents
+    function generateTableOfContents() {
+      const tocContainer = document.getElementById('toc-container');
+      if (!tocContainer) return;
+      
+      const headers = document.querySelectorAll('.main-content h2, .main-content h3, .main-content h4, .main-content h5, .main-content h6');
+      if (headers.length === 0) return;
+      
+      const toc = document.createElement('ul');
+      
+      headers.forEach((header, index) => {
+        // Create ID for the header if it doesn't have one
+        if (!header.id) {
+          header.id = `heading-${index}`;
+        }
+        
+        const li = document.createElement('li');
+        li.className = `toc-${header.tagName.toLowerCase()}`;
+        
+        const a = document.createElement('a');
+        a.href = `#${header.id}`;
+        a.textContent = header.textContent;
+        
+        li.appendChild(a);
+        toc.appendChild(li);
+      });
+      
+      tocContainer.appendChild(toc);
+    }
+    
+    // Setup search functionality
+    function setupSearch() {
+      const searchInput = document.querySelector('.search-input');
+      const searchResults = document.querySelector('.search-results');
+      const allLinks = document.querySelectorAll('.file-tree a');
+      
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        
+        if (query.length < 2) {
+          searchResults.classList.remove('show');
+          return;
+        }
+        
+        // Clear previous results
+        searchResults.innerHTML = '';
+        
+        // Filter links that match the query
+        const matches = [];
+        allLinks.forEach(link => {
+          const text = link.textContent.toLowerCase();
+          if (text.includes(query)) {
+            matches.push({
+              text: link.textContent,
+              href: link.href
+            });
+          }
+        });
+        
+        // Display results
+        if (matches.length > 0) {
+          matches.forEach(match => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'search-result-item';
+            resultItem.textContent = match.text;
+            resultItem.addEventListener('click', () => {
+              window.location.href = match.href;
+            });
+            searchResults.appendChild(resultItem);
+          });
+          searchResults.classList.add('show');
+        } else {
+          const noResults = document.createElement('div');
+          noResults.className = 'search-result-item';
+          noResults.textContent = 'No matches found';
+          searchResults.appendChild(noResults);
+          searchResults.classList.add('show');
+        }
+      });
+      
+      // Hide search results when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+          searchResults.classList.remove('show');
+        }
+      });
+    }
+    
+    // Restore theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
