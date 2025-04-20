@@ -1,204 +1,80 @@
-<!-- _includes/scripts.html -->
-<script>
-    // Code syntax highlighting
-    document.addEventListener('DOMContentLoaded', (event) => {
-      // Highlight code blocks
-      document.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block);
-      });
+<!-- _includes/file-tree.html -->
+<div class="file-tree">
+    <ul>
+      <!-- Home link -->
+      <li>
+        <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
+      </li>
       
-      // Add functionality for modal image viewing
-      const images = document.querySelectorAll('.markdown-body img');
-      const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImage');
-      const closeBtn = document.querySelector('.close');
+      <!-- First, collect all directories -->
+      {% assign all_pages = site.pages | sort: "path" %}
+      {% assign directories = "" | split: "" %}
       
-      images.forEach(img => {
-        img.onclick = function() {
-          modal.style.display = "flex";
-          modalImg.src = this.src;
-        }
-      });
+      {% for page_item in all_pages %}
+        {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+          {% assign path_parts = page_item.path | split: '/' %}
+          {% if path_parts.size > 1 %}
+            {% assign dir = path_parts | pop | join: '/' %}
+            {% unless directories contains dir %}
+              {% assign directories = directories | push: dir %}
+            {% endunless %}
+          {% endif %}
+        {% endunless %}
+      {% endfor %}
       
-      // Close modal when clicking the X
-      closeBtn.onclick = function() {
-        modal.style.display = "none";
-      }
+      <!-- Process root level files first -->
+      <li class="section-header">Pages</li>
+      {% for page_item in all_pages %}
+        {% assign path_parts = page_item.path | split: "/" %}
+        {% if path_parts.size == 1 %}
+          {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+            <li class="file-item">
+              <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                {{ page_item.path | replace: '.md', '' | replace: '.html', '' }}
+              </a>
+            </li>
+          {% endunless %}
+        {% endif %}
+      {% endfor %}
       
-      // Close modal when clicking outside the image
-      window.onclick = function(event) {
-        if (event.target == modal) {
-          modal.style.display = "none";
-        }
-      }
+      <!-- Process directories -->
+      {% if directories.size > 0 %}
+        <li class="section-header">Directories</li>
+        {% for dir in directories %}
+          <li class="directory">
+            <details {% if page.path contains dir %}open{% endif %}>
+              <summary>
+                <div class="directory-container">
+                  <span class="directory-item">{{ dir }}</span>
+                  <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                </div>
+              </summary>
+              
+              <ul>
+                {% for page_item in all_pages %}
+                  {% if page_item.path contains dir %}
+                    {% assign dir_prefix = dir | append: '/' %}
+                    {% assign rel_path = page_item.path | remove_first: dir_prefix %}
+                    {% unless rel_path contains '/' or page_item.path contains '_' %}
+                      <li class="file-item">
+                        <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                          {{ rel_path | replace: '.md', '' | replace: '.html', '' }}
+                        </a>
+                      </li>
+                    {% endunless %}
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </details>
+          </li>
+        {% endfor %}
+      {% endif %}
       
-      // Generate table of contents
-      generateTableOfContents();
-      
-      // Setup search functionality
-      setupSearch();
-      
-      // Setup directory navigation
-      setupDirectoryNavigation();
-    });
-    
-    // Toggle theme function
-    function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const codeStyle = document.getElementById('code-style');
-      
-      if (currentTheme === 'dark') {
-        document.documentElement.removeAttribute('data-theme');
-        codeStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
-        localStorage.setItem('theme', 'light');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        codeStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css';
-        localStorage.setItem('theme', 'dark');
-      }
-    }
-    
-    // Toggle sidebar (for mobile)
-    function toggleSidebar() {
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.querySelector('.overlay');
-      sidebar.classList.toggle('active');
-      overlay.classList.toggle('active');
-    }
-    
-    // Handle directory click events
-    function handleDirClick(event, container) {
-      // Get the directory link and toggle button
-      const dirLink = container.querySelector('.directory-link');
-      const toggleBtn = container.querySelector('.toggle-btn');
-      
-      // If click was on the toggle button, just toggle the details
-      if (event.target === toggleBtn || event.target.closest('.toggle-btn')) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        const details = container.closest('details');
-        details.open = !details.open;
-        return;
-      }
-      
-      // If click was on the link, navigate to the link
-      if (dirLink && (event.target === dirLink || event.target.closest('.directory-link'))) {
-        event.preventDefault();
-        event.stopPropagation();
-        window.location.href = dirLink.href;
-        return;
-      }
-      
-      // If click was elsewhere on the container, toggle details
-      const details = container.closest('details');
-      details.open = !details.open;
-    }
-    
-    // Setup directory navigation behavior
-    function setupDirectoryNavigation() {
-      // Add click handlers to all summary elements to prevent default toggle behavior
-      const summaries = document.querySelectorAll('.directory > details > summary');
-      summaries.forEach(summary => {
-        summary.addEventListener('click', function(event) {
-          // Prevent default toggle behavior
-          event.preventDefault();
-        });
-      });
-    }
-    
-    // Generate table of contents
-    function generateTableOfContents() {
-      const tocContainer = document.getElementById('toc-container');
-      if (!tocContainer) return;
-      
-      const headers = document.querySelectorAll('.main-content h2, .main-content h3, .main-content h4, .main-content h5, .main-content h6');
-      if (headers.length === 0) return;
-      
-      const toc = document.createElement('ul');
-      
-      headers.forEach((header, index) => {
-        // Create ID for the header if it doesn't have one
-        if (!header.id) {
-          header.id = `heading-${index}`;
-        }
-        
-        const li = document.createElement('li');
-        li.className = `toc-${header.tagName.toLowerCase()}`;
-        
-        const a = document.createElement('a');
-        a.href = `#${header.id}`;
-        a.textContent = header.textContent;
-        
-        li.appendChild(a);
-        toc.appendChild(li);
-      });
-      
-      tocContainer.appendChild(toc);
-    }
-    
-    // Setup search functionality
-    function setupSearch() {
-      const searchInput = document.querySelector('.search-input');
-      const searchResults = document.querySelector('.search-results');
-      const allLinks = document.querySelectorAll('.file-tree a');
-      
-      searchInput.addEventListener('input', function() {
-        const query = this.value.toLowerCase();
-        
-        if (query.length < 2) {
-          searchResults.classList.remove('show');
-          return;
-        }
-        
-        // Clear previous results
-        searchResults.innerHTML = '';
-        
-        // Filter links that match the query
-        const matches = [];
-        allLinks.forEach(link => {
-          const text = link.textContent.toLowerCase();
-          if (text.includes(query)) {
-            matches.push({
-              text: link.textContent,
-              href: link.href
-            });
-          }
-        });
-        
-        // Display results
-        if (matches.length > 0) {
-          matches.forEach(match => {
-            const resultItem = document.createElement('div');
-            resultItem.className = 'search-result-item';
-            resultItem.textContent = match.text;
-            resultItem.addEventListener('click', () => {
-              window.location.href = match.href;
-            });
-            searchResults.appendChild(resultItem);
-          });
-          searchResults.classList.add('show');
-        } else {
-          const noResults = document.createElement('div');
-          noResults.className = 'search-result-item';
-          noResults.textContent = 'No matches found';
-          searchResults.appendChild(noResults);
-          searchResults.classList.add('show');
-        }
-      });
-      
-      // Hide search results when clicking outside
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-container')) {
-          searchResults.classList.remove('show');
-        }
-      });
-    }
-    
-    // Restore theme from localStorage
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      document.getElementById('code-style').href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css';
-    }
-</script>
+      <!-- Debug info - uncomment to help debugging -->
+      <!--
+      <li class="section-header">Debug Info</li>
+      <li><small>Total pages: {{ all_pages.size }}</small></li>
+      <li><small>Directories: {{ directories | join: ', ' }}</small></li>
+      -->
+    </ul>
+  </div>
