@@ -3,14 +3,14 @@
       <li>
         <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
       </li>
-      
-      {% assign sorted_pages = site.pages | sort: "path" %}
-      {% assign all_paths = sorted_pages | map: "path" %}
+  
+      {% comment %}Get all pages excluding special Jekyll files{% endcomment %}
+      {% assign all_pages = site.pages | where_exp: "item", "item.name != '404.html'" | where_exp: "item", "item.name != 'feed.xml'" | sort: "path" %}
       
       {% comment %}Build directory structure{% endcomment %}
       {% assign dir_tree = "" | split: "" %}
-      {% for page_path in all_paths %}
-        {% assign path_parts = page_path | split: "/" %}
+      {% for page in all_pages %}
+        {% assign path_parts = page.path | split: "/" %}
         {% if path_parts.size > 1 %}
           {% assign current_path = "" %}
           {% for i in (0..path_parts.size | minus: 2) %}
@@ -23,51 +23,65 @@
       {% endfor %}
       
       {% assign dir_tree = dir_tree | sort %}
-      
-      {% comment %}Process root directories{% endcomment %}
+  
+      {% comment %}Process root files first{% endcomment %}
+      {% for page in all_pages %}
+        {% assign path_parts = page.path | split: "/" %}
+        {% if path_parts.size == 1 %}
+          {% unless page.path contains '_' or page.path == '404.html' or page.path == 'feed.xml' %}
+            <li class="file-item">
+              <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
+                {{ page.path | replace: '.md', '' | replace: '.html', '' }}
+              </a>
+            </li>
+          {% endunless %}
+        {% endif %}
+      {% endfor %}
+  
+      {% comment %}Process directories{% endcomment %}
       {% for dir_path in dir_tree %}
         {% assign path_parts = dir_path | split: "/" %}
-        {% if path_parts.size == 1 and path_parts[0] != "_" and path_parts[0] != "." %}
+        {% if path_parts.size == 1 %}
           <li class="directory">
             <details {% if page.path contains dir_path %}open{% endif %}>
               <summary>
                 <div class="directory-container">
-                  {% assign has_readme = false %}
+                  {% assign dir_name = path_parts[0] %}
                   {% assign readme_page = nil %}
-                  {% for p in sorted_pages %}
-                    {% if p.path == path_parts[0] | append: "/README.md" or p.path == path_parts[0] | append: "/index.md" %}
-                      {% assign has_readme = true %}
+                  
+                  {% comment %}Look for README or index files in this directory{% endcomment %}
+                  {% for p in all_pages %}
+                    {% if p.path == dir_name | append: "/README.md" or p.path == dir_name | append: "/index.md" or p.path == dir_name | append: "/index.html" %}
                       {% assign readme_page = p %}
                       {% break %}
                     {% endif %}
                   {% endfor %}
                   
-                  {% if has_readme %}
+                  {% if readme_page %}
                     <a href="{{ site.baseurl }}{{ readme_page.url }}" class="directory-link directory-item">
-                      {{ path_parts[0] }}
+                      {{ dir_name }}
                     </a>
                     <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
                   {% else %}
-                    <span class="directory-item">{{ path_parts[0] }}</span>
+                    <span class="directory-item">{{ dir_name }}</span>
                   {% endif %}
                 </div>
               </summary>
-              
+  
               <ul>
-                {% comment %}Add files directly in this directory{% endcomment %}
-                {% for page in sorted_pages %}
+                {% comment %}Add files in this directory{% endcomment %}
+                {% for page in all_pages %}
                   {% assign page_dir = page.path | split: "/" | first %}
                   {% assign filename = page.path | split: "/" | last %}
                   
-                  {% if page_dir == path_parts[0] and page.path | split: "/" | size == 2 %}
-                    {% assign is_readme = filename == "README.md" or filename == "index.md" %}
-                    {% if is_readme == false %}
+                  {% if page_dir == dir_name and page.path | split: "/" | size == 2 %}
+                    {% unless filename == "README.md" or filename == "index.md" or filename == "index.html" %}
                       <li class="file-item">
                         <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
                           {{ filename | replace: '.md', '' | replace: '.html', '' }}
                         </a>
                       </li>
-                    {% endif %}
+                    {% endunless %}
                   {% endif %}
                 {% endfor %}
                 
@@ -82,40 +96,40 @@
                         <details {% if page.path contains subdir_path %}open{% endif %}>
                           <summary>
                             <div class="directory-container">
-                              {% assign has_readme = false %}
-                              {% assign readme_page = nil %}
-                              {% for p in sorted_pages %}
-                                {% if p.path == subdir_path | append: "README.md" or p.path == subdir_path | append: "index.md" %}
-                                  {% assign has_readme = true %}
-                                  {% assign readme_page = p %}
+                              {% assign subdir_name = subdir_parts | last %}
+                              {% assign subdir_readme = nil %}
+                              
+                              {% comment %}Look for README/index in subdirectory{% endcomment %}
+                              {% for p in all_pages %}
+                                {% if p.path == subdir_path | append: "README.md" or p.path == subdir_path | append: "index.md" or p.path == subdir_path | append: "index.html" %}
+                                  {% assign subdir_readme = p %}
                                   {% break %}
                                 {% endif %}
                               {% endfor %}
                               
-                              {% if has_readme %}
-                                <a href="{{ site.baseurl }}{{ readme_page.url }}" class="directory-link directory-item">
-                                  {{ subdir_parts | last }}
+                              {% if subdir_readme %}
+                                <a href="{{ site.baseurl }}{{ subdir_readme.url }}" class="directory-link directory-item">
+                                  {{ subdir_name }}
                                 </a>
                                 <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
                               {% else %}
-                                <span class="directory-item">{{ subdir_parts | last }}</span>
+                                <span class="directory-item">{{ subdir_name }}</span>
                               {% endif %}
                             </div>
                           </summary>
                           
                           <ul>
                             {% comment %}Add files in subdirectory{% endcomment %}
-                            {% for page in sorted_pages %}
+                            {% for page in all_pages %}
                               {% if page.path contains subdir_path and page.path | split: "/" | size == subdir_parts.size | plus: 1 %}
                                 {% assign filename = page.path | split: "/" | last %}
-                                {% assign is_readme = filename == "README.md" or filename == "index.md" %}
-                                {% if is_readme == false %}
+                                {% unless filename == "README.md" or filename == "index.md" or filename == "index.html" %}
                                   <li class="file-item">
                                     <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
                                       {{ filename | replace: '.md', '' | replace: '.html', '' }}
                                     </a>
                                   </li>
-                                {% endif %}
+                                {% endunless %}
                               {% endif %}
                             {% endfor %}
                           </ul>
@@ -128,19 +142,6 @@
             </details>
           </li>
         {% endif %}
-      {% endfor %}
-      
-      {% comment %}Add root markdown files{% endcomment %}
-      {% for page in sorted_pages %}
-        {% unless page.path contains "/" or page.path contains "_" %}
-          {% if page.path contains '.md' or page.path contains '.markdown' %}
-            <li class="file-item">
-              <a href="{{ site.baseurl }}{{ page.url }}" class="{% if page.url == page.url %}active{% endif %}">
-                {{ page.path | replace: '.md', '' | replace: '.markdown', '' }}
-              </a>
-            </li>
-          {% endif %}
-        {% endunless %}
       {% endfor %}
     </ul>
   </div>
