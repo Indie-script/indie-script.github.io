@@ -6,216 +6,58 @@
         <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
       </li>
       
-      <!-- First filter only markdown and html pages -->
-      {% assign content_pages = "" | split: "" %}
-      {% for page_item in site.pages %}
-        {% assign path_ext = page_item.path | split: "." | last | downcase %}
-        {% if path_ext == "md" or path_ext == "html" %}
-          {% unless page_item.path contains '_' or page_item.path == '404.html' %}
-            {% assign content_pages = content_pages | push: page_item %}
+      <!-- Show all pages sorted -->
+      {% assign sorted_pages = site.pages | sort: "path" %}
+      
+      <!-- Files not in directories -->
+      {% for page_item in sorted_pages %}
+        {% assign parts = page_item.path | split: "/" %}
+        {% if parts.size == 1 %}
+          {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+            <li class="file-item">
+              <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                {{ page_item.title | default: page_item.path | split: "." | first }}
+              </a>
+            </li>
           {% endunless %}
         {% endif %}
       {% endfor %}
       
-      <!-- Get all directories -->
-      {% assign all_dirs = "" | split: "" %}
-      {% for page_item in content_pages %}
+      <!-- Extract all top-level directories -->
+      {% assign top_dirs = "" | split: "" %}
+      {% for page_item in sorted_pages %}
         {% assign parts = page_item.path | split: "/" %}
         {% if parts.size > 1 %}
-          {% assign current_path = "" %}
-          {% for i in (0..parts.size | minus: 2) %}
-            {% assign dir = parts[i] %}
-            {% assign current_path = current_path | append: dir %}
-            {% unless all_dirs contains current_path %}
-              {% assign all_dirs = all_dirs | push: current_path %}
-            {% endunless %}
-            {% assign current_path = current_path | append: "/" %}
-          {% endfor %}
+          {% assign dir = parts[0] %}
+          {% unless top_dirs contains dir or dir contains '_' %}
+            {% assign top_dirs = top_dirs | push: dir %}
+          {% endunless %}
         {% endif %}
       {% endfor %}
       
-      <!-- Sort directories -->
-      {% assign all_dirs = all_dirs | sort %}
-      
-      <!-- Root level files (not in directories) -->
-      {% for page_item in content_pages %}
-        {% assign parts = page_item.path | split: "/" %}
-        {% if parts.size == 1 and page_item.path != "index.md" and page_item.path != "index.html" and page_item.path != "README.md" %}
-          <li class="file-item">
-            <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-              {{ page_item.title | default: page_item.path | split: "." | first }}
-            </a>
-          </li>
-        {% endif %}
-      {% endfor %}
-      
-      <!-- Process top-level directories -->
-      {% for dir in all_dirs %}
-        {% unless dir contains "/" %}
-          {% assign dir_path = dir | append: "/" %}
-          {% assign is_active_dir = false %}
-          {% if page.path contains dir_path %}
-            {% assign is_active_dir = true %}
-          {% endif %}
-          
-          <!-- Find index file for directory -->
-          {% assign dir_index = nil %}
-          {% for p in content_pages %}
-            {% if p.path == dir_path | append: "index.md" or p.path == dir_path | append: "index.html" or p.path == dir_path | append: "README.md" %}
-              {% assign dir_index = p %}
-              {% break %}
-            {% endif %}
-          {% endfor %}
-          
-          <!-- Count files in this directory (excluding index files) -->
-          {% assign dir_files = 0 %}
-          {% for p in content_pages %}
-            {% if p.path contains dir_path %}
-              {% assign rel_path = p.path | remove_first: dir_path %}
-              {% unless rel_path contains "/" or rel_path == "index.md" or rel_path == "index.html" or rel_path == "README.md" %}
-                {% assign dir_files = dir_files | plus: 1 %}
-              {% endunless %}
-            {% endif %}
-          {% endfor %}
-          
-          <!-- Check for subdirectories -->
-          {% assign has_subdirs = false %}
-          {% for test_dir in all_dirs %}
-            {% if test_dir contains dir_path and test_dir != dir %}
-              {% assign has_subdirs = true %}
-              {% break %}
-            {% endif %}
-          {% endfor %}
-          
-          <!-- If directory has children (files or dirs), display as directory -->
-          {% if dir_files > 0 or has_subdirs %}
-            <li class="directory">
-              <details {% if is_active_dir %}open{% endif %}>
-                <summary>
-                  <div class="directory-container" onclick="handleDirClick(event, this)">
-                    {% if dir_index %}
-                      <a href="{{ site.baseurl }}{{ dir_index.url }}" class="directory-link {% if page.url == dir_index.url %}active{% endif %}">
-                        <span class="directory-item">{{ dir }}</span>
+      <!-- Display directories and their files -->
+      {% for dir in top_dirs %}
+        <li class="directory">
+          <details>
+            <summary>
+              <span class="directory-item">{{ dir }}</span>
+            </summary>
+            <ul>
+              {% for page_item in sorted_pages %}
+                {% if page_item.path contains dir %}
+                  {% assign parts = page_item.path | split: "/" %}
+                  {% if parts.size == 2 %}
+                    <li class="file-item">
+                      <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                        {{ page_item.title | default: parts[1] | split: "." | first }}
                       </a>
-                    {% else %}
-                      <span class="directory-item">{{ dir }}</span>
-                    {% endif %}
-                    <span class="toggle-btn">▼</span>
-                  </div>
-                </summary>
-                
-                <ul>
-                  <!-- Files directly in this directory -->
-                  {% for p in content_pages %}
-                    {% if p.path contains dir_path %}
-                      {% assign rel_path = p.path | remove_first: dir_path %}
-                      {% unless rel_path contains "/" or rel_path == "index.md" or rel_path == "index.html" or rel_path == "README.md" %}
-                        <li class="file-item">
-                          <a href="{{ site.baseurl }}{{ p.url }}" class="{% if page.url == p.url %}active{% endif %}">
-                            {{ p.title | default: rel_path | split: "." | first }}
-                          </a>
-                        </li>
-                      {% endunless %}
-                    {% endif %}
-                  {% endfor %}
-                  
-                  <!-- Subdirectories -->
-                  {% for sub_dir in all_dirs %}
-                    {% if sub_dir contains dir_path and sub_dir != dir %}
-                      {% assign rel_dir = sub_dir | remove_first: dir_path %}
-                      {% unless rel_dir contains "/" %}
-                        {% assign sub_dir_path = sub_dir | append: "/" %}
-                        {% assign is_active_subdir = false %}
-                        {% if page.path contains sub_dir_path %}
-                          {% assign is_active_subdir = true %}
-                        {% endif %}
-                        
-                        <!-- Find index for subdirectory -->
-                        {% assign subdir_index = nil %}
-                        {% for p in content_pages %}
-                          {% if p.path == sub_dir_path | append: "index.md" or p.path == sub_dir_path | append: "index.html" or p.path == sub_dir_path | append: "README.md" %}
-                            {% assign subdir_index = p %}
-                            {% break %}
-                          {% endif %}
-                        {% endfor %}
-                        
-                        <!-- Count files in subdirectory -->
-                        {% assign subdir_files = 0 %}
-                        {% for p in content_pages %}
-                          {% if p.path contains sub_dir_path %}
-                            {% assign sub_rel_path = p.path | remove_first: sub_dir_path %}
-                            {% unless sub_rel_path contains "/" or sub_rel_path == "index.md" or sub_rel_path == "index.html" or sub_rel_path == "README.md" %}
-                              {% assign subdir_files = subdir_files | plus: 1 %}
-                            {% endunless %}
-                          {% endif %}
-                        {% endfor %}
-                        
-                        <!-- Check for sub-subdirectories -->
-                        {% assign has_subsubdirs = false %}
-                        {% for test_dir in all_dirs %}
-                          {% if test_dir contains sub_dir_path and test_dir != sub_dir %}
-                            {% assign has_subsubdirs = true %}
-                            {% break %}
-                          {% endif %}
-                        {% endfor %}
-                        
-                        <!-- Display as directory or file -->
-                        {% if subdir_files > 0 or has_subsubdirs %}
-                          <li class="directory sub-directory">
-                            <details {% if is_active_subdir %}open{% endif %}>
-                              <summary>
-                                <div class="directory-container" onclick="handleDirClick(event, this)">
-                                  {% if subdir_index %}
-                                    <a href="{{ site.baseurl }}{{ subdir_index.url }}" class="directory-link {% if page.url == subdir_index.url %}active{% endif %}">
-                                      <span class="directory-item">{{ rel_dir }}</span>
-                                    </a>
-                                  {% else %}
-                                    <span class="directory-item">{{ rel_dir }}</span>
-                                  {% endif %}
-                                  <span class="toggle-btn">▼</span>
-                                </div>
-                              </summary>
-                              
-                              <ul>
-                                <!-- Files in subdirectory -->
-                                {% for p in content_pages %}
-                                  {% if p.path contains sub_dir_path %}
-                                    {% assign sub_rel_path = p.path | remove_first: sub_dir_path %}
-                                    {% unless sub_rel_path contains "/" or sub_rel_path == "index.md" or sub_rel_path == "index.html" or sub_rel_path == "README.md" %}
-                                      <li class="file-item">
-                                        <a href="{{ site.baseurl }}{{ p.url }}" class="{% if page.url == p.url %}active{% endif %}">
-                                          {{ p.title | default: sub_rel_path | split: "." | first }}
-                                        </a>
-                                      </li>
-                                    {% endunless %}
-                                  {% endif %}
-                                {% endfor %}
-                              </ul>
-                            </details>
-                          </li>
-                        {% elsif subdir_index %}
-                          <!-- Display as file if only has index -->
-                          <li class="file-item">
-                            <a href="{{ site.baseurl }}{{ subdir_index.url }}" class="{% if page.url == subdir_index.url %}active{% endif %}">
-                              {{ rel_dir }}
-                            </a>
-                          </li>
-                        {% endif %}
-                      {% endunless %}
-                    {% endif %}
-                  {% endfor %}
-                </ul>
-              </details>
-            </li>
-          {% elsif dir_index %}
-            <!-- Display as file if only has index -->
-            <li class="file-item">
-              <a href="{{ site.baseurl }}{{ dir_index.url }}" class="{% if page.url == dir_index.url %}active{% endif %}">
-                {{ dir }}
-              </a>
-            </li>
-          {% endif %}
-        {% endunless %}
+                    </li>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </details>
+        </li>
       {% endfor %}
     </ul>
   </div>
