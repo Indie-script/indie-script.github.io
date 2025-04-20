@@ -1,4 +1,4 @@
- <!-- _includes/scripts.html -->
+<!-- _includes/scripts.html -->
 <script>
     // Code syntax highlighting
     document.addEventListener('DOMContentLoaded', (event) => {
@@ -37,6 +37,9 @@
       
       // Setup search functionality
       setupSearch();
+      
+      // Setup directory navigation
+      setupDirectoryNavigation();
     });
     
     // Toggle theme function
@@ -63,12 +66,45 @@
       overlay.classList.toggle('active');
     }
     
-    // Handle toggle click separately from directory link
-    function toggleDetailsClick(element) {
-        // Stop event propagation to prevent triggering the summary click
-  event.stopPropagation();
-  const details = element.closest('details');
-  details.open = !details.open;
+    // Handle directory click events
+    function handleDirClick(event, container) {
+      // Get the directory link and toggle button
+      const dirLink = container.querySelector('.directory-link');
+      const toggleBtn = container.querySelector('.toggle-btn');
+      
+      // If click was on the toggle button, just toggle the details
+      if (event.target === toggleBtn || event.target.closest('.toggle-btn')) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const details = container.closest('details');
+        details.open = !details.open;
+        return;
+      }
+      
+      // If click was on the link, navigate to the link
+      if (dirLink && (event.target === dirLink || event.target.closest('.directory-link'))) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.href = dirLink.href;
+        return;
+      }
+      
+      // If click was elsewhere on the container, toggle details
+      const details = container.closest('details');
+      details.open = !details.open;
+    }
+    
+    // Setup directory navigation behavior
+    function setupDirectoryNavigation() {
+      // Add click handlers to all summary elements to prevent default toggle behavior
+      const summaries = document.querySelectorAll('.directory > details > summary');
+      summaries.forEach(summary => {
+        summary.addEventListener('click', function(event) {
+          // Prevent default toggle behavior
+          event.preventDefault();
+        });
+      });
     }
     
     // Generate table of contents
@@ -158,27 +194,6 @@
         }
       });
     }
-
-
-// This script adds click handlers to all summary elements
-document.addEventListener('DOMContentLoaded', function() {
-  // Fix for directory summaries with links
-  const summaries = document.querySelectorAll('.directory > details > summary');
-  summaries.forEach(summary => {
-    summary.addEventListener('click', function(event) {
-      // If the click was on a link inside the summary, don't toggle
-      const linkClick = event.target.closest('a');
-      if (linkClick) {
-        // Let the link navigate as normal, but prevent toggling
-        event.preventDefault();
-        event.stopPropagation();
-        window.location.href = linkClick.href;
-      }
-    });
-  });
-});
-
-
     
     // Restore theme from localStorage
     const savedTheme = localStorage.getItem('theme');
@@ -186,4 +201,4 @@ document.addEventListener('DOMContentLoaded', function() {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.getElementById('code-style').href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css';
     }
-    </script>
+</script>
