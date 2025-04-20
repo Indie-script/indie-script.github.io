@@ -510,6 +510,8 @@
       }
     }
   
+
+
   /* Section headers in file tree */
 .section-header {
   font-weight: bold;
@@ -554,7 +556,159 @@ details[open] > summary .toggle-btn {
 }
   
   
-  
+/* GitHub-style file tree */
+.file-tree {
+  background-color: var(--nav-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.file-tree ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.file-tree li {
+  margin: 0;
+  padding: 0;
+}
+
+.file-tree > ul > li {
+  margin: 0 8px;
+}
+
+.file-tree a {
+  display: block;
+  padding: 4px 8px;
+  text-decoration: none;
+  color: var(--text-color);
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree a:hover {
+  background-color: var(--nav-hover);
+  text-decoration: none;
+}
+
+.file-tree a.active {
+  background-color: var(--active-item);
+  font-weight: 600;
+}
+
+/* Directory styling */
+.directory > details > summary {
+  padding: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.directory > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.directory-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.directory-container:hover {
+  background-color: var(--nav-hover);
+}
+
+.directory-link {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.directory-link:hover {
+  text-decoration: none;
+  color: var(--link-color);
+}
+
+.directory-item {
+  position: relative;
+  padding-left: 20px;
+  font-weight: 500;
+}
+
+.directory-item::before {
+  content: "📁";
+  position: absolute;
+  left: 0;
+}
+
+details[open] .directory-item::before {
+  content: "📂";
+}
+
+/* File item styling */
+.file-item {
+  padding-left: 0;
+  position: relative;
+}
+
+.file-item a {
+  padding-left: 28px;
+  position: relative;
+}
+
+.file-item a::before {
+  content: "📄";
+  position: absolute;
+  left: 8px;
+}
+
+/* Subdirectory indentation */
+.sub-directory {
+  margin-left: 12px !important;
+}
+
+.sub-directory .directory-item {
+  font-weight: 500;
+}
+
+/* Toggle button styling */
+.toggle-btn {
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+details[open] > summary .toggle-btn {
+  transform: rotate(180deg);
+}
+
+.directory-container:hover .toggle-btn {
+  opacity: 1;
+}
+
+/* Animations */
+details[open] > summary ~ * {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}  
   
   
   

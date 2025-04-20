@@ -6,31 +6,32 @@
         <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
       </li>
       
-      <!-- First, collect all directories -->
+      <!-- Build nested directory structure -->
       {% assign all_pages = site.pages | sort: "path" %}
-      {% assign directories = "" | split: "" %}
+      {% assign root_directories = "" | split: "" %}
       
+      <!-- First find all top-level directories -->
       {% for page_item in all_pages %}
-        {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+        {% unless page_item.path contains '_' or page_item.name == '404.html' or page_item.name == 'feed.xml' %}
           {% assign path_parts = page_item.path | split: '/' %}
           {% if path_parts.size > 1 %}
-            {% assign dir = path_parts | pop | join: '/' %}
-            {% unless directories contains dir %}
-              {% assign directories = directories | push: dir %}
+            {% assign root_dir = path_parts[0] %}
+            {% unless root_directories contains root_dir %}
+              {% assign root_directories = root_directories | push: root_dir %}
             {% endunless %}
           {% endif %}
         {% endunless %}
       {% endfor %}
       
-      <!-- Process root level files first -->
-      <li class="section-header">Pages</li>
+      <!-- Process root level pages first (exclude index/README) -->
       {% for page_item in all_pages %}
         {% assign path_parts = page_item.path | split: "/" %}
-        {% if path_parts.size == 1 %}
-          {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+        {% assign filename = page_item.path | split: "/" | last %}
+        {% if path_parts.size == 1 and filename != "index.md" and filename != "README.md" and filename != "index.html" %}
+          {% unless page_item.path contains '_' or page_item.name == '404.html' or page_item.name == 'feed.xml' %}
             <li class="file-item">
               <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-                {{ page_item.path | replace: '.md', '' | replace: '.html', '' }}
+                {{ page_item.title | default: page_item.path | replace: '.md', '' | replace: '.html', '' }}
               </a>
             </li>
           {% endunless %}
@@ -38,43 +39,120 @@
       {% endfor %}
       
       <!-- Process directories -->
-      {% if directories.size > 0 %}
-        <li class="section-header">Directories</li>
-        {% for dir in directories %}
-          <li class="directory">
-            <details {% if page.path contains dir %}open{% endif %}>
-              <summary>
-                <div class="directory-container">
-                  <span class="directory-item">{{ dir }}</span>
-                  <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
-                </div>
-              </summary>
-              
-              <ul>
-                {% for page_item in all_pages %}
-                  {% if page_item.path contains dir %}
-                    {% assign dir_prefix = dir | append: '/' %}
-                    {% assign rel_path = page_item.path | remove_first: dir_prefix %}
-                    {% unless rel_path contains '/' or page_item.path contains '_' %}
-                      <li class="file-item">
-                        <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-                          {{ rel_path | replace: '.md', '' | replace: '.html', '' }}
-                        </a>
-                      </li>
+      {% for root_dir in root_directories %}
+        {% assign is_current_dir = false %}
+        {% if page.path contains root_dir %}
+          {% assign is_current_dir = true %}
+        {% endif %}
+        
+        <!-- Find index/readme for this directory -->
+        {% assign dir_index = nil %}
+        {% for p in all_pages %}
+          {% if p.path == root_dir | append: '/index.md' or p.path == root_dir | append: '/index.html' or p.path == root_dir | append: '/README.md' %}
+            {% assign dir_index = p %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+        
+        <li class="directory">
+          <details {% if is_current_dir %}open{% endif %}>
+            <summary>
+              <div class="directory-container">
+                {% if dir_index %}
+                  <a href="{{ site.baseurl }}{{ dir_index.url }}" class="directory-link {% if page.url == dir_index.url %}active{% endif %}">
+                    <span class="directory-item">{{ root_dir }}</span>
+                  </a>
+                {% else %}
+                  <span class="directory-item">{{ root_dir }}</span>
+                {% endif %}
+                <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+              </div>
+            </summary>
+            
+            <ul>
+              <!-- Get subdirectories for this root directory -->
+              {% assign subdirectories = "" | split: "" %}
+              {% for page_item in all_pages %}
+                {% if page_item.path contains root_dir %}
+                  {% assign rel_path = page_item.path | remove_first: root_dir | remove_first: '/' %}
+                  {% if rel_path contains '/' %}
+                    {% assign subdir = rel_path | split: '/' | first %}
+                    {% unless subdirectories contains subdir %}
+                      {% assign subdirectories = subdirectories | push: subdir %}
                     {% endunless %}
                   {% endif %}
+                {% endif %}
+              {% endfor %}
+              
+              <!-- Display files directly in this directory (excluding index/readme) -->
+              {% for page_item in all_pages %}
+                {% assign rel_path = page_item.path | remove_first: root_dir | remove_first: '/' %}
+                {% if page_item.path contains root_dir and rel_path != '' and rel_path != 'index.md' and rel_path != 'README.md' and rel_path != 'index.html' %}
+                  {% unless rel_path contains '/' %}
+                    <li class="file-item">
+                      <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                        {{ page_item.title | default: rel_path | replace: '.md', '' | replace: '.html', '' }}
+                      </a>
+                    </li>
+                  {% endunless %}
+                {% endif %}
+              {% endfor %}
+              
+              <!-- Process subdirectories -->
+              {% for subdir in subdirectories %}
+                {% assign full_subdir_path = root_dir | append: '/' | append: subdir %}
+                {% assign is_current_subdir = false %}
+                {% if page.path contains full_subdir_path %}
+                  {% assign is_current_subdir = true %}
+                {% endif %}
+                
+                <!-- Find index/readme for subdirectory -->
+                {% assign subdir_index = nil %}
+                {% for p in all_pages %}
+                  {% if p.path == full_subdir_path | append: '/index.md' or p.path == full_subdir_path | append: '/index.html' or p.path == full_subdir_path | append: '/README.md' %}
+                    {% assign subdir_index = p %}
+                    {% break %}
+                  {% endif %}
                 {% endfor %}
-              </ul>
-            </details>
-          </li>
-        {% endfor %}
-      {% endif %}
-      
-      <!-- Debug info - uncomment to help debugging -->
-      <!--
-      <li class="section-header">Debug Info</li>
-      <li><small>Total pages: {{ all_pages.size }}</small></li>
-      <li><small>Directories: {{ directories | join: ', ' }}</small></li>
-      -->
+                
+                <li class="directory sub-directory">
+                  <details {% if is_current_subdir %}open{% endif %}>
+                    <summary>
+                      <div class="directory-container">
+                        {% if subdir_index %}
+                          <a href="{{ site.baseurl }}{{ subdir_index.url }}" class="directory-link {% if page.url == subdir_index.url %}active{% endif %}">
+                            <span class="directory-item">{{ subdir }}</span>
+                          </a>
+                        {% else %}
+                          <span class="directory-item">{{ subdir }}</span>
+                        {% endif %}
+                        <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                      </div>
+                    </summary>
+                    
+                    <ul>
+                      <!-- Display files in this subdirectory (excluding index/readme) -->
+                      {% for page_item in all_pages %}
+                        {% if page_item.path contains full_subdir_path %}
+                          {% assign rel_subpath = page_item.path | remove_first: full_subdir_path | remove_first: '/' %}
+                          {% if rel_subpath != '' and rel_subpath != 'index.md' and rel_subpath != 'README.md' and rel_subpath != 'index.html' %}
+                            {% unless rel_subpath contains '/' %}
+                              <li class="file-item">
+                                <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                                  {{ page_item.title | default: rel_subpath | replace: '.md', '' | replace: '.html', '' }}
+                                </a>
+                              </li>
+                            {% endunless %}
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  </details>
+                </li>
+              {% endfor %}
+            </ul>
+          </details>
+        </li>
+      {% endfor %}
     </ul>
   </div>
