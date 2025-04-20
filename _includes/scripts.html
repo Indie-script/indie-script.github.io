@@ -1,0 +1,165 @@
+<script>
+    // Code syntax highlighting
+    document.addEventListener('DOMContentLoaded', (event) => {
+      // Highlight code blocks
+      document.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+      });
+      
+      // Add functionality for modal image viewing
+      const images = document.querySelectorAll('.markdown-body img');
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      const closeBtn = document.querySelector('.close');
+      
+      images.forEach(img => {
+        img.onclick = function() {
+          modal.style.display = "flex";
+          modalImg.src = this.src;
+        }
+      });
+      
+      // Close modal when clicking the X
+      closeBtn.onclick = function() {
+        modal.style.display = "none";
+      }
+      
+      // Close modal when clicking outside the image
+      window.onclick = function(event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      }
+      
+      // Generate table of contents
+      generateTableOfContents();
+      
+      // Setup search functionality
+      setupSearch();
+    });
+    
+    // Toggle theme function
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const codeStyle = document.getElementById('code-style');
+      
+      if (currentTheme === 'dark') {
+        document.documentElement.removeAttribute('data-theme');
+        codeStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        codeStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css';
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+    
+    // Toggle sidebar (for mobile)
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.querySelector('.overlay');
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+    
+    // Handle toggle click separately from directory link
+    function toggleDetailsClick(element) {
+      const details = element.closest('details');
+      details.open = !details.open;
+    }
+    
+    // Generate table of contents
+    function generateTableOfContents() {
+      const tocContainer = document.getElementById('toc-container');
+      if (!tocContainer) return;
+      
+      const headers = document.querySelectorAll('.main-content h2, .main-content h3, .main-content h4, .main-content h5, .main-content h6');
+      if (headers.length === 0) return;
+      
+      const toc = document.createElement('ul');
+      
+      headers.forEach((header, index) => {
+        // Create ID for the header if it doesn't have one
+        if (!header.id) {
+          header.id = `heading-${index}`;
+        }
+        
+        const li = document.createElement('li');
+        li.className = `toc-${header.tagName.toLowerCase()}`;
+        
+        const a = document.createElement('a');
+        a.href = `#${header.id}`;
+        a.textContent = header.textContent;
+        
+        li.appendChild(a);
+        toc.appendChild(li);
+      });
+      
+      tocContainer.appendChild(toc);
+    }
+    
+    // Setup search functionality
+    function setupSearch() {
+      const searchInput = document.querySelector('.search-input');
+      const searchResults = document.querySelector('.search-results');
+      const allLinks = document.querySelectorAll('.file-tree a');
+      
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        
+        if (query.length < 2) {
+          searchResults.classList.remove('show');
+          return;
+        }
+        
+        // Clear previous results
+        searchResults.innerHTML = '';
+        
+        // Filter links that match the query
+        const matches = [];
+        allLinks.forEach(link => {
+          const text = link.textContent.toLowerCase();
+          if (text.includes(query)) {
+            matches.push({
+              text: link.textContent,
+              href: link.href
+            });
+          }
+        });
+        
+        // Display results
+        if (matches.length > 0) {
+          matches.forEach(match => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'search-result-item';
+            resultItem.textContent = match.text;
+            resultItem.addEventListener('click', () => {
+              window.location.href = match.href;
+            });
+            searchResults.appendChild(resultItem);
+          });
+          searchResults.classList.add('show');
+        } else {
+          const noResults = document.createElement('div');
+          noResults.className = 'search-result-item';
+          noResults.textContent = 'No matches found';
+          searchResults.appendChild(noResults);
+          searchResults.classList.add('show');
+        }
+      });
+      
+      // Hide search results when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+          searchResults.classList.remove('show');
+        }
+      });
+    }
+    
+    // Restore theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('code-style').href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css';
+    }
+    </script>
