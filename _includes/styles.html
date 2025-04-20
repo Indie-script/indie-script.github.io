@@ -1,3 +1,4 @@
+ <!-- _includes/styles.html -->
 <style>
     :root {
       --bg-color: #ffffff;
@@ -508,4 +509,54 @@
         display: block;
       }
     }
+  
+  /* Section headers in file tree */
+.section-header {
+  font-weight: bold;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  padding: 5px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--header-color);
+}
+
+/* Improve file items display */
+.file-item {
+  margin: 3px 0;
+  position: relative;
+}
+
+/* Ensure directory listings look good */
+.directory > details > summary {
+  padding: 5px 0;
+}
+
+/* Path display formatting */
+.file-path {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+/* Hover state for better UX */
+.file-tree a:hover .file-path {
+  opacity: 1;
+}
+
+/* Animation for opening/closing directories */
+details[open] > summary .toggle-btn {
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+}
+
+.toggle-btn {
+  transition: transform 0.3s ease;
+}
+  
+  
+  
+  
+  
+  
+  
   </style>
