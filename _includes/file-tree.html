@@ -6,58 +6,75 @@
         <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
       </li>
       
-      <!-- Show all pages sorted -->
-      {% assign sorted_pages = site.pages | sort: "path" %}
+      <!-- First, collect all directories -->
+      {% assign all_pages = site.pages | sort: "path" %}
+      {% assign directories = "" | split: "" %}
       
-      <!-- Files not in directories -->
-      {% for page_item in sorted_pages %}
-        {% assign parts = page_item.path | split: "/" %}
-        {% if parts.size == 1 %}
+      {% for page_item in all_pages %}
+        {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
+          {% assign path_parts = page_item.path | split: '/' %}
+          {% if path_parts.size > 1 %}
+            {% assign dir = path_parts | pop | join: '/' %}
+            {% unless directories contains dir %}
+              {% assign directories = directories | push: dir %}
+            {% endunless %}
+          {% endif %}
+        {% endunless %}
+      {% endfor %}
+      
+      <!-- Process root level files first -->
+      <li class="section-header">Pages</li>
+      {% for page_item in all_pages %}
+        {% assign path_parts = page_item.path | split: "/" %}
+        {% if path_parts.size == 1 %}
           {% unless page_item.path contains '_' or page_item.path == '404.html' or page_item.path == 'feed.xml' %}
             <li class="file-item">
               <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-                {{ page_item.title | default: page_item.path | split: "." | first }}
+                {{ page_item.path | replace: '.md', '' | replace: '.html', '' }}
               </a>
             </li>
           {% endunless %}
         {% endif %}
       {% endfor %}
       
-      <!-- Extract all top-level directories -->
-      {% assign top_dirs = "" | split: "" %}
-      {% for page_item in sorted_pages %}
-        {% assign parts = page_item.path | split: "/" %}
-        {% if parts.size > 1 %}
-          {% assign dir = parts[0] %}
-          {% unless top_dirs contains dir or dir contains '_' %}
-            {% assign top_dirs = top_dirs | push: dir %}
-          {% endunless %}
-        {% endif %}
-      {% endfor %}
-      
-      <!-- Display directories and their files -->
-      {% for dir in top_dirs %}
-        <li class="directory">
-          <details>
-            <summary>
-              <span class="directory-item">{{ dir }}</span>
-            </summary>
-            <ul>
-              {% for page_item in sorted_pages %}
-                {% if page_item.path contains dir %}
-                  {% assign parts = page_item.path | split: "/" %}
-                  {% if parts.size == 2 %}
-                    <li class="file-item">
-                      <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-                        {{ page_item.title | default: parts[1] | split: "." | first }}
-                      </a>
-                    </li>
+      <!-- Process directories -->
+      {% if directories.size > 0 %}
+        <li class="section-header">Directories</li>
+        {% for dir in directories %}
+          <li class="directory">
+            <details {% if page.path contains dir %}open{% endif %}>
+              <summary>
+                <div class="directory-container">
+                  <span class="directory-item">{{ dir }}</span>
+                  <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                </div>
+              </summary>
+              
+              <ul>
+                {% for page_item in all_pages %}
+                  {% if page_item.path contains dir %}
+                    {% assign dir_prefix = dir | append: '/' %}
+                    {% assign rel_path = page_item.path | remove_first: dir_prefix %}
+                    {% unless rel_path contains '/' or page_item.path contains '_' %}
+                      <li class="file-item">
+                        <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
+                          {{ rel_path | replace: '.md', '' | replace: '.html', '' }}
+                        </a>
+                      </li>
+                    {% endunless %}
                   {% endif %}
-                {% endif %}
-              {% endfor %}
-            </ul>
-          </details>
-        </li>
-      {% endfor %}
+                {% endfor %}
+              </ul>
+            </details>
+          </li>
+        {% endfor %}
+      {% endif %}
+      
+      <!-- Debug info - uncomment to help debugging -->
+      <!--
+      <li class="section-header">Debug Info</li>
+      <li><small>Total pages: {{ all_pages.size }}</small></li>
+      <li><small>Directories: {{ directories | join: ', ' }}</small></li>
+      -->
     </ul>
   </div>
