@@ -16,7 +16,6 @@ Logic changes:
     {% assign indicators = all_pages | where_exp: "item", "item.path contains 'indicators/' and item.path contains 'README'" %}
     {% assign docs = all_pages | where_exp: "item", "item.path contains 'docs/' and item.path != 'docs/README.md'" %}
 
-    {%- comment -%} Detect pages at root (like index.html) {%- endcomment -%}
     {% assign root_pages = all_pages | where_exp: "item", "item.path != '404.html' and item.path != 'feed.xml' and item.path contains '/' == false and item.path contains '_' == false" %}
     {% if root_pages.size > 0 %}
     <li class="section-header">Pages</li>
@@ -32,11 +31,10 @@ Logic changes:
     {% if indicators.size > 0 %}
     <li class="section-header">Indicators</li>
     {% for item in indicators %}
-      {% assign name = item.path | split: '/' | last | replace: '.md', '' | replace: 'README', item.path | split: '/' | slice: -2, 1 %}
-      {% assign display_name = item.path | split: '/' | slice: -2, 1 | first | replace: '-', ' ' %}
+      {% assign folder_name = item.path | split: '/' | slice: -2, 1 | first %}
       <li class="file-item">
         <a href="{{ site.baseurl }}{{ item.url }}" class="{% if page.url == item.url %}active{% endif %}">
-          {{ display_name | replace: '-', ' ' }}
+          {{ folder_name | replace: '-', ' ' }}
         </a>
       </li>
     {% endfor %}
