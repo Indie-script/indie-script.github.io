@@ -3,6 +3,7 @@ Improved _includes/file-tree.html
 Compatible with GitHub Pages safe Liquid syntax
 Filters only .md pages, excludes .html/.scss/other files
 Handles indicator folders with multiple files correctly
+Folder names are clickable, toggle is done via arrow only
 -->
 
 <div class="file-tree">
@@ -59,6 +60,7 @@ Handles indicator folders with multiple files correctly
       <li class="section-header">Indicators</li>
       {% for folder in indicators_dirs %}
         {% assign folder_pages = '' | split: '' %}
+        {% assign readme_page = '' %}
         {% for entry in indicators_flat %}
           {% assign entry_folder = entry | split: '|' | first %}
           {% assign entry_file = entry | split: '|' | last %}
@@ -66,40 +68,37 @@ Handles indicator folders with multiple files correctly
             {% assign full_path = 'indicators/' | append: folder | append: '/' | append: entry_file %}
             {% for page in all_pages %}
               {% if page.path == full_path %}
-                {% assign folder_pages = folder_pages | push: page %}
+                {% if entry_file == 'README.md' %}
+                  {% assign readme_page = page %}
+                {% else %}
+                  {% assign folder_pages = folder_pages | push: page %}
+                {% endif %}
               {% endif %}
             {% endfor %}
           {% endif %}
         {% endfor %}
   
-        {% if folder_pages.size == 1 %}
-          {% assign single = folder_pages[0] %}
-          <li class="file-item">
-            <a href="{{ site.baseurl }}{{ single.url }}" class="{% if page.url == single.url %}active{% endif %}">
-              {{ folder | replace: '-', ' ' }}
-            </a>
-          </li>
-        {% else %}
-          <li class="directory">
-            <details {% if page.path contains folder %}open{% endif %}>
-              <summary>
-                <div class="directory-container">
-                  <span class="directory-item">{{ folder }}</span>
-                  <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
-                </div>
-              </summary>
-              <ul>
-                {% for file in folder_pages %}
-                <li class="file-item">
-                  <a href="{{ site.baseurl }}{{ file.url }}" class="{% if page.url == file.url %}active{% endif %}">
-                    {{ file.path | split: '/' | last | replace: '.md', '' }}
-                  </a>
-                </li>
-                {% endfor %}
-              </ul>
-            </details>
-          </li>
-        {% endif %}
+        <li class="directory">
+          <details {% if page.path contains folder %}open{% endif %}>
+            <summary>
+              <div class="directory-container">
+                <a class="directory-link" href="{{ site.baseurl }}{{ readme_page.url }}">{{ folder }}</a>
+                <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+              </div>
+            </summary>
+            {% if folder_pages.size > 0 %}
+            <ul>
+              {% for file in folder_pages %}
+              <li class="file-item">
+                <a href="{{ site.baseurl }}{{ file.url }}" class="{% if page.url == file.url %}active{% endif %}">
+                  {{ file.path | split: '/' | last | replace: '.md', '' }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </details>
+        </li>
       {% endfor %}
       {% endif %}
   
@@ -109,16 +108,11 @@ Handles indicator folders with multiple files correctly
         <details {% if page.path contains 'docs/' %}open{% endif %}>
           <summary>
             <div class="directory-container">
-              <span class="directory-item">docs</span>
+              <a class="directory-link" href="{{ site.baseurl }}{{ doc_readme.url }}">docs</a>
               <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
             </div>
           </summary>
           <ul>
-            {% if doc_readme %}
-            <li class="file-item">
-              <a href="{{ site.baseurl }}{{ doc_readme.url }}" class="{% if page.url == doc_readme.url %}active{% endif %}">README</a>
-            </li>
-            {% endif %}
             {% for page_item in docs %}
             <li class="file-item">
               <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
