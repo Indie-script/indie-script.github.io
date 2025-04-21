@@ -712,5 +712,43 @@ details[open] > summary ~ * {
   
   
   
-  
+ /* GitHub-style hierarchy line */
+.sub-directory {
+  position: relative;
+  margin-left: 16px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Compact font */
+.file-tree {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Sidebar resizing like GitHub */
+.sidebar {
+  resize: horizontal;
+  overflow: auto;
+  min-width: 200px;
+  max-width: 600px;
+}
+
+/* Consistent directory arrow spacing */
+.directory-container {
+  gap: 6px;
+}
+
+.toggle-btn {
+  width: 14px;
+  display: inline-block;
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+details[open] > summary .toggle-btn {
+  transform: rotate(90deg);
+  opacity: 1;
+} 
   </style>
