@@ -12,11 +12,11 @@ Logic changes:
       <a href="{{ site.baseurl }}/" class="{% if page.url == '/' %}active{% endif %}">Home</a>
     </li>
 
-    {% assign all_pages = site.pages | sort: "path" %}
-    {% assign indicators = all_pages | where_exp: "item", "item.path contains 'indicators/' and item.path contains 'README'" %}
-    {% assign docs = all_pages | where_exp: "item", "item.path contains 'docs/' and item.path != 'docs/README.md'" %}
+    {% assign all_pages = site.pages | sort: 'path' %}
+    {% assign indicators = all_pages | where_exp: 'item', "item.path contains 'indicators/' and item.path contains 'README'" %}
+    {% assign docs = all_pages | where_exp: 'item', "item.path contains 'docs/' and item.path != 'docs/README.md'" %}
 
-    {% assign root_pages = all_pages | where_exp: "item", "item.path != '404.html' and item.path != 'feed.xml' and item.path contains '/' == false and item.path contains '_' == false" %}
+    {% assign root_pages = all_pages | where_exp: 'item', "item.path != '404.html' and item.path != 'feed.xml' and item.path contains '/' == false and item.path contains '_' == false" %}
     {% if root_pages.size > 0 %}
     <li class="section-header">Pages</li>
     {% for page_item in root_pages %}
@@ -40,7 +40,7 @@ Logic changes:
     {% endfor %}
     {% endif %}
 
-    {% assign doc_readme = all_pages | where: "path", "docs/README.md" | first %}
+    {% assign doc_readme = all_pages | where: 'path', 'docs/README.md' | first %}
     {% if doc_readme or docs.size > 0 %}
     <li class="section-header">Docs</li>
     <li class="directory">
