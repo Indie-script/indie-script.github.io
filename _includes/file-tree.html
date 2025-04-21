@@ -13,7 +13,6 @@ Handles indicator folders with multiple files
   
       {% assign all_pages = site.pages | sort: 'path' %}
   
-      {% assign indicators_map = '' | split: '' %}
       {% assign indicators_flat = '' | split: '' %}
       {% assign indicators_dirs = '' | split: '' %}
       {% assign docs = '' | split: '' %}
@@ -27,9 +26,9 @@ Handles indicator folders with multiple files
           {% if p contains 'indicators/' %}
             {% assign parts = p | split: '/' %}
             {% assign folder = parts[1] %}
-            {% assign count = indicators_map[folder] | default: 0 | plus: 1 %}
-            {% assign indicators_map = indicators_map | merge: {{ folder | jsonify }}: count %}
-            {% assign indicators_dirs = indicators_dirs | push: folder %}
+            {% unless indicators_dirs contains folder %}
+              {% assign indicators_dirs = indicators_dirs | push: folder %}
+            {% endunless %}
             {% assign indicators_flat = indicators_flat | push: item %}
           {% elsif p contains 'docs/' %}
             {% if p == 'docs/README.md' %}
@@ -42,8 +41,6 @@ Handles indicator folders with multiple files
           {% endif %}
         {% endunless %}
       {% endfor %}
-  
-      {% assign indicators_dirs = indicators_dirs | uniq %}
   
       {% if root_pages.size > 0 %}
       <li class="section-header">Pages</li>
@@ -61,7 +58,7 @@ Handles indicator folders with multiple files
       {% for folder in indicators_dirs %}
         {% assign folder_pages = '' | split: '' %}
         {% for item in indicators_flat %}
-          {% if item.path contains 'indicators/' | append: folder | append: '/' %}
+          {% if item.path contains 'indicators/' and item.path contains folder %}
             {% assign folder_pages = folder_pages | push: item %}
           {% endif %}
         {% endfor %}
