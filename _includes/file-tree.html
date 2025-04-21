@@ -1,6 +1,7 @@
 <!--
 Improved _includes/file-tree.html
 Compatible with GitHub Pages safe Liquid syntax
+Filters only .md pages, excludes .html/.scss/other files
 -->
 
 <div class="file-tree">
@@ -11,14 +12,15 @@ Compatible with GitHub Pages safe Liquid syntax
   
       {% assign all_pages = site.pages | sort: 'path' %}
   
-      {%- assign indicators = '' | split: '' -%}
-      {%- assign docs = '' | split: '' -%}
-      {%- assign root_pages = '' | split: '' -%}
-      {%- assign doc_readme = '' -%}
+      {% assign indicators = '' | split: '' %}
+      {% assign docs = '' | split: '' %}
+      {% assign root_pages = '' | split: '' %}
+      {% assign doc_readme = '' %}
   
       {% for item in all_pages %}
         {% assign p = item.path %}
-        {% unless p contains '_' or p == '404.html' or p == 'feed.xml' %}
+        {% assign ext = p | split: '.' | last %}
+        {% unless p contains '_' or p == '404.html' or p == 'feed.xml' or ext != 'md' %}
           {% if p contains 'indicators/' and p contains 'README' %}
             {% assign indicators = indicators | push: item %}
           {% elsif p contains 'docs/' %}
@@ -38,7 +40,7 @@ Compatible with GitHub Pages safe Liquid syntax
       {% for page_item in root_pages %}
         <li class="file-item">
           <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-            {{ page_item.path | replace: '.md', '' | replace: '.html', '' }}
+            {{ page_item.path | replace: '.md', '' }}
           </a>
         </li>
       {% endfor %}
@@ -76,7 +78,7 @@ Compatible with GitHub Pages safe Liquid syntax
             {% for page_item in docs %}
             <li class="file-item">
               <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
-                {{ page_item.path | split: '/' | last | replace: '.md', '' | replace: '.html', '' }}
+                {{ page_item.path | split: '/' | last | replace: '.md', '' }}
               </a>
             </li>
             {% endfor %}
