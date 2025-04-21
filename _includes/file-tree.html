@@ -1,9 +1,6 @@
 <!--
 Improved _includes/file-tree.html
-Logic changes:
-1. Extracts key sections like "Docs" and "Indicators" from directory structure.
-2. Hides README/index.md if they are the only readable files.
-3. Flattens indicator folders to act like files.
+Compatible with GitHub Pages safe Liquid syntax
 -->
 
 <div class="file-tree">
@@ -13,10 +10,29 @@ Logic changes:
       </li>
   
       {% assign all_pages = site.pages | sort: 'path' %}
-      {% assign indicators = all_pages | where_exp: 'item', 'item.path contains "indicators/" and item.path contains "README"' %}
-      {% assign docs = all_pages | where_exp: 'item', 'item.path contains "docs/" and item.path != "docs/README.md"' %}
   
-      {% assign root_pages = all_pages | where_exp: 'item', 'item.path != "404.html" and item.path != "feed.xml" and item.path contains "/" == false and item.path contains "_" == false' %}
+      {%- assign indicators = '' | split: '' -%}
+      {%- assign docs = '' | split: '' -%}
+      {%- assign root_pages = '' | split: '' -%}
+      {%- assign doc_readme = '' -%}
+  
+      {% for item in all_pages %}
+        {% assign p = item.path %}
+        {% unless p contains '_' or p == '404.html' or p == 'feed.xml' %}
+          {% if p contains 'indicators/' and p contains 'README' %}
+            {% assign indicators = indicators | push: item %}
+          {% elsif p contains 'docs/' %}
+            {% if p == 'docs/README.md' %}
+              {% assign doc_readme = item %}
+            {% else %}
+              {% assign docs = docs | push: item %}
+            {% endif %}
+          {% elsif p contains '/' == false %}
+            {% assign root_pages = root_pages | push: item %}
+          {% endif %}
+        {% endunless %}
+      {% endfor %}
+  
       {% if root_pages.size > 0 %}
       <li class="section-header">Pages</li>
       {% for page_item in root_pages %}
@@ -31,7 +47,8 @@ Logic changes:
       {% if indicators.size > 0 %}
       <li class="section-header">Indicators</li>
       {% for item in indicators %}
-        {% assign folder_name = item.path | split: '/' | slice: -2, 1 | first %}
+        {% assign parts = item.path | split: '/' %}
+        {% assign folder_name = parts[1] %}
         <li class="file-item">
           <a href="{{ site.baseurl }}{{ item.url }}" class="{% if page.url == item.url %}active{% endif %}">
             {{ folder_name | replace: '-', ' ' }}
@@ -40,7 +57,6 @@ Logic changes:
       {% endfor %}
       {% endif %}
   
-      {% assign doc_readme = all_pages | where: 'path', 'docs/README.md' | first %}
       {% if doc_readme or docs.size > 0 %}
       <li class="section-header">Docs</li>
       <li class="directory">
@@ -54,9 +70,7 @@ Logic changes:
           <ul>
             {% if doc_readme %}
             <li class="file-item">
-              <a href="{{ site.baseurl }}{{ doc_readme.url }}" class="{% if page.url == doc_readme.url %}active{% endif %}">
-                README
-              </a>
+              <a href="{{ site.baseurl }}{{ doc_readme.url }}" class="{% if page.url == doc_readme.url %}active{% endif %}">README</a>
             </li>
             {% endif %}
             {% for page_item in docs %}
