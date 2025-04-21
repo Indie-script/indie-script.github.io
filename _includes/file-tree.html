@@ -2,6 +2,7 @@
 Improved _includes/file-tree.html
 Compatible with GitHub Pages safe Liquid syntax
 Filters only .md pages, excludes .html/.scss/other files
+Handles indicator folders with multiple files
 -->
 
 <div class="file-tree">
@@ -12,7 +13,9 @@ Filters only .md pages, excludes .html/.scss/other files
   
       {% assign all_pages = site.pages | sort: 'path' %}
   
-      {% assign indicators = '' | split: '' %}
+      {% assign indicators_map = '' | split: '' %}
+      {% assign indicators_flat = '' | split: '' %}
+      {% assign indicators_dirs = '' | split: '' %}
       {% assign docs = '' | split: '' %}
       {% assign root_pages = '' | split: '' %}
       {% assign doc_readme = '' %}
@@ -21,8 +24,13 @@ Filters only .md pages, excludes .html/.scss/other files
         {% assign p = item.path %}
         {% assign ext = p | split: '.' | last %}
         {% unless p contains '_' or p == '404.html' or p == 'feed.xml' or ext != 'md' %}
-          {% if p contains 'indicators/' and p contains 'README' %}
-            {% assign indicators = indicators | push: item %}
+          {% if p contains 'indicators/' %}
+            {% assign parts = p | split: '/' %}
+            {% assign folder = parts[1] %}
+            {% assign count = indicators_map[folder] | default: 0 | plus: 1 %}
+            {% assign indicators_map = indicators_map | merge: {{ folder | jsonify }}: count %}
+            {% assign indicators_dirs = indicators_dirs | push: folder %}
+            {% assign indicators_flat = indicators_flat | push: item %}
           {% elsif p contains 'docs/' %}
             {% if p == 'docs/README.md' %}
               {% assign doc_readme = item %}
@@ -35,6 +43,8 @@ Filters only .md pages, excludes .html/.scss/other files
         {% endunless %}
       {% endfor %}
   
+      {% assign indicators_dirs = indicators_dirs | uniq %}
+  
       {% if root_pages.size > 0 %}
       <li class="section-header">Pages</li>
       {% for page_item in root_pages %}
@@ -46,16 +56,44 @@ Filters only .md pages, excludes .html/.scss/other files
       {% endfor %}
       {% endif %}
   
-      {% if indicators.size > 0 %}
+      {% if indicators_dirs.size > 0 %}
       <li class="section-header">Indicators</li>
-      {% for item in indicators %}
-        {% assign parts = item.path | split: '/' %}
-        {% assign folder_name = parts[1] %}
-        <li class="file-item">
-          <a href="{{ site.baseurl }}{{ item.url }}" class="{% if page.url == item.url %}active{% endif %}">
-            {{ folder_name | replace: '-', ' ' }}
-          </a>
-        </li>
+      {% for folder in indicators_dirs %}
+        {% assign folder_pages = '' | split: '' %}
+        {% for item in indicators_flat %}
+          {% if item.path contains 'indicators/' | append: folder | append: '/' %}
+            {% assign folder_pages = folder_pages | push: item %}
+          {% endif %}
+        {% endfor %}
+  
+        {% if folder_pages.size == 1 %}
+          {% assign single = folder_pages[0] %}
+          <li class="file-item">
+            <a href="{{ site.baseurl }}{{ single.url }}" class="{% if page.url == single.url %}active{% endif %}">
+              {{ folder | replace: '-', ' ' }}
+            </a>
+          </li>
+        {% else %}
+          <li class="directory">
+            <details {% if page.path contains folder %}open{% endif %}>
+              <summary>
+                <div class="directory-container">
+                  <span class="directory-item">{{ folder }}</span>
+                  <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
+                </div>
+              </summary>
+              <ul>
+                {% for file in folder_pages %}
+                <li class="file-item">
+                  <a href="{{ site.baseurl }}{{ file.url }}" class="{% if page.url == file.url %}active{% endif %}">
+                    {{ file.path | split: '/' | last | replace: '.md', '' }}
+                  </a>
+                </li>
+                {% endfor %}
+              </ul>
+            </details>
+          </li>
+        {% endif %}
       {% endfor %}
       {% endif %}
   
@@ -89,4 +127,3 @@ Filters only .md pages, excludes .html/.scss/other files
   
     </ul>
   </div>
-  
