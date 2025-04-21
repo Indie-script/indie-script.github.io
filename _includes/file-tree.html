@@ -2,7 +2,7 @@
 Improved _includes/file-tree.html
 Compatible with GitHub Pages safe Liquid syntax
 Filters only .md pages, excludes .html/.scss/other files
-Handles indicator folders with multiple files
+Handles indicator folders with multiple files correctly
 -->
 
 <div class="file-tree">
@@ -26,10 +26,12 @@ Handles indicator folders with multiple files
           {% if p contains 'indicators/' %}
             {% assign parts = p | split: '/' %}
             {% assign folder = parts[1] %}
+            {% assign filename = parts | last %}
             {% unless indicators_dirs contains folder %}
               {% assign indicators_dirs = indicators_dirs | push: folder %}
             {% endunless %}
-            {% assign indicators_flat = indicators_flat | push: item %}
+            {% assign item_with_folder = folder | append: '|' | append: filename %}
+            {% assign indicators_flat = indicators_flat | push: item_with_folder %}
           {% elsif p contains 'docs/' %}
             {% if p == 'docs/README.md' %}
               {% assign doc_readme = item %}
@@ -57,9 +59,16 @@ Handles indicator folders with multiple files
       <li class="section-header">Indicators</li>
       {% for folder in indicators_dirs %}
         {% assign folder_pages = '' | split: '' %}
-        {% for item in indicators_flat %}
-          {% if item.path contains 'indicators/' and item.path contains folder %}
-            {% assign folder_pages = folder_pages | push: item %}
+        {% for entry in indicators_flat %}
+          {% assign entry_folder = entry | split: '|' | first %}
+          {% assign entry_file = entry | split: '|' | last %}
+          {% if entry_folder == folder %}
+            {% assign full_path = 'indicators/' | append: folder | append: '/' | append: entry_file %}
+            {% for page in all_pages %}
+              {% if page.path == full_path %}
+                {% assign folder_pages = folder_pages | push: page %}
+              {% endif %}
+            {% endfor %}
           {% endif %}
         {% endfor %}
   
@@ -124,3 +133,4 @@ Handles indicator folders with multiple files
   
     </ul>
   </div>
+  
