@@ -17,7 +17,7 @@ Logic changes:
     {% assign docs = all_pages | where_exp: 'item', "item.path contains 'docs/' and item.path != 'docs/README.md'" %}
 
     {% assign root_pages = all_pages | where_exp: 'item', "item.path != '404.html' and item.path != 'feed.xml' and item.path contains '/' == false and item.path contains '_' == false" %}
-    {% if root_pages.size > 0 %}
+    {% if root_pages.size > 0 %}1
     <li class="section-header">Pages</li>
     {% for page_item in root_pages %}
       <li class="file-item">
