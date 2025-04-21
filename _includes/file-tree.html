@@ -1,9 +1,7 @@
 <!--
 Improved _includes/file-tree.html
 Compatible with GitHub Pages safe Liquid syntax
-Filters only .md pages, excludes .html/.scss/other files
-Handles indicator folders with multiple files correctly
-Folder names are clickable, toggle is done via arrow only
+GitHub-style sidebar: toggle arrow on left, only shown if subfiles exist
 -->
 
 <div class="file-tree">
@@ -13,7 +11,6 @@ Folder names are clickable, toggle is done via arrow only
       </li>
   
       {% assign all_pages = site.pages | sort: 'path' %}
-  
       {% assign indicators_flat = '' | split: '' %}
       {% assign indicators_dirs = '' | split: '' %}
       {% assign docs = '' | split: '' %}
@@ -79,15 +76,19 @@ Folder names are clickable, toggle is done via arrow only
         {% endfor %}
   
         <li class="directory">
-          <details {% if page.path contains folder %}open{% endif %}>
+          <details class="directory-wrapper" {% if page.path contains folder %}open{% endif %}>
             <summary>
               <div class="directory-container">
+                {% if folder_pages.size > 0 %}
+                <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▶</span>
+                {% else %}
+                <span class="toggle-btn empty"></span>
+                {% endif %}
                 <a class="directory-link" href="{{ site.baseurl }}{{ readme_page.url }}">{{ folder }}</a>
-                <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
               </div>
             </summary>
             {% if folder_pages.size > 0 %}
-            <ul>
+            <ul class="sub-directory">
               {% for file in folder_pages %}
               <li class="file-item">
                 <a href="{{ site.baseurl }}{{ file.url }}" class="{% if page.url == file.url %}active{% endif %}">
@@ -105,14 +106,18 @@ Folder names are clickable, toggle is done via arrow only
       {% if doc_readme or docs.size > 0 %}
       <li class="section-header">Docs</li>
       <li class="directory">
-        <details {% if page.path contains 'docs/' %}open{% endif %}>
+        <details class="directory-wrapper" {% if page.path contains 'docs/' %}open{% endif %}>
           <summary>
             <div class="directory-container">
+              {% if docs.size > 0 %}
+              <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▶</span>
+              {% else %}
+              <span class="toggle-btn empty"></span>
+              {% endif %}
               <a class="directory-link" href="{{ site.baseurl }}{{ doc_readme.url }}">docs</a>
-              <span class="toggle-btn" onclick="event.preventDefault(); toggleDetailsClick(this)">▼</span>
             </div>
           </summary>
-          <ul>
+          <ul class="sub-directory">
             {% for page_item in docs %}
             <li class="file-item">
               <a href="{{ site.baseurl }}{{ page_item.url }}" class="{% if page.url == page_item.url %}active{% endif %}">
@@ -127,4 +132,3 @@ Folder names are clickable, toggle is done via arrow only
   
     </ul>
   </div>
-  
