@@ -751,4 +751,73 @@ details[open] > summary .toggle-btn {
   transform: rotate(90deg);
   opacity: 1;
 } 
+
+/* REMOVE ICONS from files/folders */
+.file-item a::before,
+.directory-item::before {
+  content: none !important;
+}
+
+/* Compact vertical spacing */
+.file-tree li {
+  margin: 0;
+  padding: 0;
+}
+
+.file-tree a {
+  padding: 3px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Indentation for nested items */
+.sub-directory {
+  margin-left: 12px !important;
+  padding-left: 6px;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Align toggle and folder label neatly */
+.directory-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Arrow spacing and style */
+.toggle-btn {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.6;
+  margin-right: 2px;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
+details[open] > summary .toggle-btn {
+  transform: rotate(90deg);
+  opacity: 1;
+}
+
+/* Sidebar spacing and resizing */
+.sidebar {
+  resize: horizontal;
+  overflow: auto;
+  min-width: 200px;
+  max-width: 600px;
+  font-size: 13px;
+}
+
+/* Summary spacing */
+summary {
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
   </style>
