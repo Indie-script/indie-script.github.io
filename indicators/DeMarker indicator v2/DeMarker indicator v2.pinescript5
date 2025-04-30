@@ -1,6 +1,12 @@
 //education purpose
 //@version=5
-indicator("DeMarker", overlay=false)
+//education purpose
+//© 2025 Pavel Medd (@pavelmedd)
+//Licensed under the MIT License. You may use, copy, modify, merge, publish, 
+//distribute, sublicense, and/or sell copies of the Software, subject to the 
+//conditions of the MIT license. Full license text: https://opensource.org/licenses/MIT
+
+indicator("DeMarker v2", overlay=false)
 
 per = input(13, title="Period")
 

@@ -1,9 +1,13 @@
 #education purpose
+# © 2025 Pavel Medd (@pavelmedd)
+# Licensed under the MIT License. You may use, copy, modify, merge, publish, 
+# distribute, sublicense, and/or sell copies of the Software, subject to the 
+# conditions of the MIT license. Full license text: https://opensource.org/licenses/MIT
 # indie:lang_version = 5
 from indie import indicator, param, plot, color, MutSeriesF
 from indie.algorithms import Sma
 
-@indicator("DeMarker")
+@indicator("DeMarker v2")
 @param.int("per", default=13, min=1, title="Period")
 @plot.line(color=color.WHITE, id='#plot_0')
 @plot.line(id='#plot_1')

@@ -39,7 +39,7 @@ Combine with RSI, MACD, or price action (support/resistance zones) for best resu
 
 ## Indie V5 source code
 
-```
+```python
 # indie:lang_version = 5
 # education purpose
 # © 2025 Pavel Medd (@pavelmedd)

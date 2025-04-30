@@ -3,7 +3,7 @@
 from indie import indicator, param, plot, color, Plot, MutSeriesF
 from indie.algorithms import Sma
 
-@indicator("DeMarker")
+@indicator("DeMarker v2")
 @param.int("per", default=13, min=1, title="Period")
 @plot(color=color.WHITE)
 def Main(self, per):
