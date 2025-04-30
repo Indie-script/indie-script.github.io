@@ -1,5 +1,10 @@
-#education purpose
 # indie:lang_version = 5
+# education purpose
+# © 2025 Pavel Medd (@pavelmedd)
+# Licensed under the MIT License. You may use, copy, modify, merge, publish, 
+# distribute, sublicense, and/or sell copies of the Software, subject to the 
+# conditions of the MIT license. Full license text: https://opensource.org/licenses/MIT
+
 from indie import indicator, plot, color, MutSeriesF
 from indie.algorithms import Sum
 
