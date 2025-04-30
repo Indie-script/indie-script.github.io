@@ -1,3 +1,98 @@
+# 📊 Comprehensive Indie Demo Indicator
+
+**Version**: Indie v5
+**Language**: Indie
+**Chart Type**: Non-overlay (separate pane)
+**Purpose**: Demonstrates multiple Indie language features including multi-timeframe analysis, dynamic markers, volatility alerts, and advanced plotting.
+**Author**: Pavel Medd
+
+***
+
+## 🔍 Overview
+
+This indicator is designed as a rich, educational showcase of the Indie scripting language. It mimics the structure and behavior of popular indicators like MACD and RSI, while extending functionality to higher-timeframe context evaluation and volatility detection.
+Whether you're learning Indie or building complex custom indicators, this example includes advanced concepts like:
+
+* Parameterized timeframes
+* Cross-over signal generation
+* ATR-based volatility columns
+* MACD-style line logic
+* Momentum histogram
+* Multi-pane marker annotations
+* Use of `Optional`, `MutSeriesF`, and conditional marker rendering
+
+***
+
+## 🧮 Indicator Logic
+
+### 1. **MACD-like Line**
+
+Calculates the difference between a fast EMA and a slow SMA on the current timeframe.
+
+```
+main_line = fast_ema - slow_sma
+signal_line = EMA of main_line (smoothing factor 9)
+```
+
+### 2. **Momentum Histogram**
+
+Plots the price difference between current and previous close with color indicating direction.
+
+### 3. **Volatility Columns**
+
+Based on ATR as a % of price. If volatility exceeds 5%, a red alert marker appears on the chart.
+
+### 4. **Cross-over Markers**
+
+Detects when price crosses the slow SMA:
+
+* Green “BUY” arrow when price crosses above
+* Red “SELL” arrow when price crosses below
+
+### 5. **Higher Timeframe Context**
+
+Uses a secondary context to compute RSI and SMA on a user-defined higher timeframe (e.g., 1D). If the price is above the higher-timeframe SMA, a green HTF marker with RSI value appears.
+
+***
+
+## ⚙️ Inputs
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `Fast Length` | int | Period for fast EMA |
+| `Slow Length` | int | Period for slow SMA |
+| `Volatility Multiplier` | float | Scales height of volatility columns |
+| `Show Higher Timeframe` | bool | Toggle visibility of HTF marker |
+| `Higher Timeframe` | TimeFrame | Target timeframe for HTF analysis (e.g., "1D") |
+
+***
+
+## 📈 Outputs
+
+| Output | Type | Description |
+| ------ | ---- | ----------- |
+| **Main Line** | Line | MACD-style line (EMA - SMA) |
+| **Signal Line** | Line | EMA of Main Line |
+| **Momentum** | Histogram | Price delta between candles |
+| **HTF Marker** | Marker | RSI-based marker from higher timeframe |
+| **Crossover Marker** | Marker | Shows BUY/SELL arrows |
+| **Volatility Alert** | Marker | Appears if ATR > 5% of close |
+| **Volatility Columns** | Columns | Visualizes ATR volatility scaled by multiplier |
+
+***
+
+## 📌 Additional Notes
+
+* `Optional[...]` is used for safe dynamic updates and conditional rendering.
+* `calc_on()` with `@sec_context` performs MTF computations cleanly.
+* Modular design and clear series separation make it ideal for educational use.
+
+## Indie Code
+
+[open source file](https://github.com/Indie-script/indie-script.github.io/blob/main/indicators/Compr%20Demo%20Indicator%20v1/Compr%20Demo%20Indicator%20v1.indie5)
+
+<br>
+```python
 # indie:lang_version = 5
 # Comprehensive Indie Demo Indicator
 # This indicator demonstrates multiple Indie language features with full explanatory comments
@@ -139,3 +234,4 @@ class Main(MainContext):
                 )
             )
         )
+```
