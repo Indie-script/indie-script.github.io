@@ -1,3 +1,158 @@
+# Dynamic Volume Profile Oscillator (DVPO) – Indie Implementation
+
+## Overview
+
+The **Dynamic Volume Profile Oscillator** transforms traditional volume analysis into an advanced oscillator that measures price deviation from a volume-weighted equilibrium. It adapts to changing market conditions by dynamically constructing a volume profile and identifying overbought/oversold conditions based on price-volume divergence.
+This indicator is designed for both discretionary traders and algorithmic strategists. It also serves as an educational tool for those transitioning from Pine Script™ to the Indie language.
+
+***
+
+## Core Concepts
+
+### Volume-Weighted Equilibrium
+
+The oscillator uses a simplified volume profile calculation:
+
+```
+VWAP = Σ (price × volume) / Σ (volume)
+```
+
+Deviation from this VWAP is then normalized:
+```
+Deviation = Σ (|price - VWAP| × volume_share)
+```
+
+### Oscillator Modes
+
+The oscillator supports two modes:
+
+1. **Mean Reversion Mode** (default):
+    Measures how far current price is from VWAP, normalized by volume-weighted deviation.
+    Formula:
+
+    ```
+    OscRaw = 50 + ((Price - VWAP) / (Deviation × Sensitivity)) × 25
+    
+    ```
+2. **Standard Mode**:
+    Measures smoothed volume intensity relative to its historical range:
+
+    ```
+    OscRaw = 100 × (SmoothedVolume - Min) / (Max - Min)
+    
+    ```
+
+***
+
+## Components and Visualization
+
+### Adaptive Midline and Gradient Zones
+
+The midline is computed as a moving average of the oscillator. Zones are defined as standard deviations around the midline:
+
+```
+Zone[i] = Midline ± StdDev × (1 - 0.1 × i)
+```
+
+These zones are plotted with 10 levels of gradient intensity, aiding visual detection of extremes.
+
+### Signal Lines
+
+The oscillator is double-smoothed with two EMAs:
+
+* Fast Signal (5-period)
+* Slow Signal (15-period)
+
+Their crossovers provide early trend confirmation.
+
+***
+
+## Candlestick Integration
+
+Bar colors change contextually when strong divergences occur:
+
+```
+if osc > upper_zone7 and osc > fast_signal and osc > slow_signal:
+    bar_color = color.FUCHSIA
+elif osc < lower_zone7 and osc < fast_signal and osc < slow_signal:
+    bar_color = color.AQUA
+else:
+    bar_color = bullish ? GREEN : RED
+```
+
+This optional setting (`color_bars`) enhances visual clarity during extreme phases.
+
+***
+
+## Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `price_src` | source | Price input (e.g., close, hl2) |
+| `lookback` | integer | Number of candles to build the volume profile |
+| `smoothing` | integer | EMA smoothing of oscillator |
+| `sensitivity` | float | Adjusts oscillator scale in mean-reversion mode |
+| `mean_reversion` | bool | Toggle between mean reversion and standard volume mode |
+| `use_adaptive_midline` | bool | Enables midline and zone dynamics based on historical values |
+| `midline_period` | integer | Lookback for adaptive midline and standard deviation |
+| `zone_width` | float | Multiplier for zone distances |
+| `color_bars` | bool | Enables contextual bar coloring |
+
+***
+
+## Strategy Applications
+
+### Trend Following
+
+* Go long when `osc` crosses above midline and fast > slow signal.
+* Go short when `osc` crosses below midline and fast < slow signal.
+
+### Mean Reversion
+
+* Look for entries near zone 9–10 or −9 to −10.
+* Confirm with divergences and fading volume.
+
+### Volume Analysis
+
+* Use standard mode to track abnormal volume spikes.
+* Use adaptive midline to detect sustained imbalances.
+
+***
+
+## Educational Value
+
+This script demonstrates key Indie features:
+
+* `@indicator`, `@param`, and `@plot` decorators for clarity
+* Manual volume-weighted calculations
+* Use of `MutSeriesF`, conditionals, and smoothing algorithms
+* Avoidance of list comprehensions (not supported in Indie)
+
+It is a practical reference for Pine Script users exploring Indie’s flexible, Pythonic syntax.
+
+***
+
+## Snippet: Oscillator Core Calculation (Simplified)
+
+```
+# Mean Reversion Mode
+osc_raw = 50 + ((price - vwap) / (deviation * sensitivity)) * 25
+
+# Standard Mode
+osc_raw = 100 * (SmoothedVolume - MinVolume) / (MaxVolume - MinVolume)
+```
+
+***
+
+## Final Notes
+
+* Designed for intraday and swing trading
+* Best combined with support/resistance and volume profile overlays
+* Gradient zones provide intuitive context for positioning and risk
+
+Indie Language code
+## 
+```python
 # indie:lang_version = 5
 # © Pavel Medvedev
 # Licensed under the MIT License. You may use, copy, modify, merge, publish, 
@@ -110,3 +265,9 @@ class Main(MainContext):
             lower_zones[0], lower_zones[1], lower_zones[2], lower_zones[3], lower_zones[4],
             lower_zones[5], lower_zones[6], lower_zones[7], lower_zones[8], lower_zones[9]
         )
+
+```
+<br>
+
+To contribute improvements or variations, feel free to fork or issue pull requests.
+
