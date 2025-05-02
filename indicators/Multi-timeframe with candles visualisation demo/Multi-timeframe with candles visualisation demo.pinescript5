@@ -1,0 +1,25 @@
+//@version=5
+indicator("Multi-timeframe with candles visualisation demo", overlay=true)
+
+// Input parameters
+higher_tf = input.timeframe("D", "Higher Timeframe")
+ma_length = input.int(20, "MA Length", minval=1)
+fill_opacity = input.float(0.15, "Fill Opacity", minval=0.05, maxval=0.5)
+
+// Get data from higher timeframe
+htf_high = request.security(syminfo.ticker, higher_tf, high)
+htf_low = request.security(syminfo.ticker, higher_tf, low)
+htf_is_bullish = request.security(syminfo.ticker, higher_tf, close >= open)
+
+// Calculate current timeframe MA
+current_ma = ta.sma(close, ma_length)
+
+// Determine colors based on direction
+level_color = htf_is_bullish ? color.green : color.red
+fill_color = htf_is_bullish ? color.new(color.green, 100 - fill_opacity * 100) : color.new(color.red, 100 - fill_opacity * 100)
+
+// Plot the higher timeframe levels and current MA
+h_line = plot(htf_high, "HTF High", color=level_color)
+l_line = plot(htf_low, "HTF Low", color=level_color)
+fill(h_line, l_line, title="HTF Candle Range", color=fill_color)
+plot(current_ma, "Current TF MA", color=color.yellow)
