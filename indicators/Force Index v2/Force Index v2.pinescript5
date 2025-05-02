@@ -1,0 +1,14 @@
+//@version=5
+indicator("Elder's Force Index (FI)", overlay=false)
+
+// Input parameter
+length = input.int(13, "EMA Length", minval=1)
+
+// Calculate Force Index
+fi_series = (close - close[1]) * volume
+
+// Apply exponential smoothing
+smoothed_fi = ta.ema(fi_series, length)
+
+// Plot the indicator with color based on value
+plot(smoothed_fi, "Force Index", color=smoothed_fi > 0 ? color.green : color.red)
