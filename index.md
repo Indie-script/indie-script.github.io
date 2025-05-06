@@ -6,18 +6,6 @@ title: Indie-script
 # Indie Language Code Examples
 ## Unofficial Indie language community page.
 
-<div class="file-navigation">
-  <div class="file-tree">
-    <ul>
-      {% for page in site.pages %}
-        <li class="file">
-          <a href="{{ site.baseurl }}{{ page.url }}">{{ page.path }}</a>
-        </li>
-      {% endfor %}
-    </ul>
-  </div>
-</div>
-
 # Indie Language Code Examples
 # Unofficial Indie language community page
 
