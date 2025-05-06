@@ -4,9 +4,6 @@ title: Indie-script
 ---
 
 # Indie Language Code Examples
-## Unofficial Indie language community page.
-
-# Indie Language Code Examples
 # Unofficial Indie language community page
 
 Welcome to the unofficial GitHub hub for the **Indie Language** (Indie Script) — the Python-inspired scripting language used on the TakeProfit platform to build custom indicators, signals, and advanced trading logic. This page is intended as a clear, human-readable introduction for Pine Script™ users, Python developers, and algorithmic traders looking to explore or migrate to Indie.
