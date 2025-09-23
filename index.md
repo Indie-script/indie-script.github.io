@@ -1,3 +1,8 @@
+---
+layout: default
+title: Indie Language for Trading Indicators (Technical Analysis, scripts, charts)
+---
+
 # Indie Language Code Examples
 # Unofficial Indie language community page
 
