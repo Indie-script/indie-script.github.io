@@ -1,8 +1,3 @@
----
-layout: default
-title: Indie-script
----
-
 # Indie Language Code Examples
 # Unofficial Indie language community page
 
