@@ -1,10 +1,9 @@
 ---
 layout: default
-title: Indie Language for Trading Indicators (Technical Analysis, scripts, charts)
+title: Indie Language for Trading Indicators | Technical Analysis
 ---
 
-# Indie Language Code Examples
-# Unofficial Indie language community page
+## Unofficial Indie language community page
 
 Welcome to the unofficial GitHub hub for the **Indie Language** (Indie Script) — the Python-inspired scripting language used on the TakeProfit platform to build custom indicators, signals, and advanced trading logic. This page is intended as a clear, human-readable introduction for Pine Script™ users, Python developers, and algorithmic traders looking to explore or migrate to Indie.
 
@@ -97,7 +96,7 @@ If you're coming from **TradingView's Pine Script™**, Indie might feel familia
 [Step-by-Step Guide: Rewriting Indicators from Pine Script to Indie](https://www.reddit.com/r/IndieLang/comments/1j4xss4/stepbystep_guide_rewriting_indicators_from_pine/)
 
 
-
+### Indie Language Code Examples
 ## Community
 
 [Discord](https://discord.gg/WVk8TjwU7p)
