@@ -1,4 +1,4 @@
-Andean Oscillator — Indie Port
+# Andean Oscillator — Indie Port
 
 This is a direct port of the original Andean Oscillator, conceptualized by © alexgrover, and implemented for the Indie platform with strict adherence to the core logic.
 
