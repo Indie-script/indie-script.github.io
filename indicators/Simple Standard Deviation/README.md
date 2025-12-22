@@ -1,8 +1,9 @@
+# Standard Deviation Indicator / Indie 
+
 Here is a **compact but comprehensive write-up** for the **Standard Deviation Indicator** suitable for educational publishing on platforms like GitHub, TradingView, or forums:
 
 ***
 
-# 📊 Standard Deviation Indicator / Indie 
 
 ## Overview
 
