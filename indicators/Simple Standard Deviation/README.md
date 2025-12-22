@@ -37,7 +37,7 @@ Indie and Pine use built-in functions to encapsulate this computation.
 | Decorators | `@indicator`, `@plot.line` | `indicator()`, `plot()` |
 
 ### Indie v5 Code
-
+```
 #education purpose
 # indie:lang_version = 5
 from indie import indicator, plot, color
