@@ -58,4 +58,7 @@
     ,{"@type":"ListItem","position":2,"name":{{ ld_title | jsonify }},"item":{{ canonical | jsonify }}}
   {%- endif -%}
   ]}</script>
+  {%- if kind == "indicator" %}
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":{{ page_title | jsonify }},"description":{{ meta_desc | default: page_title | jsonify }},"url":{{ canonical | jsonify }},"inLanguage":"en","about":{"@type":"SoftwareSourceCode","name":{{ folder_name | jsonify }},"programmingLanguage":"Indie Script","codeRepository":{{ portal.repo | prepend: "https://github.com/" | jsonify }}}}</script>
+  {%- endif %}
   {%- endif %}

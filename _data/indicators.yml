@@ -49,71 +49,106 @@
   category: volume
 "2-Period RSI Strategy":
   category: oscillators
+  description: "Plots a 2-period RSI with color-coded signals based on SMA(5), SMA(200) and oversold/overbought thresholds."
 "3 Trading Sessions":
   category: other
+  description: "Highlights up to three customizable intraday trading sessions with colored rectangles, open/close lines, and optional statistics like tick range and average price."
 "Adaptive Trend Overlay (Enhanced TMA)":
   category: trend
+  description: "Overlay showing 21/50/100/200 SMMA lines, EMA(2)-based trend fill, 3 Line Strike and engulfing markers, and optional session background."
 "ADX + DI (Wilder Plus)":
   category: trend
+  description: "ADX trend strength with +DI and -DI directional movement, Wilder smoothing, optional fill between DI lines."
 "AlphaTrend (Indie Port)":
   category: trend
+  description: "ATR-based adaptive trend line with MFI/RSI momentum filter and buy/sell signals."
 "Auto Fibonacci Levels":
   category: support-resistance
+  description: "Automatically calculates and plots Fibonacci retracement levels based on highest and lowest closing prices over a user-defined period."
 "Awesome - Accelerator - Zone Oscillator":
   category: oscillators
+  description: "Computes Awesome Oscillator, Accelerator Oscillator, and a Zone histogram with color-coded momentum."
 "BB + RSI Double Cross Strategy":
   category: oscillators
+  description: "Computes Bollinger Bands and RSI, plots L/S signals when RSI crosses the trigger while price crosses a band edge, and draws trend markers."
 "Classic NVI-PVI Fosback":
   category: volume
+  description: "Computes Negative Volume Index (NVI) or Positive Volume Index (PVI) with a signal line and trend coloring."
 "Classic SlingShot Trend Logic":
   category: trend
+  description: "Dual EMA trend-following system identifying pullbacks and continuation entries with visual markers."
 "Custom VWAP - usage example of indie.Schedule class":
   category: demos
+  description: "Computes a volume-weighted average price with upper and lower standard deviation bands, using configurable calendar, session, or custom schedule anchors."
 "Daily Range":
   category: volatility
+  description: "Computes the average daily range over a configurable number of days (default 50) as a take-profit reference."
 "Dynamic Andean Oscillator":
   category: oscillators
+  description: "Computes bull/bear volatility components via exponential envelope smoothing and displays a colored histogram."
 "Dynamic Volume Profile Oscillator v2":
   category: oscillators
+  description: "Oscillator from volume-weighted average price and volume profile; plots smoothed oscillator, signals, adaptive midline and six zone levels."
 "Elder's Force Index (FI)":
   category: volume
+  description: "Exponentially smoothed product of price change and volume, plotted as a line colored green when positive, red when negative."
 "Enhanced Candlestick Patterns (Beta)":
   category: patterns
+  description: "Detects 10 candlestick patterns with EMA trend confirmation, ATR-based volatility filters, and volume confirmation for engulfing patterns."
 "Fibonacci Bollinger Bands":
   category: support-resistance
+  description: "Computes Fibonacci-scaled Bollinger Bands based on VWMA and standard deviation to highlight support and resistance levels."
 "Green-Red Bar Count - usage example of indie.VarT":
   category: demos
+  description: "Counts consecutive green (up) and red (down) bars using indie.Var for state tracking."
 "Green-Red Bar Counts - usage example of indie.MutSeriesT generic class":
   category: demos
+  description: "Counts consecutive green and red bars using MutSeries[int] generic type."
 "HalfTrend Indicator":
   category: trend
+  description: "Trend-following indicator that plots a dynamic half trend line with ATR-based channels and buy/sell signals."
 "Halloween Strategy":
   category: patterns
+  description: "Visualizes the Halloween effect by shading winter/summer periods, placing Buy/Sell labels at transitions, and displaying a performance stats panel."
 "Highlight Crossover - Background Color Example":
   category: demos
+  description: "Educational indicator that fades the chart background teal when a 15-period SMA crosses above a 30-period SMA."
 "MACD Ultimate Multiple Timeframes":
   category: oscillators
+  description: "Enhanced MACD with multi-color histogram, crossover dots, and configurable timeframes."
 "Median Algorithm (written with Indie v4 classes)":
   category: moving-averages
+  description: "Computes the median of the last `length` values of a series using a sliding window with a sorted list."
 "Pivot Points High-Low (Simplified)":
   category: support-resistance
+  description: "Labels pivot highs and pivot lows using a lookback period, updating or creating labels on the chart."
 "RSI Divergence Indicator":
   category: oscillators
+  description: "Measures the difference between fast and slow RSI to visualize internal momentum shifts."
 "SMA algorithm that accepts 'series' length":
   category: moving-averages
+  description: "Computes an SMA whose length switches between two user parameters based on comparing short and long SMAs of high."
 "Sma-Ema Crossover - usage example of indie.VarT":
   category: demos
+  description: "Computes a 5-period SMA and EMA and plots the retained SMA value on downward crossovers, demonstrating indie.Var[T] state storage."
 "TonyUX EMA Scalper Buy - Sell (Indie Port)":
   category: moving-averages
+  description: "Plots EMA, recent 8-bar high/low, and buy/sell markers on EMA cross with close direction confirmation."
 "Trend Impulse Channels":
   category: trend
+  description: "A trend-following indicator that discretizes price movement into ATR-based steps with volatility-adaptive channels and retest signals."
 "Trend Line Methods (TLM)":
   category: support-resistance
+  description: "Draws dynamic trend lines from recent pivot points and a 5-segment linear regression channel."
 "Trendlines with Breaks":
   category: trend
+  description: "Plots trendlines based on pivot highs/lows and marks breakout events when price crosses them."
 "Ultra Trend Alerts":
   category: trend
+  description: "Computes a dynamic trailing stop based on ATR and generates buy/sell signals on crossovers."
 "Universal Forecast Funnel UFF":
   category: trend
+  description: "Computes a linear-regression basis line, volatility-scaled upper/lower funnel, R² confidence, and a projected forecast funnel with MAE label on the last bar."
 "Williams VIX Fix":
   category: volatility
+  description: "Computes a volatility indicator similar to VIX for any asset using highest-low ratio and Bollinger Bands."

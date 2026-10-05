@@ -43,6 +43,7 @@
 {%- if kind == "indicator" -%}
   {%- include indicator-meta.html p=page -%}
   {%- assign page_cat = im_cat -%}
+  {%- unless meta_desc -%}{%- assign meta_desc = im_reg.description -%}{%- endunless -%}
 {%- elsif kind == "category" -%}
   {%- assign page_cat = portal.categories | where: "id", page.category | first -%}
   {%- unless meta_desc -%}{%- assign meta_desc = page_cat.summary -%}{%- endunless -%}
