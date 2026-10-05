@@ -1,0 +1,29 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color, MutSeriesF
+from indie.algorithms import Ma, Tr, Atr, Rma
+
+
+@indicator('KC', overlay_main_pane=True)  # Keltner Channels
+@param.int('length', default=20, min=1)
+@param.float('mult', default=2.0, title='Multiplier')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.bool('exp', default=True, title='Use Exponential MA')
+@param.str('bands_style', default='Average True Range', title='Bands Style',
+           options=['Average True Range', 'True Range', 'Range'])
+@param.int('atr_length', default=10, min=1, title='ATR Length')
+@plot.line('lower', color=color.BLUE, title='Lower')
+@plot.line(color=color.BLUE, title='Basis')
+@plot.line('upper', color=color.BLUE, title='Upper')
+@plot.fill('lower', 'upper', color=color.AQUA(0.05), title='Background')
+def Main(self, length, mult, src, exp, bands_style, atr_length):
+    ma = Ma.new(src, length, 'EMA' if exp else 'SMA')[0]
+    range_ma = 0.0
+    if bands_style == 'True Range':
+        range_ma = Tr.new(True)[0]
+    elif bands_style == 'Average True Range':
+        range_ma = Atr.new(atr_length)[0]
+    else:  # bands_style == 'Range'
+        range_ma = Rma.new(MutSeriesF.new(self.high[0] - self.low[0]), length)[0]
+    upper = ma + range_ma * mult
+    lower = ma - range_ma * mult
+    return lower, ma, upper, plot.Fill()

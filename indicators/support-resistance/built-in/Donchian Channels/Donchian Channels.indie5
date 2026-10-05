@@ -1,0 +1,16 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Lowest, Highest, Donchian
+
+
+@indicator('DC', overlay_main_pane=True)  # Donchian Channels
+@param.int('length', default=20, min=1)
+@plot.line('lower', color=color.BLUE, title='Lower')
+@plot.line(color=color.RED, title='Basis')
+@plot.line('upper', color=color.BLUE, title='Upper')
+@plot.fill('lower', 'upper', color=color.AQUA(0.05), title='Background')
+def Main(self, length):
+    lower = Lowest.new(self.low, length)
+    upper = Highest.new(self.high, length)
+    basis = Donchian.new(length)
+    return lower[0], basis[0], upper[0], plot.Fill()

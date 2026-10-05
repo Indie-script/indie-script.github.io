@@ -1,0 +1,30 @@
+# indie:lang_version = 5
+from indie import algorithm, MutSeriesF, SeriesF, indicator, format, param, level, color, plot
+from indie.algorithms import Sma, Roc
+
+
+@algorithm
+def SmaRoc(self, roc_len: int, sma_len: int) -> SeriesF:
+    return Sma.new(Roc.new(self.ctx.close, roc_len), sma_len)
+
+
+@indicator('KST', format=format.PRICE, precision=4)  # Know Sure Thing
+@param.int('roc_len1', default=10, min=1, title='ROC Length #1')
+@param.int('roc_len2', default=15, min=1, title='ROC Length #2')
+@param.int('roc_len3', default=20, min=1, title='ROC Length #3')
+@param.int('roc_len4', default=30, min=1, title='ROC Length #4')
+@param.int('sma_len1', default=10, min=1, title='SMA Length #1')
+@param.int('sma_len2', default=10, min=1, title='SMA Length #2')
+@param.int('sma_len3', default=10, min=1, title='SMA Length #3')
+@param.int('sma_len4', default=15, min=1, title='SMA Length #4')
+@param.int('sig_len', default=9, min=1, title='Signal Line Length')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.GREEN, title='KST')
+@plot.line(color=color.RED, title='Signal')
+def Main(self, roc_len1, roc_len2, roc_len3, roc_len4, sma_len1, sma_len2, sma_len3, sma_len4, sig_len):
+    kst = 1 * SmaRoc.new(roc_len1, sma_len1)[0] + \
+          2 * SmaRoc.new(roc_len2, sma_len2)[0] + \
+          3 * SmaRoc.new(roc_len3, sma_len3)[0] + \
+          4 * SmaRoc.new(roc_len4, sma_len4)[0]
+    sig = Sma.new(MutSeriesF.new(kst), sig_len)[0]
+    return kst, sig

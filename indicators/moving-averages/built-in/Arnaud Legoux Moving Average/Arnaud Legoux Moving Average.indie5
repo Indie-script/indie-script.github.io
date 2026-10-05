@@ -1,0 +1,20 @@
+# indie:lang_version = 5
+from math import exp, pow
+from indie import indicator, param, plot, color
+from indie.math import divide
+
+
+@indicator('ALMA', overlay_main_pane=True)  # Arnaud Legoux Moving Average
+@param.int('window_size', default=9, min=1, title='Window Size')
+@param.float('offset', default=0.85)
+@param.float('sigma', default=6.0, min=0.001)
+@plot.line(color=color.BLUE)
+def Main(self, window_size, offset, sigma):
+    m = offset * (window_size - 1)
+    s = window_size / sigma
+    sum, norm = 0.0, 0.0
+    for i in range(window_size):
+        weight = exp(-1 * pow(i - m, 2) / (2 * pow(s, 2)))
+        norm += weight
+        sum += self.close[window_size - i - 1] * weight
+    return divide(sum, norm)

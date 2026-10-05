@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Ema
+
+
+@indicator('BBP')  # Bull Bear Power
+@param.int('length', default=13, min=1)
+@plot.line(color=color.BLUE)
+def Main(self, length):
+    bear_power = self.low[0] - Ema.new(self.close, length)[0]
+    bull_power = self.high[0] - Ema.new(self.close, length)[0]
+    return bull_power + bear_power

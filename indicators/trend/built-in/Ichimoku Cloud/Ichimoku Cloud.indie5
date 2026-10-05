@@ -1,0 +1,40 @@
+# indie:lang_version = 5
+from indie import SeriesF, MutSeriesF, indicator, param, plot, color
+from indie.algorithms import Donchian
+
+
+def mean(price1: SeriesF, price2: SeriesF) -> float:
+    # TODO: implement @algorithm avg with variable number of arguments in indie.algorithms
+    return (price1[0] + price2[0]) / 2
+
+
+# TODO: Add palette of colors
+@indicator('Ichimoku', overlay_main_pane=True)  # Ichimoku Cloud
+@param.int('conversion_periods', default=9, min=1, title='Conversion Line Length')
+@param.int('base_periods', default=26, min=1, title='Base Line Length')
+@param.int('lagging_span_2_periods', default=52, min=1, title='Leading Span B Length')
+@param.int('displacement', default=26, min=1, title='Lagging Span')
+@plot.line(color=color.BLUE, title='Conversion Line')
+@plot.line(color=color.RED, title='Base Line')
+@plot.line(color=color.GREEN, title='Lagging Span')
+@plot.line('ls_a', color=color.GREEN(0.6), title='Leading Span A')
+@plot.line('ls_b', color=color.RED(0.6), title='Leading Span B')
+@plot.fill('ls_a', 'ls_b', title='Background Up', color=color.GREEN(0.1))
+@plot.fill('ls_a', 'ls_b', title='Background Down', color=color.RED(0.1))
+def Main(self, conversion_periods, base_periods, lagging_span_2_periods, displacement):
+    conversion_line = Donchian.new(conversion_periods)
+    base_line = Donchian.new(base_periods)
+    lead_line1 = mean(conversion_line, base_line)
+    lead_line2 = Donchian.new(lagging_span_2_periods)[0]
+
+    fill_up_color = None if lead_line1 > lead_line2 else color.TRANSPARENT
+    fill_down_color = color.TRANSPARENT if lead_line1 > lead_line2 else None
+    return (
+        conversion_line[0],
+        base_line[0],
+        plot.Line(self.close[0], offset=-displacement + 1),
+        plot.Line(lead_line1, offset=displacement - 1),
+        plot.Line(lead_line2, offset=displacement - 1),
+        plot.Fill(offset=displacement - 1, color=fill_up_color),
+        plot.Fill(offset=displacement - 1, color=fill_down_color),
+    )

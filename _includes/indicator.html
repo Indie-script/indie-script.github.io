@@ -1,5 +1,6 @@
 {%- comment -%} Indicator page: indicators/<Name>/README.md plus the source files that live next to it. {%- endcomment -%}
 {%- include indicator-meta.html p=page -%}
+{%- assign ind_builtin = im_builtin -%}
 {%- include indicator-files.html dir=page.dir -%}
 {%- assign content_head = content | lstrip | slice: 0, 3 -%}
 {%- assign dir_path = page.path | remove: page.name | uri_escape -%}
@@ -12,16 +13,21 @@
       <span class="crumbs-sep">/</span>
       <a href="{{ cat_url }}">{{ im_cat.label | escape }}</a>
       <span class="crumbs-sep">/</span>
+      {%- if ind_builtin %}
+      <a href="{{ cat_url | append: 'built-in/' }}">built-in</a>
+      <span class="crumbs-sep">/</span>
+      {%- endif %}
       <span class="crumbs-current" aria-current="page">{{ folder_name | escape }}</span>
     </nav>
 
     <header class="dirhead">
       <div class="dirhead-main">
-        <span class="dirhead-icon">{% include icon.html name="file-directory-open-fill" px=24 %}</span>
+        <span class="dirhead-icon{% if ind_builtin %} is-builtin{% endif %}">{% include icon.html name="file-directory-open-fill" px=24 %}</span>
         <div>
           <div class="dirhead-name">{{ folder_name | escape }}</div>
           <div class="dirhead-meta">
             <a class="label label-accent" href="{{ cat_url }}">{% include icon.html name=im_cat.icon px=12 %}{{ im_cat.label | escape }}</a>
+            {%- if ind_builtin %}<span class="badge badge-builtin">Built-in</span>{% endif %}
             {%- for l in ind_labels %}
             <span class="badge {% if l contains 'Indie' %}badge-indie{% else %}badge-pine{% endif %}">{{ l }}</span>
             {%- endfor %}

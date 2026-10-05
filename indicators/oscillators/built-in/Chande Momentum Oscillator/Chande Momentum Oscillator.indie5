@@ -1,0 +1,21 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, level, color, plot, MutSeriesF
+from indie.algorithms import Change, Sum
+from indie.math import divide
+
+
+@indicator('Chande MO', format=format.PRICE)  # Chande Momentum Oscillator
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.BLUE, title='Chande MO')
+def Main(self, length, src):
+    momm = Change.new(src)[0]
+
+    m1 = momm if momm >= 0 else 0
+    m2 = 0.0 if momm >= 0 else -momm
+
+    sm1 = Sum.new(MutSeriesF.new(m1), length)[0]
+    sm2 = Sum.new(MutSeriesF.new(m2), length)[0]
+
+    return 100 * divide(sm1 - sm2, sm1 + sm2)

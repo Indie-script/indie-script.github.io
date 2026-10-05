@@ -35,11 +35,11 @@ RSI = 100 - \frac{100}{1 + \frac{\text{Average Gain}}{\text{Average Loss}}}
 $$
 
 $$
-\text{Upper Band} = \text{MA(RSI)} + \text{StdDev(RSI)} \times \text{bb_mult}
+\text{Upper Band} = \text{MA(RSI)} + \text{StdDev(RSI)} \times \text{bb\_mult}
 $$
 
 $$
-\text{Lower Band} = \text{MA(RSI)} - \text{StdDev(RSI)} \times \text{bb_mult}
+\text{Lower Band} = \text{MA(RSI)} - \text{StdDev(RSI)} \times \text{bb\_mult}
 $$
 
 ## Parameters

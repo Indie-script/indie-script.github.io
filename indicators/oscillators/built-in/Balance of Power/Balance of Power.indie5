@@ -1,0 +1,9 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color
+from indie.math import divide
+
+
+@indicator('BoP', format=format.PRICE)  # Balance of Power
+@plot.line(color=color.RED)
+def Main(self):
+    return divide(self.close[0] - self.open[0], self.high[0] - self.low[0])

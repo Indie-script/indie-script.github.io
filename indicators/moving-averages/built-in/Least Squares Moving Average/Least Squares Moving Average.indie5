@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot
+from indie.algorithms import LinReg
+
+
+@indicator('LSMA', overlay_main_pane=True)  # Least Squares Moving Average
+@param.int('length', default=25, min=1)
+@param.int('offset', default=0)
+@param.source('src', default=source.CLOSE)
+@plot.line(title='LSMA')
+def Main(self, length, offset, src):
+    return LinReg.new(src, length, offset)[0]

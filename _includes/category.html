@@ -1,39 +1,58 @@
 {%- comment -%} Category page (/indicators/<category-id>/): front matter `kind: category`, `category: <id>`. {%- endcomment -%}
 {%- assign cat = portal.categories | where: "id", page.category | first -%}
-{%- include cat-rows.html cat=page.category -%}
+{%- assign only = "community" -%}
+{%- if page.builtin %}{%- assign only = "builtin" -%}{%- endif -%}
+{%- include cat-rows.html cat=page.category only=only -%}
 {%- assign rows = cat_rows -%}
+{%- assign bi_n = cat_bi.size -%}
+{%- assign is_bi = page.builtin -%}
+{%- assign cat_label = cat.label -%}
 <div class="layout layout-noside-rail">
   {% include_cached sidebar.html %}
   <div class="layout-main">
     <nav class="crumbs" aria-label="Breadcrumb">
       <a href="{{ '/indicators/' | relative_url }}">Indicators</a>
       <span class="crumbs-sep">/</span>
-      <span class="crumbs-current" aria-current="page">{{ cat.label | escape }}</span>
+      {%- if is_bi %}
+      <a href="{{ '/indicators/' | append: page.category | append: '/' | relative_url }}">{{ cat_label | escape }}</a>
+      <span class="crumbs-sep">/</span>
+      <span class="crumbs-current" aria-current="page">built-in</span>
+      {%- else %}
+      <span class="crumbs-current" aria-current="page">{{ cat_label | escape }}</span>
+      {%- endif %}
     </nav>
     <header class="pagehead">
       <span class="pagehead-icon">{% include icon.html name=cat.icon px=24 %}</span>
       <div class="pagehead-text">
-        <h1>{{ page.heading | default: cat.label | escape }}</h1>
-        <p class="lead">{{ cat.summary | escape }}</p>
+        <h1>{% if is_bi %}Built-in {{ cat_label | downcase | escape }}{% else %}{{ page.heading | default: cat_label | escape }}{% endif %}</h1>
+        <p class="lead">{% if is_bi %}{{ cat_label | escape }} that ship with the TakeProfit platform, written in Indie. Each page explains the algorithm, parameters and source code.{% else %}{{ cat.summary | escape }}{% endif %}</p>
       </div>
       <dl class="pagehead-stats">
-        <div><dt>Indicators</dt><dd>{{ rows.size }}</dd></div>
+        <div><dt>{% if is_bi %}Built-in{% else %}Indicators{% endif %}</dt><dd>{{ rows.size }}</dd></div>
+        {%- if bi_n > 0 and is_bi != true %}<div><dt>Built-in</dt><dd>{{ bi_n }}</dd></div>{% endif %}
       </dl>
     </header>
 
     {% include catalog-tools.html current=page.category %}
 
     <div data-catalog>
-      {%- if rows.size > 0 %}
+      {%- if rows.size > 0 or bi_n > 0 %}
       <section class="box catsec" data-catsec>
         <ul class="rowlist">
+          {%- if bi_n > 0 and is_bi != true %}
+          <li class="row" data-row data-name="built-in" data-cat="{{ page.category }}" data-langs="" data-files="0">
+            <span class="row-icon is-builtin">{% include icon.html name="file-directory-fill" %}</span>
+            <a class="row-name" href="{{ '/indicators/' | append: page.category | append: '/built-in/' | relative_url }}">built-in</a>
+            <span class="row-desc">{{ bi_n }} indicators that ship with the platform</span>
+          </li>
+          {%- endif %}
           {%- for p in rows %}
           {% include indicator-row.html p=p %}
           {%- endfor %}
         </ul>
       </section>
       {%- endif %}
-      <div class="blankslate" data-catalog-empty{% if rows.size > 0 %} hidden{% endif %}>
+      <div class="blankslate" data-catalog-empty{% if rows.size > 0 or bi_n > 0 %} hidden{% endif %}>
         {% include icon.html name="search" px=24 %}
         <h3>{% if rows.size > 0 %}No indicators match{% else %}No indicators here yet{% endif %}</h3>
         <p class="muted"><a href="{{ '/indicators/' | relative_url }}">Browse the full catalog</a></p>

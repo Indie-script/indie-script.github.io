@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot, MutSeriesF
+from indie.algorithms import Change, Ema
+
+
+@indicator('EFI', format=format.VOLUME)  # Elders Force Index
+@param.int('length', default=13, min=1)
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.RED, title='Elders Force Index')
+def Main(self, length):
+    efi = Change.new(self.close)[0] * self.volume[0]
+    return Ema.new(MutSeriesF.new(efi), length)[0]

@@ -1,0 +1,53 @@
+# indie:lang_version = 5
+from math import nan, isnan, atan, pi
+from indie import indicator, format, plot, color, Color
+from indie.algorithms import Highest, Lowest, Ema
+from indie.math import divide
+
+
+@indicator('Chop Zone', format=format.PRICE, precision=0)
+@plot.columns()
+def Main(self):
+    color_turquoise = color.rgba(38, 198, 218)
+    color_dark_green = color.rgba(67, 160, 71)
+    color_pale_green = color.rgba(165, 214, 167)
+    color_lime = color.rgba(0, 150, 136)
+    color_dark_red = color.rgba(213, 0, 0)
+    color_red = color.rgba(233, 30, 99)
+    color_orange = color.rgba(255, 109, 0)
+    color_light_orange = color.rgba(255, 183, 77)
+    color_yellow = color.rgba(253, 216, 53)
+
+    periods = 30
+    highest_high = Highest.new(self.high, periods)[0]
+    lowest_low = Lowest.new(self.low, periods)[0]
+    span = divide(25, highest_high - lowest_low) * lowest_low
+
+    ema34 = Ema.new(self.close, 34)
+    y2_ema34 = divide(ema34[1] - ema34[0], self.hlc3[0]) * span
+
+    ema_angle_1 = nan
+    if not isnan(y2_ema34):
+        ema_angle_1 = round(180 * atan(abs(y2_ema34)) / pi)
+    ema_angle = -ema_angle_1 if y2_ema34 > 0 else ema_angle_1
+
+    chop_zone_color = color.BLACK  # default value
+    if ema_angle >= 5:
+        chop_zone_color = color_turquoise
+    elif ema_angle >= 3.57:
+        chop_zone_color = color_dark_green
+    elif ema_angle >= 2.14:
+        chop_zone_color = color_pale_green
+    elif ema_angle >= 0.71:
+        chop_zone_color = color_lime
+    elif ema_angle <= -5:
+        chop_zone_color = color_dark_red
+    elif ema_angle <= -3.57:
+        chop_zone_color = color_red
+    elif ema_angle <= -2.14:
+        chop_zone_color = color_orange
+    elif ema_angle <= -0.71:
+        chop_zone_color = color_light_orange
+    else:  # ema_angle > -0.71 and ema_angle < 0.71
+        chop_zone_color = color_yellow
+    return plot.Columns(1, color=chop_zone_color)

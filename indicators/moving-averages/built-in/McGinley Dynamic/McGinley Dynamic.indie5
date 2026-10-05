@@ -1,0 +1,17 @@
+# indie:lang_version = 5
+from math import isnan, pow
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Ema
+from indie.math import divide
+
+
+@indicator('McGinley', overlay_main_pane=True)  # McGinley Dynamic
+@param.int('length', default=14, min=1)
+@plot.line(color=color.BLUE)
+def Main(self, length):
+    mg = MutSeriesF.new(init=0)
+    if isnan(mg[1]):
+        mg[0] = Ema.new(self.close, length)[0]
+    else:
+        mg[0] = mg[1] + divide(self.close[0] - mg[1], length * pow(divide(self.close[0], mg[1]), 4))
+    return mg[0]

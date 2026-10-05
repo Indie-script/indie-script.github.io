@@ -1,0 +1,38 @@
+# indie:lang_version = 5
+from math import isnan, nan, log
+from indie import indicator, format, param, level, color, plot, MutSeriesF
+from indie.algorithms import Highest, Lowest
+from indie.math import divide
+
+
+def nan_to_zero(val: float) -> float:
+    return 0 if isnan(val) else val
+
+
+def round(val: float) -> float:
+    if val > 0.99:
+        val = 0.999
+    elif val < -0.99:
+        val = -0.999
+    return val
+
+
+@indicator('Fisher', format=format.PRICE)  # Fisher Transform
+@param.int('length', default=9, min=1)
+@level(-1.5, line_color=color.RED, title='-1.5')
+@level(-0.75, line_color=color.GRAY, title='-0.75')
+@level(0, line_color=color.RED, title='0')
+@level(0.75, line_color=color.GRAY, title='0.75')
+@level(1.5, line_color=color.RED, title='1.5')
+@plot.line(color=color.BLUE, title='Fisher')
+@plot.line(color=color.MAROON, title='Trigger')
+def Main(self, length):
+    high = Highest.new(self.hl2, length)[0]
+    low = Lowest.new(self.hl2, length)[0]
+
+    value = MutSeriesF.new(init=0)
+    value[0] = round(0.66 * (divide(self.hl2[0] - low, high - low) - 0.5) + \
+                     0.67 * nan_to_zero(value[1]))
+    fish = MutSeriesF.new(init=nan)
+    fish[0] = 0.5 * log(divide(1 + value[0], 1 - value[0])) + 0.5 * nan_to_zero(fish[1])
+    return fish[0], fish[1]

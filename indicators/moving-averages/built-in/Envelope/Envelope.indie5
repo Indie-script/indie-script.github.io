@@ -1,0 +1,24 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Ema, Sma
+
+
+@indicator('Env', overlay_main_pane=True)  # Envelope
+@param.int('length', default=20, min=1)
+@param.float('percent', default=10.0)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.bool('exponential', default=False)
+@plot.line('lower', color=color.BLUE, title='Lower')
+@plot.line('basis', color=color.RED, title='Basis')
+@plot.line('upper', color=color.BLUE, title='Upper')
+@plot.fill('lower', 'upper', color=color.AQUA(0.05), title='Background')
+def Main(self, length, percent, src, exponential):
+    basis = 0.0
+    if exponential:
+        basis = Ema.new(src, length)[0]
+    else:
+        basis = Sma.new(src, length)[0]
+    k = percent / 100.0
+    upper = basis * (1 + k)
+    lower = basis * (1 - k)
+    return lower, basis, upper, plot.Fill()

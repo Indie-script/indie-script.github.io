@@ -1,0 +1,11 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Change
+
+
+@indicator('Mom')  # Momentum
+@param.int('length', default=10, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(color=color.BLUE)
+def Main(self, length, src):
+    return Change.new(src, length)[0]

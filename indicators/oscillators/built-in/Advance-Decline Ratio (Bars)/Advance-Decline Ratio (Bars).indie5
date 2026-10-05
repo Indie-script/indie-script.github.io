@@ -1,0 +1,20 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot, MutSeriesF
+from indie.algorithms import Sum
+from indie.math import divide
+
+
+@indicator('ADR_B', format=format.PRICE)  # Advance/Decline Ratio (Bars)
+@param.int('length', default=9, min=1)
+@level(1, line_color=color.GRAY, title='Equality Line')
+@plot.line(color=color.BLUE, title='ADR_B')
+def Main(self, length):
+    is_up = (self.close[0] - self.open[0]) >= 0.0
+
+    is_down_ints = MutSeriesF.new(0 if is_up else 1)
+    is_up_ints = MutSeriesF.new(1 if is_up else 0)
+
+    down_bars = Sum.new(is_down_ints, length)
+    up_bars = Sum.new(is_up_ints, length)
+
+    return divide(up_bars[0], down_bars[0], up_bars[0])

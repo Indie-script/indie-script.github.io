@@ -1,0 +1,18 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Atr, Lowest, Highest
+
+
+@indicator('Chande KS', overlay_main_pane=True)  # Chande Kroll Stop
+@param.int('p', default=10, min=1)
+@param.int('x', default=1, min=1)
+@param.int('q', default=9, min=1)
+@plot.line(color=color.BLUE, title='Stop Long')
+@plot.line(color=color.MAROON, title='Stop Short')
+def Main(self, p, x, q):
+    atr = Atr.new(p)[0]
+    first_low_stop = MutSeriesF.new(Lowest.new(self.low, p)[0] + x * atr)
+    first_high_stop = MutSeriesF.new(Highest.new(self.high, p)[0] - x * atr)
+    stop_long = Lowest.new(first_low_stop, q)
+    stop_short = Highest.new(first_high_stop, q)
+    return stop_long[0], stop_short[0]

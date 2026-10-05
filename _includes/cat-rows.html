@@ -1,9 +1,20 @@
 {%- comment -%}
   Indicator pages of one category. Usage: {% include cat-rows.html cat="oscillators" %}
-  Sets: cat_rows (array of pages)
+  Optional only="builtin" or only="community" narrows the list.
+  Sets: cat_rows (array of pages: community first, then built-in), cat_comm, cat_bi
 {%- endcomment -%}
-{%- assign cat_rows = "" | split: "" -%}
+{%- assign cat_comm = "" | split: "" -%}
+{%- assign cat_bi = "" | split: "" -%}
 {%- for cr_p in indicators -%}
   {%- include indicator-meta.html p=cr_p -%}
-  {%- if im_cat_id == include.cat -%}{%- assign cat_rows = cat_rows | push: cr_p -%}{%- endif -%}
+  {%- if im_cat_id == include.cat -%}
+    {%- if im_builtin -%}{%- assign cat_bi = cat_bi | push: cr_p -%}{%- else -%}{%- assign cat_comm = cat_comm | push: cr_p -%}{%- endif -%}
+  {%- endif -%}
 {%- endfor -%}
+{%- if include.only == "builtin" -%}
+  {%- assign cat_rows = cat_bi -%}
+{%- elsif include.only == "community" -%}
+  {%- assign cat_rows = cat_comm -%}
+{%- else -%}
+  {%- assign cat_rows = cat_comm | concat: cat_bi -%}
+{%- endif -%}

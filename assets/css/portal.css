@@ -869,3 +869,11 @@ body.viewer-full { overflow: hidden; }
 /* rich content: mermaid diagrams and KaTeX math (assets/js/rich.js) */
 .markdown-body pre.mermaid { background: transparent; border: 1px solid var(--border, #d0d7de); border-radius: 6px; padding: 16px; text-align: center; overflow-x: auto; }
 .markdown-body .math-block { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+/* Built-in indicators: purple folders and badge, so they read apart from community indicators */
+:root { --c-builtin: #8250df; }
+[data-theme="dark"], [data-theme="dimmed"] { --c-builtin: #ab7df8; }
+.row-icon.is-builtin, .dirhead-icon.is-builtin { color: var(--c-builtin); }
+.side-link .octicon.dir.builtin, .rail-links .octicon.dir.builtin, .side-sub > summary .octicon.dir { color: var(--c-builtin); }
+.badge-builtin { color: var(--c-builtin); background: color-mix(in srgb, var(--c-builtin) 12%, transparent); border-color: color-mix(in srgb, var(--c-builtin) 35%, transparent); }
+.side-sub { margin: 0; }

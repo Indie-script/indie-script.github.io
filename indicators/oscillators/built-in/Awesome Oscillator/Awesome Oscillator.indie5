@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, plot, color, MutSeriesF
+from indie.algorithms import Sma
+
+
+# TODO: Support palettes of colors in indicators
+@indicator('AO')  # Awesome Oscillator
+@plot.columns()
+def Main(self):
+    ao = MutSeriesF.new(Sma.new(self.hl2, 5)[0] - Sma.new(self.hl2, 34)[0])
+    d = ao[0] - ao[1]
+    c = color.MAROON if d <= 0 else color.GREEN
+    return plot.Columns(ao[0], color=c)

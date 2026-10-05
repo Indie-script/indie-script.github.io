@@ -152,15 +152,83 @@
 "Williams VIX Fix":
   category: volatility
   description: "Computes a volatility indicator similar to VIX for any asset using highest-low ratio and Bollinger Bands."
+"Accumulation-Distribution":
+  description: "Accumulates per-bar money flow volume into a cumulative Accumulation/Distribution line plotted in olive."
+"Advance-Decline Ratio (Bars)":
+  description: "Computes the rolling ratio of up bars to down bars based on close vs open, with a reference line at 1."
+"Arnaud Legoux Moving Average":
+  description: "Arnaud Legoux Moving Average (ALMA) with adjustable window, offset, and sigma for reduced lag and smoothness."
+"Aroon":
+  description: "Computes Aroon Up and Aroon Down indicators to measure trend strength and direction over a given period."
+"Average Day Range":
+  description: "Computes the difference between the simple moving averages of high and low prices over a specified period."
+"Average Directional Index":
+  description: "Computes the Average Directional Index (ADX) to measure trend strength using ADX smoothing and DI lengths."
 "Average True Range":
-  category: volatility
-  builtin: true
-  description: "Computes the Average True Range (ATR) with configurable smoothing (RMA, SMA, EMA, WMA) and lookback length."
+  description: "Computes the Average True Range, a volatility measure based on the true range (the greatest of three price differences) averaged over a given period."
+"Awesome Oscillator":
+  description: "Computes the Awesome Oscillator as the difference between 5- and 34-period SMAs of median price, drawn as colored columns."
+"Balance of Power":
+  description: "Computes the Balance of Power as (close - open) / (high - low) for each bar, indicating buying vs selling pressure."
 "Bollinger Bands":
-  category: volatility
-  builtin: true
-  description: "Bollinger Bands plot a moving average with upper/lower bands at k standard deviations."
+  description: "Computes Bollinger Bands (middle SMA, upper/lower bands at mult*stddev) with optional offset."
+"Bollinger Bands %B":
+  description: "Measures the relative position of the source within Bollinger Bands as a normalized oscillator between 0 and 1."
+"Bollinger Bands Width":
+  description: "Computes Bollinger Bands Width as (upper - lower) / middle from a configurable source and plots it as a teal line."
+"Bull Bear Power":
+  description: "Computes the sum of bull and bear power relative to an EMA, showing buying vs selling pressure."
+"Chaikin Oscillator":
+  description: "Computes the difference between fast and slow EMAs of the cumulative money flow volume (Accumulation/Distribution Line)."
+"Chande Kroll Stop":
+  description: "Computes trailing stop levels based on ATR and price extremes, with two lines for long and short stops."
+"Chande Momentum Oscillator":
+  description: "Computes the Chande Momentum Oscillator (CMO) as the ratio of price change sums over a specified period."
+"Chop Zone":
+  description: "Computes the slope angle of a 34-period EMA relative to the price range and colors a column to indicate trend strength and direction."
+"Choppiness Index":
+  description: "Computes the Choppiness Index (CHOP) to measure market trendiness vs. choppiness over a given period."
+"Commodity Channel Index":
+  description: "Computes the Commodity Channel Index from a price source and plots it with fixed ±100 and 0 levels."
+"Connors RSI":
+  description: "A composite oscillator that averages RSI of price, RSI of directional streaks, and PercentRank of rate of change."
+"Coppock Curve":
+  description: "Computes the Coppock Curve as a weighted moving average of the sum of two Rate of Change values."
+"Correlation Coefficient":
+  description: "Computes the Pearson correlation coefficient between the current instrument's price and another instrument's price over a rolling window."
+"Double EMA":
+  description: "Computes the Double Exponential Moving Average (DEMA) of a given source over a specified length."
+"Directional Movement Index":
+  description: "Computes the Directional Movement Index (DMI) with +DI, -DI, and ADX lines to measure directional price movement strength."
+"Donchian Channels":
+  description: "Computes Donchian Channels: upper (highest high), lower (lowest low), and basis (midpoint) over a given period."
+"Ease of Movement":
+  description: "Combines price movement and volume to show how easily price changes per unit of volume."
+"Elders Force Index":
+  description: "Oscillator combining price change and volume to measure buying or selling pressure."
+"Exponential Moving Average":
+  description: "Plots an exponential moving average of the selected price source with configurable length and offset."
+"Envelope":
+  description: "Plots a moving-average basis (SMA or EMA) with upper and lower bands set at a fixed percentage from the basis."
+"Fisher Transform":
+  description: "Computes the Fisher Transform to identify potential price reversals by normalizing price into a Gaussian distribution."
+"Ichimoku Cloud":
+  description: "Ichimoku Cloud indicator with conversion, base, lagging span, and leading spans A and B, forming a cloud for trend and support/resistance."
+"Keltner Channels":
+  description: "Plots a central moving average with upper and lower bands based on volatility (ATR, True Range, or Range) to identify overbought/oversold conditions and trend strength."
+"Klinger Oscillator":
+  description: "Computes Klinger Oscillator (KVO) and its signal line using signed volume and EMAs."
+"Know Sure Thing":
+  description: "Weighted sum of four smoothed rate-of-change (ROC) series forming the KST oscillator plus its SMA signal line."
+"Linear Regression Channel":
+  description: "Computes a linear regression channel with upper/lower deviation bands and Pearson's R coefficient."
+"Least Squares Moving Average":
+  description: "Computes a least-squares linear regression line as a moving average, often used as a smoother with reduced lag."
+"Moving Average Ribbon":
+  description: "Plots up to four configurable moving averages (SMA, EMA, WMA, VWMA, SMMA) as separate lines on the chart."
+"McGinley Dynamic":
+  description: "Adaptive moving average that smooths price while responding faster to trends."
+"Momentum":
+  description: "Computes the price change over a specified lookback period, displayed as a blue line."
 "Relative Strength Index":
-  category: oscillators
-  builtin: true
   description: "Computes the Relative Strength Index (RSI) with optional smoothing and Bollinger Bands."

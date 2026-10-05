@@ -1,0 +1,16 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, band, color, level, plot
+from indie.algorithms import Bb
+from indie.math import divide
+
+
+@indicator('BB %B', format=format.PRICE)  # Bollinger Bands %B
+@param.int('length', default=20, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.float('mult', default=2.0, min=0.001, max=50.0, title='StdDev')
+@band(0, 1, line_color=color.GRAY, fill_color=color.AQUA(0.1), title='Background')
+@level(0.5, line_color=color.GRAY, title='Middle Band')
+@plot.line(color=color.AQUA, title='Bollinger Bands %B')
+def Main(self, length, src, mult):
+    (lower, _, upper) = Bb.new(src, length, mult)
+    return divide(src[0] - lower[0], upper[0] - lower[0])

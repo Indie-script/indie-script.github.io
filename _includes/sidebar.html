@@ -34,9 +34,22 @@
       <summary>{% include icon.html name="chevron-right" class="chev" px=12 %}{% include icon.html name=c.icon %}<span>{{ c.label | escape }}</span><span class="counter">{{ cat_rows.size }}</span></summary>
       <ul>
         <li><a class="side-link side-all" href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{% include icon.html name="list-unordered" %}<span>All {{ c.label | downcase | escape }}</span></a></li>
-        {%- for cl_p in cat_rows %}
+        {%- for cl_p in cat_comm %}
         <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
         {%- endfor %}
+        {%- if cat_bi.size > 0 %}
+        <li>
+          <details class="side-group side-sub" data-group="bi-{{ c.id }}">
+            <summary>{% include icon.html name="chevron-right" class="chev" px=12 %}{% include icon.html name="file-directory-fill" class="dir builtin" %}<span>built-in</span><span class="counter">{{ cat_bi.size }}</span></summary>
+            <ul>
+              <li><a class="side-link side-all" href="{{ '/indicators/' | append: c.id | append: '/built-in/' | relative_url }}">{% include icon.html name="list-unordered" %}<span>All built-in</span></a></li>
+              {%- for cl_p in cat_bi %}
+              <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir builtin" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
+              {%- endfor %}
+            </ul>
+          </details>
+        </li>
+        {%- endif %}
       </ul>
     </details>
       {%- endif -%}
@@ -56,7 +69,7 @@
         links[i].classList.add('current');
         links[i].setAttribute('aria-current', 'page');
         var g = links[i].closest('details');
-        if (g) g.open = true;
+        while (g) { g.open = true; g = g.parentElement ? g.parentElement.closest('details') : null; }
       }
     }
   })();

@@ -1,0 +1,27 @@
+# indie:lang_version = 5
+from indie import indicator, MainContext, sec_context, format, param, source, param_ref, level, color, plot
+from indie.algorithms import Corr
+
+
+@sec_context
+@param_ref('source')
+def SecContext(self, source):
+    return source[0]
+
+
+@indicator('CC', format=format.PRICE)  # Correlation Coefficient
+@param.str('exchange', default='NASDAQ')
+@param.str('ticker', default='GOOG')
+@param.source('source', default=source.CLOSE)
+@param.int('length', default=20, min=1)
+@level(1, line_color=color.GRAY)
+@level(0)
+@level(-1, line_color=color.GRAY)
+@plot.line(color=color.BLUE, title='Correlation')
+class Main(MainContext):
+    def __init__(self, exchange, ticker):
+        self.ctx_other = self.calc_on(SecContext, exchange=exchange, ticker=ticker)
+
+    def calc(self, source, length):
+        corr = Corr.new(source, self.ctx_other, length)
+        return corr[0]

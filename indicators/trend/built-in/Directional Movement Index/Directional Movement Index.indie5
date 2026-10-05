@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+from indie.algorithms import Adx
+
+
+@indicator('DMI', format=format.PRICE, precision=4)  # Directional Movement Index
+@param.int('adx_len', default=14, min=1, title='ADX Smoothing')
+@param.int('di_len', default=14, min=1, title='DI Length')
+@plot.line(color=color.MAROON, title='-DI')
+@plot.line(color=color.RED, title='ADX')
+@plot.line(color=color.BLUE, title='+DI')
+def Main(self, adx_len, di_len):
+    minus, adx, plus = Adx.new(adx_len, di_len)
+    return minus[0], adx[0], plus[0]

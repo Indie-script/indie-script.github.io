@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Sma
+
+
+@indicator('ADR')  # Average Day Range
+@param.int('length', default=14, min=1)
+@plot.line(color=color.BLUE)
+def Main(self, length):
+    sma_high = Sma.new(self.high, length)
+    sma_low = Sma.new(self.low, length)
+    return sma_high[0] - sma_low[0]

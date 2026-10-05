@@ -1,0 +1,17 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+from indie.algorithms import SinceLowest, SinceHighest
+
+
+@indicator('Aroon', format=format.PRICE)  # TODO: format=format.PERCENT
+@param.int('length', default=14, min=1)
+@plot.line(color=color.BLUE, title='Aroon Down')
+@plot.line(color=color.YELLOW, title='Aroon Up')
+def Main(self, length):
+    lo_offset = SinceLowest.new(self.low, length)
+    hi_offset = SinceHighest.new(self.high, length)
+
+    down = 100 * (length - lo_offset[0]) / length
+    up = 100 * (length - hi_offset[0]) / length
+
+    return down, up

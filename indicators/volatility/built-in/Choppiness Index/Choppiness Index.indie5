@@ -1,0 +1,17 @@
+# indie:lang_version = 5
+from math import log10
+from indie import indicator, format, param, band, color, level, plot
+from indie.algorithms import Highest, Lowest, Sum, Atr
+from indie.math import divide
+
+
+@indicator('CHOP', format=format.PRICE)  # Choppiness Index
+@param.int('length', default=14, min=1)
+@param.int('offset', default=0, min=-500, max=500)
+@band(38.2, 61.8, line_color=color.GRAY, fill_color=color.AQUA(0.1), title='Background')
+@level(50, line_color=color.GRAY(0.5), title='Middle Band')
+@plot.line(color=color.BLUE, title='CHOP')
+def Main(self, length, offset):
+    hl = Highest.new(self.high, length)[0] - Lowest.new(self.low, length)[0]
+    res = 100 * divide(log10(divide(Sum.new(Atr.new(1), length)[0], hl)), log10(length))
+    return plot.Line(res, offset=offset)

@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot
+from indie.algorithms import CumSum, Mfv, Ema
+
+
+@indicator('Chaikin Osc', format=format.VOLUME)  # Chaikin Oscillator
+@param.int('fast_length', default=3, min=1, title='Fast Length')
+@param.int('slow_length', default=10, min=1, title='Slow Length')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.RED, title='Chaikin Oscillator')
+def Main(self, fast_length, slow_length):
+    ad = CumSum.new(Mfv.new())
+    ch_osc = Ema.new(ad, fast_length)[0] - Ema.new(ad, slow_length)[0]
+    return ch_osc

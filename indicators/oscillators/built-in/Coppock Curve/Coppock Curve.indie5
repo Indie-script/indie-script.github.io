@@ -1,0 +1,15 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Roc, Wma
+
+
+@indicator('Coppock')  # Coppock Curve
+@param.int('wma_length', default=10, min=1, title='WMA Length')
+@param.int('long_roc_length', default=14, min=1, title='Long RoC Length')
+@param.int('short_roc_length', default=11, min=1, title='Short RoC Length')
+@plot.line(color=color.BLUE)
+def Main(self, wma_length, long_roc_length, short_roc_length):
+    l_roc = Roc.new(self.close, long_roc_length)[0]
+    s_roc = Roc.new(self.close, short_roc_length)[0]
+    curve = Wma.new(MutSeriesF.new(l_roc + s_roc), wma_length)[0]
+    return curve

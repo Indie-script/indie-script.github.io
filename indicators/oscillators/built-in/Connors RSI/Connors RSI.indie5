@@ -1,0 +1,36 @@
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, format, param, band, color, level, plot, MutSeriesF
+from indie.algorithms import Rsi, PercentRank, Roc
+
+
+def nan_to_zero(val: float) -> float:
+    return 0 if isnan(val) else val
+
+
+@indicator('CRSI', format=format.PRICE)  # Connors RSI
+@param.int('len_rsi', default=3, min=1, title='RSI Length')
+@param.int('len_up_down', default=2, min=1, title='UpDown Length')
+@param.int('len_roc', default=100, min=1, title='ROC Length')
+@band(30, 70, line_color=color.GRAY, fill_color=color.AQUA(0.1), title='Background')
+@level(50, line_color=color.GRAY(0.5), title='Middle Band')
+@plot.line(color=color.BLUE, title='CRSI')
+def Main(self, len_rsi, len_up_down, len_roc):
+    is_equal = self.close[0] == self.close[1]
+    is_growing = self.close[0] > self.close[1]
+    ud = MutSeriesF.new(0)  # why not mut_series(init=0)
+    if is_growing:
+        if nan_to_zero(ud[1]) <= 0:  # why not equal nan_to_zero(ud)[1]
+            ud[0] = 1
+        else:
+            ud[0] = nan_to_zero(ud[1]) + 1
+    elif not is_equal:
+        if nan_to_zero(ud[1]) >= 0:
+            ud[0] = -1
+        else:
+            ud[0] = nan_to_zero(ud[1]) - 1
+
+    rsi = Rsi.new(self.close, len_rsi)[0]
+    ud_rsi = Rsi.new(ud, len_up_down)[0]
+    pr = PercentRank.new(Roc.new(self.close, 1), len_roc)[0]
+    return (rsi + ud_rsi + pr) / 3

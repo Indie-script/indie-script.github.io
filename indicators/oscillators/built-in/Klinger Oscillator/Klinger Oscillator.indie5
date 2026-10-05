@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color, MutSeriesF
+from indie.algorithms import Change, Ema
+
+
+@indicator('Klinger Osc', format=format.VOLUME)  # Klinger Oscillator
+@plot.line(color=color.BLUE, title='KO')
+@plot.line(color=color.GREEN, title='Signal')
+def Main(self):
+    sv = MutSeriesF.new(self.volume[0] if Change.new(self.hlc3)[0] >= 0 else -self.volume[0])
+    kvo = MutSeriesF.new(Ema.new(sv, 34)[0] - Ema.new(sv, 55)[0])
+    sig = Ema.new(kvo, 13)
+    return kvo[0], sig[0]

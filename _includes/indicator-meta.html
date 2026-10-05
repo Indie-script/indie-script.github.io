@@ -1,11 +1,18 @@
 {%- comment -%}
   Category of an indicator page. Usage: {% include indicator-meta.html p=page_object %}
-  Sets: im_name (folder name), im_cat_id, im_cat (entry from portal.categories)
-  Source of the category: README front matter `category`, then _data/indicators.yml, then "other".
+  Sets: im_name (folder name), im_cat_id, im_cat (entry from portal.categories), im_builtin (page lives in indicators/<category>/built-in/)
+  Source of the category: README front matter `category`, then the path (indicators/<category>/built-in/...), then _data/indicators.yml, then "other".
 {%- endcomment -%}
 {%- assign im_name = include.p.dir | split: "/" | last -%}
 {%- assign im_reg = site.data.indicators[im_name] -%}
-{%- assign im_cat_id = include.p.category | default: im_reg.category | default: "other" -%}
+{%- assign im_parts = include.p.dir | split: "/" -%}
+{%- assign im_builtin = false -%}
+{%- assign im_path_cat = "" -%}
+{%- if im_parts contains "built-in" -%}
+  {%- assign im_builtin = true -%}
+  {%- assign im_path_cat = im_parts[2] -%}
+{%- endif -%}
+{%- assign im_cat_id = include.p.category | default: im_path_cat | default: im_reg.category | default: "other" -%}
 {%- assign im_cat = portal.categories | where: "id", im_cat_id | first -%}
 {%- unless im_cat -%}
   {%- assign im_cat_id = "other" -%}

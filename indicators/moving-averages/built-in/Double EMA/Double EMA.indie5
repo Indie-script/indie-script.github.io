@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Ema
+
+
+@indicator('DEMA', overlay_main_pane=True)  # Double EMA
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(color=color.GREEN)
+def Main(self, length, src):
+    ema1 = Ema.new(src, length)
+    ema2 = Ema.new(ema1, length)
+    return 2 * ema1[0] - ema2[0]

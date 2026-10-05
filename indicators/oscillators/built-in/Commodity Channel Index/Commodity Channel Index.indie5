@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, band, color, level, plot
+from indie.algorithms import Cci
+
+
+@indicator('CCI', format=format.PRICE)  # Commodity Channel Index
+@param.int('length', default=20, min=1)
+@param.source('src', default=source.HLC3, title='Source')
+@band(-100, 100, line_color=color.GRAY, fill_color=color.AQUA(0.1), title='Background')
+@level(0, line_color=color.GRAY(0.5), title='Middle Band')
+@plot.line(color=color.BLUE, title='CCI')
+def Main(self, length, src):
+    return Cci.new(src, length)[0]
+    # TODO: implement smoothing when display.none is supported

@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color, MutSeriesF
+from indie.algorithms import Change, Sma
+from indie.math import divide
+
+
+@indicator('EOM', format=format.VOLUME)  # Ease of Movement
+@param.int('length', default=14, min=1)
+@param.int('divisor', default=10000, min=1)
+@plot.line(color=color.GREEN)
+def Main(self, length, divisor):
+    eom = divisor * Change.new(self.hl2)[0] * divide(self.high[0] - self.low[0], self.volume[0])
+    return Sma.new(MutSeriesF.new(eom), length)[0]

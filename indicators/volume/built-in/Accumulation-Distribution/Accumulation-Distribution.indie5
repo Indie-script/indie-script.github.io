@@ -1,0 +1,9 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color
+from indie.algorithms import CumSum, Mfv
+
+
+@indicator('Accum/Dist', format=format.VOLUME)  # Accumulation/Distribution
+@plot.line(color=color.OLIVE)
+def Main(self):
+    return CumSum.new(Mfv.new())[0]

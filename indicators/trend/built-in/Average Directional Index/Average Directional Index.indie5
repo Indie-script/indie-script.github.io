@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+from indie.algorithms import Adx
+
+
+@indicator('ADX', format=format.PRICE)  # Average Directional Index
+@param.int('adx_len', default=14, min=1, title='ADX Smoothing')
+@param.int('di_len', default=14, min=1, title='DI Length')
+@plot.line(color=color.RED)
+def Main(self, adx_len, di_len):
+    _, adx, _ = Adx.new(adx_len, di_len)
+    return adx[0]

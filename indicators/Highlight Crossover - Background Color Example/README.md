@@ -34,7 +34,7 @@ $$
 \alpha_t = \frac{0.5}{(t - t_{\text{cross}} + 1)^{0.6}}
 $$
 
-where \(t = \text{self.bar_index}\) and \(t_{\text{cross}}\) is the stored `cross_over_index` value.
+where \(t = \text{self.bar\_index}\) and \(t_{\text{cross}}\) is the stored `cross_over_index` value.
 
 ## Logic flow
 
