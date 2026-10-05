@@ -1,0 +1,84 @@
+{%- comment -%} Indicator catalog (/indicators/): every indicator, grouped by category. {%- endcomment -%}
+{%- assign code_n = 0 -%}
+{%- assign orphans = "" | split: "" -%}
+{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|" -%}
+{%- for f in src_files -%}
+  {%- include file-meta.html name=f.name -%}
+  {%- if fm_lang != "" -%}
+    {%- assign code_n = code_n | plus: 1 -%}
+    {%- assign f_dir = f.path | remove: f.name -%}
+    {%- assign needle = "|" | append: f_dir | append: "|" -%}
+    {%- unless ind_dirs contains needle -%}{%- assign orphans = orphans | push: f -%}{%- endunless -%}
+  {%- endif -%}
+{%- endfor -%}
+<div class="layout layout-noside-rail">
+  {% include_cached sidebar.html %}
+  <div class="layout-main">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="{{ '/' | relative_url }}">Overview</a>
+      <span class="crumbs-sep">/</span>
+      <span class="crumbs-current" aria-current="page">Indicators</span>
+    </nav>
+    <header class="pagehead">
+      <span class="pagehead-icon">{% include icon.html name="package" px=24 %}</span>
+      <div class="pagehead-text">
+        <h1>{{ page.heading | default: page_title }}</h1>
+        {%- if page.lead %}<p class="lead">{{ page.lead }}</p>{% endif %}
+      </div>
+      <dl class="pagehead-stats">
+        <div><dt>Indicators</dt><dd>{{ indicators.size }}</dd></div>
+        <div><dt>Source files</dt><dd>{{ code_n }}</dd></div>
+      </dl>
+    </header>
+
+    {% include catalog-tools.html current="" %}
+
+    <div data-catalog>
+      {%- for c in portal.categories -%}
+        {%- include cat-rows.html cat=c.id -%}
+        {%- if cat_rows.size > 0 %}
+      <section class="box catsec" id="{{ c.id }}" data-catsec>
+        <header class="box-head catsec-head">
+          <h2 class="box-title">{% include icon.html name=c.icon %}<a href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{{ c.label | escape }}</a><span class="counter" data-catsec-count>{{ cat_rows.size }}</span></h2>
+          <p class="catsec-sum muted">{{ c.summary | escape }}</p>
+        </header>
+        <ul class="rowlist">
+          {%- for p in cat_rows %}
+          {% include indicator-row.html p=p %}
+          {%- endfor %}
+        </ul>
+      </section>
+        {%- endif -%}
+      {%- endfor %}
+      <section class="box catsec" data-flat hidden>
+        <ul class="rowlist"></ul>
+      </section>
+      <div class="blankslate" data-catalog-empty hidden>
+        {% include icon.html name="search" px=24 %}
+        <h3>No indicators match</h3>
+        <p class="muted">Try a different name or clear the language filter.</p>
+      </div>
+    </div>
+
+    {%- if orphans.size > 0 %}
+    <section class="box">
+      <header class="box-head">
+        <h2 class="box-title">{% include icon.html name="file-code" %}Source only<span class="counter">{{ orphans.size }}</span></h2>
+        <span class="box-note muted">Scripts published without a write-up</span>
+      </header>
+      <ul class="filelist">
+        {%- for f in orphans -%}
+          {%- include file-meta.html name=f.name %}
+        <li class="filerow">
+          <span class="row-icon">{% include icon.html name="file-code" %}</span>
+          <a class="file-name" href="{{ f.path | relative_url }}" download="{{ f.name | escape }}">{{ f.path | remove_first: "/indicators/" | escape }}</a>
+          <span class="file-tags"><span class="badge {% if fm_lang == 'indie' %}badge-indie{% else %}badge-pine{% endif %}">{{ fm_label }}</span></span>
+          <span class="file-size muted"></span>
+          <a class="icon-btn file-dl" href="{{ f.path | relative_url }}" download="{{ f.name | escape }}" title="Download" aria-label="Download {{ f.name | escape }}">{% include icon.html name="download" %}</a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </section>
+    {%- endif %}
+  </div>
+</div>

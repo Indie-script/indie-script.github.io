@@ -1,0 +1,56 @@
+{%- comment -%}
+  Per-page variables for the layout:
+    kind        - home | doc | indicator | catalog | notfound
+    section     - first path segment ("docs", "indicators", "")
+    folder_name - last folder of the page path
+    page_title  - page.title with a fallback (folder or file name)
+    nav_label   - short name for breadcrumbs
+    doc_meta    - registry entry from _data/portal.yml (docs only)
+    page_cat    - category entry (indicator and category pages)
+    meta_desc   - meta description, when the page has one
+    page_empty  - true for a category without indicators (kept out of the index)
+{%- endcomment -%}
+{%- assign dir_parts = page.dir | split: "/" -%}
+{%- assign section = dir_parts[1] | default: "" -%}
+{%- assign folder_name = dir_parts | last | default: "" -%}
+{%- if page.kind -%}
+  {%- assign kind = page.kind -%}
+{%- elsif page.url == "/" -%}
+  {%- assign kind = "home" -%}
+{%- elsif section == "indicators" and page.name == "README.md" -%}
+  {%- assign kind = "indicator" -%}
+{%- else -%}
+  {%- assign kind = "doc" -%}
+{%- endif -%}
+{%- assign page_title = page.title -%}
+{%- if page_title == nil or page_title == "" -%}
+  {%- if page.name == "README.md" -%}
+    {%- assign page_title = folder_name -%}
+  {%- else -%}
+    {%- assign page_title = page.name | split: "." | first -%}
+  {%- endif -%}
+{%- endif -%}
+{%- assign doc_meta = nil -%}
+{%- assign nav_label = page_title -%}
+{%- if section == "docs" -%}
+  {%- assign doc_meta = portal.docs | where: "file", page.name | first -%}
+  {%- if doc_meta -%}{%- assign nav_label = doc_meta.label -%}{%- endif -%}
+{%- elsif kind == "indicator" -%}
+  {%- assign nav_label = folder_name -%}
+{%- endif -%}
+{%- assign meta_desc = page.description -%}
+{%- assign page_empty = false -%}
+{%- if kind == "indicator" -%}
+  {%- include indicator-meta.html p=page -%}
+  {%- assign page_cat = im_cat -%}
+{%- elsif kind == "category" -%}
+  {%- assign page_cat = portal.categories | where: "id", page.category | first -%}
+  {%- unless meta_desc -%}{%- assign meta_desc = page_cat.summary -%}{%- endunless -%}
+  {%- include cat-rows.html cat=page.category -%}
+  {%- if cat_rows.size == 0 -%}{%- assign page_empty = true -%}{%- endif -%}
+{%- elsif kind == "catalog" -%}
+  {%- unless meta_desc -%}{%- assign meta_desc = page.lead -%}{%- endunless -%}
+{%- endif -%}
+{%- assign src_path = page.path | uri_escape -%}
+{%- assign canonical = page.url | absolute_url -%}
+{%- assign asset_v = site.time | date: "%Y%m%d%H%M" -%}

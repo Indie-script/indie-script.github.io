@@ -1,0 +1,17 @@
+{%- comment -%} 404 page body. {%- endcomment -%}
+<div class="layout layout-noside-rail">
+  {% include_cached sidebar.html %}
+  <div class="layout-main">
+    <div class="blankslate blankslate-lg">
+      <div class="notfound-code">404</div>
+      <h1>Page not found</h1>
+      <p class="muted">The page may have been moved or renamed. Search the portal or pick a section below.</p>
+      <div class="blankslate-actions">
+        <button class="btn btn-primary" type="button" data-palette-open>{% include icon.html name="search" %}Search the portal</button>
+        <a class="btn" href="{{ '/' | relative_url }}">{% include icon.html name="home" %}Overview</a>
+        <a class="btn" href="{{ '/indicators/' | relative_url }}">{% include icon.html name="package" %}Indicators</a>
+        <a class="btn" href="{{ '/docs/' | relative_url }}">{% include icon.html name="book" %}Docs</a>
+      </div>
+    </div>
+  </div>
+</div>

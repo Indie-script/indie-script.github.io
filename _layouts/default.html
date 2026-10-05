@@ -1,90 +1,39 @@
+{%- include data.html -%}
+{%- include page-vars.html -%}
 <!DOCTYPE html>
- <!--this file is _layouts/default.html -->
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ page.title }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css" id="code-style">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/yaml.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/ruby.min.js"></script>
-  {% include styles.html %}
-
-  <!-- Favicons and App Icons -->
-<link rel="manifest" href="/assets/site.webmanifest">
-<link rel="icon" type="image/x-icon" href="{{ '/assets/favicon.ico' | relative_url }}">
-<link rel="icon" type="image/png" sizes="16x16" href="{{ '/assets/favicon-16x16.png' | relative_url }}">
-<link rel="icon" type="image/png" sizes="32x32" href="{{ '/assets/favicon-32x32.png' | relative_url }}">
-<link rel="icon" type="image/png" sizes="192x192" href="{{ '/assets/android-chrome-192x192.png' | relative_url }}">
-<link rel="icon" type="image/png" sizes="512x512" href="{{ '/assets/android-chrome-512x512.png' | relative_url }}">
-<link rel="apple-touch-icon" href="{{ '/assets/apple-touch-icon.png' | relative_url }}">
-
+{% include head.html %}
 </head>
-<body>
-  <div class="header-controls">
-    <div class="theme-switch">
-      <span>Theme:</span>
-      <button onclick="toggleTheme()">Toggle theme</button>
-    </div>
-  </div>
-  
-  <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-  <div class="overlay" onclick="toggleSidebar()"></div>
-  
-  <div class="container">
-    <div class="sidebar">
-      <div class="search-container">
-        <input type="text" class="search-input" placeholder="Search files...">
-        <div class="search-results"></div>
-      </div>
-      
-      {% include file-tree.html %}
-    </div>
-    
-    <div class="main-content markdown-body">
-      {% assign path_parts = page.path | split: "/" %}
-      {% if path_parts.size > 1 %}
-        <ul class="breadcrumbs">
-          <li>
-            <a href="{{ site.baseurl }}/">Home</a>
-          </li>
-          {% assign current_path = "" %}
-          {% for i in (0..path_parts.size | minus: 2) %}
-            {% assign current_path = current_path | append: path_parts[i] | append: "/" %}
-            <li>
-              <a href="{{ site.baseurl }}/{{ current_path }}">{{ path_parts[i] }}</a>
-            </li>
-          {% endfor %}
-          <li>{{ path_parts | last | replace: '.md', '' | replace: '.html', '' }}</li>
-        </ul>
-      {% endif %}
-      
-      <h1>{{ page.title | default: page.path | split: "/" | last | replace: '.md', '' | replace: '.html', '' }}</h1>
-      
-      {% if page.content contains '<h2' or page.content contains '##' %}
-      <div class="toc">
-        <h3>Table of Contents</h3>
-        <div id="toc-container" class="toc-list"></div>
-      </div>
-      {% endif %}
-      
-      {{ content }}
-      
-      {% if page.last_modified_at %}
-      <p class="last-updated">
-        Last updated: {{ page.last_modified_at | date: "%B %d, %Y" }}
-      </p>
-      {% endif %}
-    </div>
-  </div>
-  
-  <!-- Modal window for images -->
-  <div id="imageModal" class="modal">
-    <span class="close">&times;</span>
-    <img class="modal-content" id="modalImage">
-  </div>
+<body class="k-{{ kind }}" id="top">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="progress" aria-hidden="true"><span></span></div>
+  {% include_cached header.html %}
+  {% include context.html %}
 
-  {% include scripts.html %}
+  <main id="main">
+    {%- case kind -%}
+      {%- when "home" -%}
+        {% include home.html %}
+      {%- when "indicator" -%}
+        {% include indicator.html %}
+      {%- when "catalog" -%}
+        {% include catalog.html %}
+      {%- when "category" -%}
+        {% include category.html %}
+      {%- when "notfound" -%}
+        {% include notfound.html %}
+      {%- else -%}
+        {% include doc.html %}
+    {%- endcase -%}
+  </main>
+
+  {% include_cached footer.html %}
+  <div class="drawer-backdrop" data-drawer-close hidden></div>
+  {% include_cached overlays.html %}
+
+  <script>window.PORTAL = { repo: {{ portal.repo | jsonify }}, branch: {{ portal.branch | jsonify }}, base: {{ site.baseurl | default: "" | jsonify }} };</script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script defer src="{{ '/assets/js/portal.js' | relative_url }}?v={{ asset_v }}"></script>
 </body>
 </html>

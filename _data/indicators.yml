@@ -1,0 +1,49 @@
+# Indicator registry: folder name under indicators/ -> metadata.
+# Front matter in the indicator's README.md (category, tags) takes priority over this file,
+# so new indicators can simply declare `category: <id>` in their README front matter.
+# Category ids are defined in _data/portal.yml (categories). Missing entry = "other".
+
+"Advanced Volatility And Risk-adjusted Return Indicator":
+  category: volatility
+"Andean Oscillator":
+  category: oscillators
+"Compr Demo Indicator v1":
+  category: demos
+"DeMarker indicator":
+  category: oscillators
+"DeMarker indicator v2":
+  category: oscillators
+"Dynamic Andean Oscillator - Enhanced Indie Version":
+  category: oscillators
+"Dynamic Volume Profile Oscillator":
+  category: volume
+"Enhanced Andean Oscillator 2025":
+  category: oscillators
+"Enhanced Candlestick Patterns v3":
+  category: patterns
+"Force Index":
+  category: oscillators
+"Force Index v2":
+  category: oscillators
+"Heikin Ashi Trend Channel Advanced":
+  category: trend
+"KalmanFilter lite":
+  category: trend
+"Multi-timeframe with candles visualisation demo":
+  category: demos
+"Simple Pivot Points":
+  category: support-resistance
+"Simple Standard Deviation":
+  category: volatility
+"Squeeze Momentum":
+  category: oscillators
+"SuperTrend Mobius":
+  category: trend
+"Support, Resistance and Median with Trend":
+  category: support-resistance
+"Ultimate MA - MultiTF":
+  category: moving-averages
+"Volume Flow Indicator":
+  category: volume
+"Weis Wave Volume":
+  category: volume

@@ -1,0 +1,32 @@
+{%- comment -%}
+  Category chips + filter toolbar shared by the catalog and category pages.
+  Usage: {% include catalog-tools.html current="oscillators" %}  (current = "" on the full catalog)
+{%- endcomment -%}
+<nav class="chips" aria-label="Indicator categories">
+  <a class="chip{% if include.current == '' %} selected{% endif %}" href="{{ '/indicators/' | relative_url }}">{% include icon.html name="apps" %}All<span class="counter">{{ indicators.size }}</span></a>
+  {%- for c in portal.categories -%}
+    {%- include cat-rows.html cat=c.id -%}
+    {%- if cat_rows.size > 0 %}
+  <a class="chip{% if include.current == c.id %} selected{% endif %}" href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{% include icon.html name=c.icon %}{{ c.label | escape }}<span class="counter">{{ cat_rows.size }}</span></a>
+    {%- endif -%}
+  {%- endfor %}
+</nav>
+<div class="toolbar" data-catalog-toolbar>
+  <label class="input-icon">
+    {% include icon.html name="search" %}
+    <input type="search" placeholder="Filter indicators by name..." aria-label="Filter indicators" data-catalog-q autocomplete="off" spellcheck="false">
+  </label>
+  <div class="segmented" role="group" aria-label="Language" data-catalog-lang>
+    <button type="button" class="selected" data-lang="">All</button>
+    <button type="button" data-lang="indie5">Indie v5</button>
+    <button type="button" data-lang="indie4">Indie v4</button>
+    <button type="button" data-lang="pine">Pine Script</button>
+  </div>
+  {%- if include.current == "" %}
+  <div class="segmented" role="group" aria-label="Grouping" data-catalog-view>
+    <button type="button" class="selected" data-view="grouped">{% include icon.html name="rows" %}By type</button>
+    <button type="button" data-view="flat">{% include icon.html name="sort-asc" %}A-Z</button>
+  </div>
+  {%- endif %}
+  <span class="toolbar-count muted" data-catalog-count></span>
+</div>

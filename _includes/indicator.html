@@ -1,0 +1,127 @@
+{%- comment -%} Indicator page: indicators/<Name>/README.md plus the source files that live next to it. {%- endcomment -%}
+{%- include indicator-meta.html p=page -%}
+{%- include indicator-files.html dir=page.dir -%}
+{%- assign content_head = content | lstrip | slice: 0, 3 -%}
+{%- assign dir_path = page.path | remove: page.name | uri_escape -%}
+{%- assign cat_url = "/indicators/" | append: im_cat_id | append: "/" | relative_url -%}
+<div class="layout">
+  {% include_cached sidebar.html %}
+  <div class="layout-main">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="{{ '/indicators/' | relative_url }}">Indicators</a>
+      <span class="crumbs-sep">/</span>
+      <a href="{{ cat_url }}">{{ im_cat.label | escape }}</a>
+      <span class="crumbs-sep">/</span>
+      <span class="crumbs-current" aria-current="page">{{ folder_name | escape }}</span>
+    </nav>
+
+    <header class="dirhead">
+      <div class="dirhead-main">
+        <span class="dirhead-icon">{% include icon.html name="file-directory-open-fill" px=24 %}</span>
+        <div>
+          <div class="dirhead-name">{{ folder_name | escape }}</div>
+          <div class="dirhead-meta">
+            <a class="label label-accent" href="{{ cat_url }}">{% include icon.html name=im_cat.icon px=12 %}{{ im_cat.label | escape }}</a>
+            {%- for l in ind_labels %}
+            <span class="badge {% if l contains 'Indie' %}badge-indie{% else %}badge-pine{% endif %}">{{ l }}</span>
+            {%- endfor %}
+            <span class="muted">{{ ind_files.size }} source file{% if ind_files.size != 1 %}s{% endif %}</span>
+          </div>
+        </div>
+      </div>
+      <div class="dirhead-actions">
+        <a class="btn btn-sm" href="{{ repo_url }}/tree/{{ portal.branch }}/{{ dir_path }}" rel="nofollow noopener">{% include icon.html name="mark-github" %}<span>View on GitHub</span></a>
+      </div>
+    </header>
+
+    {%- if ind_files.size > 0 %}
+    <section class="box files" aria-label="Source files">
+      <header class="box-head">
+        <h2 class="box-title">{% include icon.html name="file-code" %}Source files<span class="counter">{{ ind_files.size }}</span></h2>
+        <span class="box-note muted">Click a file to open it in the viewer</span>
+      </header>
+      <ul class="filelist">
+        {%- for f in ind_files -%}
+          {%- include file-meta.html name=f.name %}
+        <li class="filerow">
+          <span class="row-icon">{% include icon.html name="file-code" %}</span>
+          <a class="file-name" href="{{ f.path | relative_url }}" data-file-open="{{ forloop.index0 }}">{{ f.name | escape }}</a>
+          <span class="file-tags">{% if fm_strategy %}<span class="label">strategy</span>{% endif %}<span class="badge {% if fm_lang == 'indie' %}badge-indie{% else %}badge-pine{% endif %}">{{ fm_label }}</span></span>
+          <span class="file-size muted" data-file-size="{{ forloop.index0 }}"></span>
+          <a class="icon-btn file-dl" href="{{ f.path | relative_url }}" download="{{ f.name | escape }}" title="Download" aria-label="Download {{ f.name | escape }}">{% include icon.html name="download" %}</a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </section>
+
+    <section class="box viewer" id="source" data-viewer hidden aria-label="Source code viewer">
+      <header class="viewer-head">
+        <div class="viewer-tabs" role="tablist">
+          {%- for f in ind_files -%}
+            {%- include file-meta.html name=f.name %}
+          <button class="viewer-tab" type="button" role="tab" data-src="{{ f.path | relative_url }}" data-name="{{ f.name | escape }}" data-lang="{{ fm_lang }}" data-ver="{{ fm_ver }}" data-label="{{ fm_label }}"><span class="dot dot-{{ fm_lang }}"></span><span class="viewer-tab-text">{{ fm_label }}</span></button>
+          {%- endfor %}
+        </div>
+        <div class="viewer-actions">
+          <button class="btn btn-sm btn-icon" type="button" data-viewer-split title="Side-by-side (s)" aria-label="Side-by-side" aria-pressed="false">{% include icon.html name="columns" %}</button>
+          <button class="btn btn-sm btn-icon" type="button" data-viewer-wrap title="Wrap lines" aria-label="Wrap lines" aria-pressed="false">{% include icon.html name="fold" %}</button>
+          <button class="btn btn-sm btn-icon" type="button" data-viewer-copy title="Copy file (y)" aria-label="Copy file">{% include icon.html name="copy" %}</button>
+          <a class="btn btn-sm btn-icon" data-viewer-raw href="#" title="Open raw file" aria-label="Open raw file">{% include icon.html name="download" %}</a>
+          <button class="btn btn-sm btn-icon" type="button" data-viewer-full title="Full screen (f)" aria-label="Full screen" aria-pressed="false">{% include icon.html name="screen-full" %}</button>
+        </div>
+      </header>
+      <div class="viewer-panes">
+        <div class="pane" data-pane="0">
+          <div class="pane-bar"><select class="pane-select" data-pane-select aria-label="File in left pane"></select><span class="pane-info muted" data-pane-info></span></div>
+          <div class="pane-code" data-pane-code tabindex="0"></div>
+        </div>
+        <div class="pane" data-pane="1" hidden>
+          <div class="pane-bar"><select class="pane-select" data-pane-select aria-label="File in right pane"></select><span class="pane-info muted" data-pane-info></span></div>
+          <div class="pane-code" data-pane-code tabindex="0"></div>
+        </div>
+      </div>
+    </section>
+    {%- endif %}
+
+    <article class="filebox">
+      <header class="filebox-head">
+        <div class="filebox-path">
+          {% include icon.html name="book" %}
+          <span class="path">README.md</span>
+        </div>
+        <div class="filebox-actions">
+          <button class="btn btn-sm btn-icon" type="button" data-wide-toggle title="Toggle wide layout (w)" aria-label="Toggle wide layout">{% include icon.html name="screen-full" %}</button>
+          <div class="btn-group">
+            <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
+          </div>
+        </div>
+      </header>
+      <div class="commitbar" data-commit-path="{{ page.path | escape }}" hidden></div>
+      <details class="toc-inline" data-toc-inline hidden>
+        <summary>{% include icon.html name="list-unordered" %}<span>On this page</span>{% include icon.html name="chevron-down" class="chev" px=12 %}</summary>
+        <nav class="toc" aria-label="On this page"></nav>
+      </details>
+      <div class="markdown-body" data-content>
+        {%- unless content_head == "<h1" %}
+        <h1>{{ page_title }}</h1>
+        {%- endunless %}
+        {{ content }}
+      </div>
+    </article>
+  </div>
+
+  <aside class="rail" aria-label="Page tools">
+    <div class="rail-box" data-toc-rail hidden>
+      <h2>{% include icon.html name="list-unordered" %}On this page</h2>
+      <nav class="toc" aria-label="On this page"></nav>
+    </div>
+    <div class="rail-box">
+      <h2>{% include icon.html name=im_cat.icon %}More in {{ im_cat.label | escape }}</h2>
+      <ul class="rail-links rail-related" data-related>
+        {% include_cached cat-links.html cat=im_cat_id %}
+      </ul>
+      <a class="rail-more" href="{{ cat_url }}">View category{% include icon.html name="arrow-right" %}</a>
+    </div>
+  </aside>
+</div>

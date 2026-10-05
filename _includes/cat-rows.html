@@ -1,0 +1,9 @@
+{%- comment -%}
+  Indicator pages of one category. Usage: {% include cat-rows.html cat="oscillators" %}
+  Sets: cat_rows (array of pages)
+{%- endcomment -%}
+{%- assign cat_rows = "" | split: "" -%}
+{%- for cr_p in indicators -%}
+  {%- include indicator-meta.html p=cr_p -%}
+  {%- if im_cat_id == include.cat -%}{%- assign cat_rows = cat_rows | push: cr_p -%}{%- endif -%}
+{%- endfor -%}

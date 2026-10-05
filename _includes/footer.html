@@ -1,0 +1,65 @@
+{%- comment -%} Site footer. Page-independent: rendered once via include_cached. {%- endcomment -%}
+{%- assign rev = site.github.build_revision | default: "" | slice: 0, 7 -%}
+<footer class="foot">
+  <div class="container">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand brand-foot" href="{{ '/' | relative_url }}">
+          <img class="brand-logo" src="{{ '/assets/android-chrome-192x192.png' | relative_url }}" width="32" height="32" alt="" loading="lazy">
+          <span class="brand-name">{{ portal.name | escape }}</span>
+        </a>
+        <p>Docs, migration guides and open-source indicators for the Indie language.</p>
+        <p class="foot-build">
+          {% include icon.html name="git-commit" %}
+          {%- if rev != "" %}<a href="{{ repo_url }}/commit/{{ site.github.build_revision }}" rel="nofollow noopener"><code>{{ rev }}</code></a>{% endif %}
+          <span>built <time datetime="{{ site.time | date_to_xmlschema }}" data-reltime>{{ site.time | date: "%b %-d, %Y" }}</time></span>
+        </p>
+      </div>
+      <nav class="foot-col" aria-label="Docs">
+        <h2>Docs</h2>
+        <ul>
+          {%- for p in docs -%}
+            {%- assign m = portal.docs | where: "file", p.name | first %}
+          <li><a href="{{ p.url | relative_url }}">{% if m %}{{ m.label | escape }}{% else %}{{ p.title | default: p.name | strip_html }}{% endif %}</a></li>
+          {%- endfor %}
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-label="Indicators">
+        <h2>Indicators</h2>
+        <ul>
+          <li><a href="{{ '/indicators/' | relative_url }}">All indicators</a></li>
+          {%- for c in portal.categories -%}
+            {%- include cat-rows.html cat=c.id -%}
+            {%- if cat_rows.size > 0 %}
+          <li><a href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{{ c.label | escape }}</a></li>
+            {%- endif -%}
+          {%- endfor %}
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-label="Community">
+        <h2>Community</h2>
+        <ul>
+          {%- for c in portal.community %}
+          <li><a href="{{ c.url }}" rel="noopener">{{ c.label | escape }}</a></li>
+          {%- endfor %}
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-label="Project">
+        <h2>Project</h2>
+        <ul>
+          <li><a href="{{ repo_url }}" rel="noopener">GitHub repository</a></li>
+          <li><a href="{{ repo_url }}/issues" rel="nofollow noopener">Report an issue</a></li>
+          <li><a href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener">Changelog</a></li>
+          <li><a href="{{ '/feed.xml' | relative_url }}">Atom feed</a></li>
+          <li><a href="{{ '/sitemap.xml' | relative_url }}">Sitemap</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="foot-bar">
+      <span>{% include icon.html name="law" %}MIT License</span>
+      <span>Built with Jekyll on GitHub Pages</span>
+      <span class="foot-keys"><button type="button" class="linklike" data-shortcuts-open>Keyboard shortcuts</button> <kbd>?</kbd></span>
+      <a class="foot-top" href="#top">{% include icon.html name="arrow-up" %}Back to top</a>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,69 @@
+{%- comment -%} Command palette, shortcuts dialog, image lightbox. Page-independent (include_cached). {%- endcomment -%}
+<div class="palette" id="palette" hidden data-index="{{ '/assets/search.json' | relative_url }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
+  <div class="overlay-backdrop" data-palette-close></div>
+  <div class="palette-panel" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="palette-input">
+      {% include icon.html name="search" %}
+      <input type="text" id="palette-q" placeholder="Search docs, indicators and source files..." autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search" aria-controls="palette-results">
+      <kbd>esc</kbd>
+    </div>
+    <div class="palette-scopes" aria-label="Search scope">
+      <button type="button" class="chip selected" data-scope="all">All</button>
+      <button type="button" class="chip" data-scope="doc">{% include icon.html name="book" %}Docs</button>
+      <button type="button" class="chip" data-scope="indicator">{% include icon.html name="package" %}Indicators</button>
+      <button type="button" class="chip" data-scope="file">{% include icon.html name="file-code" %}Files</button>
+      <button type="button" class="chip" data-scope="command">{% include icon.html name="terminal" %}Commands</button>
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox"></div>
+    <div class="palette-foot">
+      <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>
+      <span><kbd>&crarr;</kbd> open</span>
+      <span><kbd>tab</kbd> scope</span>
+      <span><kbd>&gt;</kbd> commands</span>
+      <span class="palette-foot-right"><kbd>?</kbd> shortcuts</span>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="shortcuts" hidden>
+  <div class="overlay-backdrop" data-shortcuts-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+    <div class="modal-head">
+      <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+      <button class="icon-btn" type="button" data-shortcuts-close aria-label="Close">{% include icon.html name="x" %}</button>
+    </div>
+    <div class="modal-body keys">
+      <div class="keys-col">
+        <h3>Site-wide</h3>
+        <dl>
+          <div><dt>Open search</dt><dd><kbd>/</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd></dd></div>
+          <div><dt>Find a source file</dt><dd><kbd>t</kbd></dd></div>
+          <div><dt>Command mode</dt><dd><kbd>&gt;</kbd></dd></div>
+          <div><dt>Go to overview</dt><dd><kbd>g</kbd> <kbd>h</kbd></dd></div>
+          <div><dt>Go to indicators</dt><dd><kbd>g</kbd> <kbd>i</kbd></dd></div>
+          <div><dt>Go to docs</dt><dd><kbd>g</kbd> <kbd>d</kbd></dd></div>
+          <div><dt>Cycle theme</dt><dd><kbd>g</kbd> <kbd>t</kbd></dd></div>
+          <div><dt>This dialog</dt><dd><kbd>?</kbd></dd></div>
+        </dl>
+      </div>
+      <div class="keys-col">
+        <h3>Pages and code</h3>
+        <dl>
+          <div><dt>Toggle wide layout</dt><dd><kbd>w</kbd></dd></div>
+          <div><dt>Next / previous section</dt><dd><kbd>j</kbd> <kbd>k</kbd></dd></div>
+          <div><dt>Source: next / previous file</dt><dd><kbd>]</kbd> <kbd>[</kbd></dd></div>
+          <div><dt>Source: full screen</dt><dd><kbd>f</kbd></dd></div>
+          <div><dt>Source: side-by-side</dt><dd><kbd>s</kbd></dd></div>
+          <div><dt>Source: copy file</dt><dd><kbd>y</kbd></dd></div>
+          <div><dt>Close dialog or panel</dt><dd><kbd>esc</kbd></dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="icon-btn lightbox-close" type="button" aria-label="Close">{% include icon.html name="x" px=24 %}</button>
+  <img alt="">
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>

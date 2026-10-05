@@ -1,0 +1,39 @@
+---
+layout: null
+sitemap: false
+---
+{%- include data.html -%}
+{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|" -%}
+{"docs":[
+{%- for p in docs -%}
+  {%- assign m = portal.docs | where: "file", p.name | first -%}
+  {"t":{{ p.title | default: p.name | strip_html | jsonify }},"l":{{ m.label | default: "" | jsonify }},"u":{{ p.url | relative_url | jsonify }},"x":{{ p.content | strip_html | normalize_whitespace | jsonify }}}{% unless forloop.last %},{% endunless %}
+{%- endfor -%}
+],"indicators":[
+{%- for p in indicators -%}
+  {%- include indicator-meta.html p=p -%}
+  {"t":{{ im_name | jsonify }},"l":{{ p.title | default: "" | strip_html | jsonify }},"c":{{ im_cat.label | jsonify }},"u":{{ p.url | relative_url | jsonify }},"x":{{ p.content | strip_html | normalize_whitespace | jsonify }}}{% unless forloop.last %},{% endunless %}
+{%- endfor -%}
+],"categories":[
+{%- assign sep = "" -%}
+{%- for c in portal.categories -%}
+  {%- include cat-rows.html cat=c.id -%}
+  {%- if cat_rows.size > 0 -%}
+  {{ sep }}{"t":{{ c.label | jsonify }},"u":{{ "/indicators/" | append: c.id | append: "/" | relative_url | jsonify }},"n":{{ cat_rows.size }},"i":{{ c.icon | jsonify }}}
+  {%- assign sep = "," -%}
+  {%- endif -%}
+{%- endfor -%}
+],"files":[
+{%- assign sep = "" -%}
+{%- for f in src_files -%}
+  {%- include file-meta.html name=f.name -%}
+  {%- if fm_lang != "" -%}
+    {%- assign f_dir = f.path | remove: f.name -%}
+    {%- assign needle = "|" | append: f_dir | append: "|" -%}
+    {%- assign has_page = false -%}
+    {%- if ind_dirs contains needle -%}{%- assign has_page = true -%}{%- endif -%}
+  {{ sep }}{"n":{{ f.name | jsonify }},"d":{{ f_dir | split: "/" | last | jsonify }},"g":{{ fm_label | jsonify }},"p":{{ f.path | relative_url | jsonify }},"u":{% if has_page %}{{ f_dir | relative_url | jsonify }}{% else %}null{% endif %}}
+    {%- assign sep = "," -%}
+  {%- endif -%}
+{%- endfor -%}
+]}

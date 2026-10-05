@@ -1,0 +1,43 @@
+{%- comment -%} Category page (/indicators/<category-id>/): front matter `kind: category`, `category: <id>`. {%- endcomment -%}
+{%- assign cat = portal.categories | where: "id", page.category | first -%}
+{%- include cat-rows.html cat=page.category -%}
+{%- assign rows = cat_rows -%}
+<div class="layout layout-noside-rail">
+  {% include_cached sidebar.html %}
+  <div class="layout-main">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="{{ '/indicators/' | relative_url }}">Indicators</a>
+      <span class="crumbs-sep">/</span>
+      <span class="crumbs-current" aria-current="page">{{ cat.label | escape }}</span>
+    </nav>
+    <header class="pagehead">
+      <span class="pagehead-icon">{% include icon.html name=cat.icon px=24 %}</span>
+      <div class="pagehead-text">
+        <h1>{{ page.heading | default: cat.label | escape }}</h1>
+        <p class="lead">{{ cat.summary | escape }}</p>
+      </div>
+      <dl class="pagehead-stats">
+        <div><dt>Indicators</dt><dd>{{ rows.size }}</dd></div>
+      </dl>
+    </header>
+
+    {% include catalog-tools.html current=page.category %}
+
+    <div data-catalog>
+      {%- if rows.size > 0 %}
+      <section class="box catsec" data-catsec>
+        <ul class="rowlist">
+          {%- for p in rows %}
+          {% include indicator-row.html p=p %}
+          {%- endfor %}
+        </ul>
+      </section>
+      {%- endif %}
+      <div class="blankslate" data-catalog-empty{% if rows.size > 0 %} hidden{% endif %}>
+        {% include icon.html name="search" px=24 %}
+        <h3>{% if rows.size > 0 %}No indicators match{% else %}No indicators here yet{% endif %}</h3>
+        <p class="muted"><a href="{{ '/indicators/' | relative_url }}">Browse the full catalog</a></p>
+      </div>
+    </div>
+  </div>
+</div>

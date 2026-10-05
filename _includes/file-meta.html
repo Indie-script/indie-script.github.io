@@ -1,0 +1,28 @@
+{%- comment -%}
+  Classifies a source file by its name. Usage: {% include file-meta.html name=f.name %}
+  Sets: fm_lang ("indie" | "pine" | ""), fm_ver ("5" | ""), fm_label ("Indie v5"), fm_strategy (true | false)
+{%- endcomment -%}
+{%- assign fm_lang = "" -%}
+{%- assign fm_ver = "" -%}
+{%- assign fm_label = "" -%}
+{%- assign fm_strategy = false -%}
+{%- assign fm_n = include.name | downcase -%}
+{%- assign fm_tail = "" -%}
+{%- if fm_n contains ".indie" -%}
+  {%- assign fm_lang = "indie" -%}
+  {%- assign fm_label = "Indie" -%}
+  {%- assign fm_parts = fm_n | split: ".indie" -%}
+  {%- if fm_parts.size > 1 -%}{%- assign fm_tail = fm_parts | last | remove: "." -%}{%- endif -%}
+{%- elsif fm_n contains ".pinescript" -%}
+  {%- assign fm_lang = "pine" -%}
+  {%- assign fm_label = "Pine Script" -%}
+  {%- assign fm_parts = fm_n | split: ".pinescript" -%}
+  {%- if fm_parts.size > 1 -%}{%- assign fm_tail = fm_parts | last | remove: "." -%}{%- endif -%}
+  {%- if fm_n contains ".strategy." -%}{%- assign fm_strategy = true -%}{%- endif -%}
+{%- endif -%}
+{%- if fm_tail.size == 1 -%}
+  {%- if "0123456789" contains fm_tail -%}
+    {%- assign fm_ver = fm_tail -%}
+    {%- assign fm_label = fm_label | append: " v" | append: fm_ver -%}
+  {%- endif -%}
+{%- endif -%}

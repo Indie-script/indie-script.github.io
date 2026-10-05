@@ -1,0 +1,119 @@
+# Portal registry: navigation metadata for the site chrome.
+# Content itself lives in docs/*.md and indicators/*/README.md and is picked up automatically;
+# a doc that is not listed here still shows up in the sidebar under its own title.
+
+name: Indie Script
+tagline: Developer Portal
+repo: Indie-script/indie-script.github.io
+branch: main
+
+# Order here = order in menus, sidebar, cards and prev/next pager.
+#   file    - file name inside docs/
+#   label   - short name for navigation
+#   group   - menu column
+#   icon    - symbol id from assets/icons.svg
+#   tab     - show in the tab bar under the header
+#   summary - one line for cards and menus
+docs:
+  - file: complete-guide-to-indie-quickstart.md
+    label: Quickstart
+    group: Get started
+    icon: rocket
+    tab: true
+    summary: What Indie is, what you can build with it, and a first indicator in five minutes.
+  - file: README.md
+    label: Pine → Indie cheat sheet
+    group: Reference
+    icon: table
+    tab: true
+    summary: Construct-by-construct mapping from Pine Script to Indie - declarations, series, built-ins, plotting, multi-timeframe.
+  - file: indie-FAQ.md
+    label: FAQ & solutions
+    group: Reference
+    icon: question
+    tab: true
+    summary: Worked answers to common Indie questions - fills, colored zones, stacked histograms and more.
+  - file: Vibe-Coding Indie Indicators AI with MCP.md
+    label: AI coding with MCP
+    group: Get started
+    icon: zap
+    tab: true
+    summary: Describe an indicator in plain language and let an AI assistant write the Indie code through the MCP server.
+  - file: indie-vs-pine-script-alternatives-guide.md
+    label: Indie vs Pine Script
+    group: Guides
+    icon: diff
+    tab: true
+    summary: A developer's comparison of the two languages - syntax, tooling, capabilities and code side by side.
+  - file: tradingview-alternative.md
+    label: TradingView alternative
+    group: Guides
+    icon: graph
+    tab: true
+    summary: TakeProfit vs TradingView - pricing, scripting, alerts, data and migration considerations.
+
+doc_groups:
+  - Get started
+  - Reference
+  - Guides
+
+topics:
+  - indie
+  - indie-script
+  - trading-indicators
+  - technical-analysis
+  - pine-script
+  - python
+
+community:
+  - label: Discord
+    url: https://discord.gg/WVk8TjwU7p
+    icon: comment-discussion
+  - label: Reddit r/IndieLang
+    url: https://www.reddit.com/r/IndieLang/
+    icon: people
+  - label: Stack Overflow [indie]
+    url: https://stackoverflow.com/questions/tagged/indie
+    icon: stack
+
+# Indicator taxonomy. Order here = order in the catalog, menus and sidebar.
+# A category shows up only when it has at least one indicator.
+# To add a category: add an entry here and create indicators/<id>/index.html
+# with front matter  kind: category / category: <id> / title: ...
+categories:
+  - id: moving-averages
+    label: Moving averages
+    icon: graph
+    summary: Smoothed price series - simple, exponential, weighted and adaptive averages - used to read trend direction and dynamic support or resistance.
+  - id: oscillators
+    label: Oscillators
+    icon: pulse
+    summary: Indicators that swing around a centerline or inside a bounded range, used to gauge momentum and overbought or oversold conditions.
+  - id: trend
+    label: Trend
+    icon: arrow-up-right
+    summary: Trend-following tools - channels, filters and trailing levels that show the direction and strength of the prevailing move.
+  - id: volatility
+    label: Volatility
+    icon: zap
+    summary: Measures of how much price moves - standard deviation, range and risk-adjusted statistics.
+  - id: volume
+    label: Volume
+    icon: stack
+    summary: Indicators built on traded volume - flow, accumulation and distribution, and volume-weighted momentum.
+  - id: support-resistance
+    label: Support & resistance
+    icon: rows
+    summary: Price levels where moves tend to stall or reverse - pivot points, medians and dynamic levels.
+  - id: patterns
+    label: Candlestick patterns
+    icon: apps
+    summary: Detection and labeling of candlestick and chart patterns directly on the price pane.
+  - id: demos
+    label: Demos & templates
+    icon: beaker
+    summary: Showcase scripts that demonstrate Indie language features - plots, markers, multi-timeframe contexts - and serve as starting templates.
+  - id: other
+    label: Other
+    icon: package
+    summary: Indicators that do not fit the categories above.

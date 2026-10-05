@@ -1,0 +1,22 @@
+{%- comment -%}
+  Shared collections for the portal chrome. Assigns leak into the including template:
+    docs        - doc pages, ordered by _data/portal.yml, unlisted ones appended
+    indicators  - indicator README pages (one per folder)
+    src_files   - static files under /indicators/ (sources and images)
+{%- endcomment -%}
+{%- assign portal = site.data.portal -%}
+{%- assign repo_url = "https://github.com/" | append: portal.repo -%}
+{%- assign docs_all = site.pages | where_exp: "p", "p.dir == '/docs/'" | sort: "name" -%}
+{%- assign docs = "" | split: "" -%}
+{%- assign doc_reg_names = "|" -%}
+{%- for d in portal.docs -%}
+  {%- assign doc_reg_names = doc_reg_names | append: d.file | append: "|" -%}
+  {%- assign hit = docs_all | where: "name", d.file | first -%}
+  {%- if hit -%}{%- assign docs = docs | push: hit -%}{%- endif -%}
+{%- endfor -%}
+{%- for p in docs_all -%}
+  {%- assign needle = "|" | append: p.name | append: "|" -%}
+  {%- unless doc_reg_names contains needle -%}{%- assign docs = docs | push: p -%}{%- endunless -%}
+{%- endfor -%}
+{%- assign indicators = site.pages | where: "name", "README.md" | where_exp: "p", "p.dir contains '/indicators/'" | sort_natural: "dir" -%}
+{%- assign src_files = site.static_files | where_exp: "f", "f.path contains '/indicators/'" | sort: "path" -%}

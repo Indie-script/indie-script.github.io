@@ -1,0 +1,18 @@
+{%- comment -%}
+  Source files of one indicator folder. Usage: {% include indicator-files.html dir=p.dir %}
+  Sets: ind_files (static files that are Indie / Pine sources), ind_labels (unique "Indie v5" labels), ind_keys ("indie5 pine5 ")
+{%- endcomment -%}
+{%- assign ind_dir = include.dir -%}
+{%- assign ind_files = "" | split: "" -%}
+{%- assign ind_labels = "" | split: "" -%}
+{%- assign ind_keys = "" -%}
+{%- assign ind_in_dir = src_files | where_exp: "f", "f.path contains ind_dir" -%}
+{%- for inf in ind_in_dir -%}
+  {%- include file-meta.html name=inf.name -%}
+  {%- if fm_lang != "" -%}
+    {%- assign ind_files = ind_files | push: inf -%}
+    {%- unless ind_labels contains fm_label -%}{%- assign ind_labels = ind_labels | push: fm_label -%}{%- endunless -%}
+    {%- assign ind_keys = ind_keys | append: fm_lang | append: fm_ver | append: " " -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign ind_labels = ind_labels | sort -%}

@@ -1,0 +1,33 @@
+{%- comment -%} Project header with section tabs (per page: marks the selected tab). {%- endcomment -%}
+{%- assign repo_owner = portal.repo | split: "/" | first -%}
+{%- assign repo_name = portal.repo | split: "/" | last -%}
+<div class="ctx">
+  <div class="container">
+    <div class="ctx-head">
+      <div class="ctx-title">
+        {% include icon.html name="repo" %}
+        <a href="https://github.com/{{ repo_owner }}" rel="nofollow noopener">{{ repo_owner }}</a>
+        <span class="ctx-sep">/</span>
+        <a class="ctx-repo" href="{{ '/' | relative_url }}">{{ repo_name }}</a>
+        <span class="label">Public</span>
+      </div>
+      <div class="ctx-actions">
+        <a class="btn btn-sm" href="{{ repo_url }}/issues" rel="nofollow noopener">{% include icon.html name="issue-opened" %}<span>Issues</span><span class="counter" data-gh="issues" hidden></span></a>
+        <a class="btn btn-sm" href="{{ repo_url }}/fork" rel="nofollow noopener">{% include icon.html name="repo-forked" %}<span>Fork</span><span class="counter" data-gh="forks" hidden></span></a>
+        <a class="btn btn-sm" href="{{ repo_url }}" rel="noopener">{% include icon.html name="star" %}<span>Star</span><span class="counter" data-gh="stars" hidden></span></a>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a class="tab{% if kind == 'home' %} selected{% endif %}" href="{{ '/' | relative_url }}"{% if kind == 'home' %} aria-current="page"{% endif %}>{% include icon.html name="home" %}<span>Overview</span></a>
+      <a class="tab{% if section == 'indicators' %} selected{% endif %}" href="{{ '/indicators/' | relative_url }}"{% if kind == 'catalog' %} aria-current="page"{% endif %}>{% include icon.html name="package" %}<span>Indicators</span><span class="counter">{{ indicators.size }}</span></a>
+      {%- for d in portal.docs -%}
+        {%- if d.tab -%}
+          {%- assign dp = docs | where: "name", d.file | first -%}
+          {%- if dp %}
+      <a class="tab{% if dp.url == page.url %} selected{% endif %}" href="{{ dp.url | relative_url }}"{% if dp.url == page.url %} aria-current="page"{% endif %}>{% include icon.html name=d.icon %}<span>{{ d.label | escape }}</span></a>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor %}
+    </nav>
+  </div>
+</div>

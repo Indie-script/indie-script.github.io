@@ -1,0 +1,17 @@
+{%- comment -%}
+  One catalog row. Usage: {% include indicator-row.html p=page_object %}
+{%- endcomment -%}
+{%- include indicator-meta.html p=include.p -%}
+{%- include indicator-files.html dir=include.p.dir -%}
+<li class="row" data-row data-name="{{ im_name | downcase | escape }}" data-cat="{{ im_cat_id }}" data-langs="{{ ind_keys | strip }}" data-files="{{ ind_files.size }}">
+  <span class="row-icon">{% include icon.html name="file-directory-fill" %}</span>
+  <a class="row-name" href="{{ include.p.url | relative_url }}" title="{{ im_name | escape }}">{{ im_name | escape }}</a>
+  <span class="row-desc">{% if include.p.title and include.p.title != im_name %}{{ include.p.title | strip_html }}{% endif %}</span>
+  <a class="row-cat" href="{{ '/indicators/' | append: im_cat_id | append: '/' | relative_url }}">{{ im_cat.label | escape }}</a>
+  <span class="row-badges">
+    {%- for l in ind_labels -%}
+    <span class="badge {% if l contains 'Indie' %}badge-indie{% else %}badge-pine{% endif %}">{{ l }}</span>
+    {%- endfor -%}
+  </span>
+  <span class="row-count" title="Source files">{% include icon.html name="file-code" %}{{ ind_files.size }}</span>
+</li>

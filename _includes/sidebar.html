@@ -1,0 +1,63 @@
+{%- comment -%}
+  Navigation tree. Page-independent: rendered once via include_cached.
+  The current link is marked by the inline script at the bottom (no per-page Liquid).
+{%- endcomment -%}
+<aside class="sidebar" id="sidebar" aria-label="Site navigation">
+  <div class="side-top">
+    <strong>Navigation</strong>
+    <button class="icon-btn" type="button" data-drawer-close aria-label="Close navigation">{% include icon.html name="x" %}</button>
+  </div>
+  <div class="side-filter">
+    {% include icon.html name="filter" %}
+    <input type="search" placeholder="Filter navigation" aria-label="Filter navigation" data-nav-filter autocomplete="off" spellcheck="false">
+  </div>
+  <nav class="side-nav">
+    <a class="side-link side-root" href="{{ '/' | relative_url }}">{% include icon.html name="home" %}<span>Overview</span></a>
+    <details class="side-group" open data-group="docs">
+      <summary>{% include icon.html name="chevron-right" class="chev" px=12 %}{% include icon.html name="book" %}<span>Docs</span><span class="counter">{{ docs.size }}</span></summary>
+      <ul>
+        {%- for p in docs -%}
+          {%- assign m = portal.docs | where: "file", p.name | first %}
+        <li><a class="side-link" href="{{ p.url | relative_url }}">{% include icon.html name="file" %}<span>{% if m %}{{ m.label | escape }}{% else %}{{ p.title | default: p.name | strip_html }}{% endif %}</span></a></li>
+        {%- endfor %}
+      </ul>
+    </details>
+    <div class="side-heading">
+      <a href="{{ '/indicators/' | relative_url }}">Indicators</a>
+      <span class="counter">{{ indicators.size }}</span>
+    </div>
+    <a class="side-link side-root" href="{{ '/indicators/' | relative_url }}">{% include icon.html name="apps" %}<span>All indicators</span></a>
+    {%- for c in portal.categories -%}
+      {%- include cat-rows.html cat=c.id -%}
+      {%- if cat_rows.size > 0 %}
+    <details class="side-group" data-group="cat-{{ c.id }}">
+      <summary>{% include icon.html name="chevron-right" class="chev" px=12 %}{% include icon.html name=c.icon %}<span>{{ c.label | escape }}</span><span class="counter">{{ cat_rows.size }}</span></summary>
+      <ul>
+        <li><a class="side-link side-all" href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{% include icon.html name="list-unordered" %}<span>All {{ c.label | downcase | escape }}</span></a></li>
+        {%- for cl_p in cat_rows %}
+        <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
+        {%- endfor %}
+      </ul>
+    </details>
+      {%- endif -%}
+    {%- endfor %}
+  </nav>
+  <div class="side-empty" hidden>No matches</div>
+</aside>
+<script>
+  (function () {
+    var side = document.getElementById('sidebar');
+    if (!side) return;
+    var here = location.pathname.replace(/index\.html$/, '');
+    var links = side.querySelectorAll('a.side-link');
+    for (var i = 0; i < links.length; i++) {
+      var p = links[i].pathname;
+      if (p === here || p === here + '.html') {
+        links[i].classList.add('current');
+        links[i].setAttribute('aria-current', 'page');
+        var g = links[i].closest('details');
+        if (g) g.open = true;
+      }
+    }
+  })();
+</script>

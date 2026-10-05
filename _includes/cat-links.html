@@ -1,0 +1,8 @@
+{%- comment -%}
+  <li> links to every indicator of a category. Meant for include_cached (page-independent output).
+  Usage: {% include_cached cat-links.html cat="oscillators" %}
+{%- endcomment -%}
+{%- include cat-rows.html cat=include.cat -%}
+{%- for cl_p in cat_rows -%}
+<li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
+{%- endfor -%}

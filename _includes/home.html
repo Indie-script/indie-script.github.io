@@ -1,0 +1,226 @@
+{%- comment -%} Overview page (/). The markdown of index.md is rendered inside the README box. {%- endcomment -%}
+{%- assign indie_n = 0 -%}
+{%- assign pine_n = 0 -%}
+{%- for f in src_files -%}
+  {%- include file-meta.html name=f.name -%}
+  {%- if fm_lang == "indie" -%}{%- assign indie_n = indie_n | plus: 1 -%}
+  {%- elsif fm_lang == "pine" -%}{%- assign pine_n = pine_n | plus: 1 -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign code_n = indie_n | plus: pine_n -%}
+{%- assign indie_pct = 0 -%}
+{%- assign pine_pct = 0 -%}
+{%- if code_n > 0 -%}
+  {%- assign indie_pct = indie_n | times: 1000 | divided_by: code_n | divided_by: 10.0 -%}
+  {%- assign pine_pct = 100.0 | minus: indie_pct | round: 1 -%}
+{%- endif -%}
+{%- assign cat_n = 0 -%}
+{%- for c in portal.categories -%}
+  {%- include cat-rows.html cat=c.id -%}
+  {%- if cat_rows.size > 0 -%}{%- assign cat_n = cat_n | plus: 1 -%}{%- endif -%}
+{%- endfor -%}
+{%- assign first_doc = docs | first -%}
+{%- assign first_doc_meta = portal.docs | where: "file", first_doc.name | first -%}
+{% include_cached sidebar.html %}
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">{% include icon.html name="terminal" %}Indie language &middot; developer portal</p>
+      <h1>{{ page_title }}</h1>
+      <p class="lead">Reference docs, Pine Script migration guides and open-source indicators for Indie - the Python-inspired scripting language for trading indicators.</p>
+      <div class="hero-cta">
+        {%- if first_doc %}
+        <a class="btn btn-primary btn-lg" href="{{ first_doc.url | relative_url }}">{% include icon.html name="rocket" %}{{ first_doc_meta.label | default: "Get started" | escape }}</a>
+        {%- endif %}
+        <a class="btn btn-lg" href="{{ '/indicators/' | relative_url }}">{% include icon.html name="package" %}Browse {{ indicators.size }} indicators</a>
+        <a class="btn btn-lg" href="{{ '/docs/' | relative_url }}">{% include icon.html name="table" %}Pine &rarr; Indie cheat sheet</a>
+      </div>
+      <button class="hero-search" type="button" data-palette-open>
+        {% include icon.html name="search" %}<span>Search docs, indicators and source files</span><kbd>/</kbd>
+      </button>
+    </div>
+
+    <div class="codewin" data-codewin>
+      <div class="codewin-bar">
+        <span class="codewin-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div class="codewin-tabs" role="tablist">
+          <button type="button" role="tab" class="codewin-tab selected" data-codewin-tab="0"><span class="dot dot-indie"></span>Standard Deviation.indie5</button>
+          <button type="button" role="tab" class="codewin-tab" data-codewin-tab="1"><span class="dot dot-pine"></span>Standard Deviation.pinescript5</button>
+        </div>
+      </div>
+      {%- comment -%} Sample = indicators/Simple Standard Deviation/*.indie5 and *.pinescript5 {%- endcomment %}
+      <div class="codewin-body" data-codewin-pane="0">
+<pre><code class="language-indie"># indie:lang_version = 5
+from indie import indicator, plot, color
+from indie.algorithms import StdDev
+
+@indicator('Standard Deviation', overlay_main_pane=True)
+@plot.line('stddev', color=color.YELLOW)
+def Main(self):
+    stddev = StdDev.new(self.close, 20)
+    return plot.Line(stddev[0])</code></pre>
+      </div>
+      <div class="codewin-body" data-codewin-pane="1" hidden>
+<pre><code class="language-pinescript">//@version=5
+indicator("Standard Deviation", overlay=true)
+
+// Define length
+length = 20
+
+// Calculate Standard Deviation
+stddev = ta.stdev(close, length)
+
+// Plot Standard Deviation
+plot(stddev, color=color.yellow, title="StdDev")</code></pre>
+      </div>
+      <div class="codewin-foot">
+        <span class="muted">Same indicator, two languages</span>
+        <a href="{{ '/indicators/Simple Standard Deviation/' | relative_url }}">Open in the catalog{% include icon.html name="arrow-right" %}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <dl class="stats">
+      <div class="stat"><dt>{% include icon.html name="package" %}Indicators</dt><dd>{{ indicators.size }}</dd></div>
+      <div class="stat"><dt>{% include icon.html name="apps" %}Categories</dt><dd>{{ cat_n }}</dd></div>
+      <div class="stat"><dt>{% include icon.html name="file-code" %}Source files</dt><dd>{{ code_n }}</dd></div>
+      <div class="stat"><dt>{% include icon.html name="book" %}Docs &amp; guides</dt><dd>{{ docs.size }}</dd></div>
+      <div class="stat stat-commit" data-gh-latest hidden><dt>{% include icon.html name="git-commit" %}Latest update</dt><dd><a href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener" data-gh-latest-link></a></dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="container home-grid">
+  <div class="home-main">
+
+    <section class="home-sec" aria-labelledby="h-docs">
+      <div class="sec-head">
+        <h2 id="h-docs">{% include icon.html name="book" %}Documentation</h2>
+        <a class="sec-more" href="{{ '/docs/' | relative_url }}">Open the cheat sheet{% include icon.html name="arrow-right" %}</a>
+      </div>
+      <div class="cards">
+        {%- for p in docs -%}
+          {%- assign m = portal.docs | where: "file", p.name | first -%}
+          {%- assign card_icon = m.icon | default: "file" %}
+        <a class="card" href="{{ p.url | relative_url }}">
+          <span class="card-icon">{% include icon.html name=card_icon %}</span>
+          <span class="card-body">
+            <span class="card-kicker">{{ m.group | default: "Docs" | escape }}</span>
+            <strong class="card-title">{% if m %}{{ m.label | escape }}{% else %}{{ p.title | strip_html }}{% endif %}</strong>
+            <span class="card-text">{% if m %}{{ m.summary | escape }}{% else %}{{ p.title | strip_html }}{% endif %}</span>
+          </span>
+        </a>
+        {%- endfor %}
+      </div>
+    </section>
+
+    <section class="home-sec" aria-labelledby="h-ind">
+      <div class="sec-head">
+        <h2 id="h-ind">{% include icon.html name="package" %}Indicator library</h2>
+        <a class="sec-more" href="{{ '/indicators/' | relative_url }}">Browse all {{ indicators.size }}{% include icon.html name="arrow-right" %}</a>
+      </div>
+      <div class="catgrid">
+        {%- for c in portal.categories -%}
+          {%- include cat-rows.html cat=c.id -%}
+          {%- if cat_rows.size > 0 -%}
+            {%- assign cat_url = "/indicators/" | append: c.id | append: "/" | relative_url %}
+        <div class="catcard">
+          <div class="catcard-head">
+            <span class="card-icon">{% include icon.html name=c.icon %}</span>
+            <a class="catcard-title" href="{{ cat_url }}">{{ c.label | escape }}</a>
+            <span class="counter">{{ cat_rows.size }}</span>
+          </div>
+          <p class="catcard-sum">{{ c.summary | escape }}</p>
+          <ul class="catcard-list">
+            {%- for p in cat_rows limit: 4 %}
+            <li><a href="{{ p.url | relative_url }}">{% include icon.html name="file-directory-fill" %}<span>{{ p.dir | split: "/" | last | escape }}</span></a></li>
+            {%- endfor %}
+          </ul>
+          {%- if cat_rows.size > 4 %}
+          <a class="catcard-more" href="{{ cat_url }}">+{{ cat_rows.size | minus: 4 }} more{% include icon.html name="arrow-right" %}</a>
+          {%- endif %}
+        </div>
+          {%- endif -%}
+        {%- endfor %}
+      </div>
+    </section>
+
+    <article class="filebox readme" id="readme" aria-label="README">
+      <header class="filebox-head">
+        <div class="filebox-path">
+          {% include icon.html name="book" %}
+          <span class="path">README.md</span>
+        </div>
+        <div class="filebox-actions">
+          <div class="btn-group">
+            <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
+          </div>
+        </div>
+      </header>
+      <div class="markdown-body" data-content>
+        {{ content }}
+      </div>
+    </article>
+  </div>
+
+  <aside class="home-side" aria-label="About">
+    <div class="side-box">
+      <h2>About</h2>
+      <p>Unofficial Indie language community page: docs, guides and indicator source code.</p>
+      <ul class="topics">
+        {%- for t in portal.topics %}
+        <li><span class="topic">{{ t | escape }}</span></li>
+        {%- endfor %}
+      </ul>
+      <ul class="facts">
+        <li><a href="#readme">{% include icon.html name="book" %}Readme</a></li>
+        <li><span>{% include icon.html name="law" %}MIT license</span></li>
+        <li><a href="{{ '/indicators/' | relative_url }}">{% include icon.html name="package" %}<strong>{{ indicators.size }}</strong> indicators</a></li>
+        <li><a href="{{ '/indicators/' | relative_url }}">{% include icon.html name="file-code" %}<strong>{{ code_n }}</strong> source files</a></li>
+        <li><a href="{{ '/feed.xml' | relative_url }}">{% include icon.html name="rss" %}Atom feed</a></li>
+      </ul>
+    </div>
+
+    {%- if code_n > 0 %}
+    <div class="side-box">
+      <h2>Languages</h2>
+      <div class="langbar" role="img" aria-label="Indie {{ indie_pct }}%, Pine Script {{ pine_pct }}%">
+        <span class="langbar-indie" style="width: {{ indie_pct }}%"></span>
+        <span class="langbar-pine" style="width: {{ pine_pct }}%"></span>
+      </div>
+      <ul class="langs">
+        <li><span class="dot dot-indie"></span><strong>Indie</strong><span class="muted">{{ indie_pct }}%</span></li>
+        <li><span class="dot dot-pine"></span><strong>Pine Script</strong><span class="muted">{{ pine_pct }}%</span></li>
+      </ul>
+      <p class="side-note muted">Share of source files in the indicator library.</p>
+    </div>
+    {%- endif %}
+
+    <div class="side-box" data-gh-activity hidden>
+      <h2>Recent activity</h2>
+      <ul class="activity" data-gh-activity-list></ul>
+      <a class="rail-more" href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener">All commits{% include icon.html name="arrow-right" %}</a>
+    </div>
+
+    <div class="side-box">
+      <h2>Official resources</h2>
+      <ul class="rail-links">
+        <li><a href="https://takeprofit.com/docs/indie/What-is-Indie" rel="noopener">{% include icon.html name="book" %}Indie language docs{% include icon.html name="link-external" class="ext" px=12 %}</a></li>
+        <li><a href="https://takeprofit.com/docs/indie/Code-examples/built-in-indicators" rel="noopener">{% include icon.html name="code" %}Built-in indicators{% include icon.html name="link-external" class="ext" px=12 %}</a></li>
+        <li><a href="https://takeprofit.com/indicators" rel="noopener">{% include icon.html name="people" %}Community indicators{% include icon.html name="link-external" class="ext" px=12 %}</a></li>
+      </ul>
+    </div>
+
+    <div class="side-box">
+      <h2>Community</h2>
+      <ul class="rail-links">
+        {%- for c in portal.community %}
+        <li><a href="{{ c.url }}" rel="noopener">{% include icon.html name=c.icon %}{{ c.label | escape }}{% include icon.html name="link-external" class="ext" px=12 %}</a></li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </aside>
+</div>

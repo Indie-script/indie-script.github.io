@@ -1,0 +1,100 @@
+{%- comment -%} Article page: docs/*.md and any other markdown page. {%- endcomment -%}
+{%- assign words = content | strip_html | number_of_words -%}
+{%- assign mins = words | divided_by: 200 | at_least: 1 -%}
+{%- assign content_head = content | lstrip | slice: 0, 3 -%}
+{%- assign prev_doc = nil -%}
+{%- assign next_doc = nil -%}
+{%- if section == "docs" -%}
+  {%- for d in docs -%}
+    {%- if d.url == page.url -%}
+      {%- unless forloop.first -%}{%- assign pi = forloop.index0 | minus: 1 -%}{%- assign prev_doc = docs[pi] -%}{%- endunless -%}
+      {%- unless forloop.last -%}{%- assign ni = forloop.index0 | plus: 1 -%}{%- assign next_doc = docs[ni] -%}{%- endunless -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+<div class="layout">
+  {% include_cached sidebar.html %}
+  <div class="layout-main">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="{{ '/' | relative_url }}">Overview</a>
+      <span class="crumbs-sep">/</span>
+      {%- if section == "docs" and page.url != "/docs/" %}
+      <a href="{{ '/docs/' | relative_url }}">Docs</a>
+      <span class="crumbs-sep">/</span>
+      {%- elsif section == "indicators" %}
+      <a href="{{ '/indicators/' | relative_url }}">Indicators</a>
+      <span class="crumbs-sep">/</span>
+      {%- endif %}
+      <span class="crumbs-current" aria-current="page">{{ nav_label | strip_html }}</span>
+    </nav>
+
+    <article class="filebox">
+      <header class="filebox-head">
+        <div class="filebox-path">
+          {% include icon.html name="file" %}
+          <span class="path">{{ page.path | escape }}</span>
+          <span class="filebox-meta"><span data-num>{{ words }}</span> words &middot; {{ mins }} min read</span>
+        </div>
+        <div class="filebox-actions">
+          <button class="btn btn-sm btn-icon" type="button" data-wide-toggle title="Toggle wide layout (w)" aria-label="Toggle wide layout">{% include icon.html name="screen-full" %}</button>
+          <div class="btn-group">
+            <a class="btn btn-sm" href="{{ repo_url }}/blob/{{ portal.branch }}/{{ src_path }}?plain=1" rel="nofollow noopener" title="View markdown source">{% include icon.html name="code" %}<span>Source</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
+          </div>
+        </div>
+      </header>
+      <div class="commitbar" data-commit-path="{{ page.path | escape }}" hidden></div>
+      <details class="toc-inline" data-toc-inline hidden>
+        <summary>{% include icon.html name="list-unordered" %}<span>On this page</span>{% include icon.html name="chevron-down" class="chev" px=12 %}</summary>
+        <nav class="toc" aria-label="On this page"></nav>
+      </details>
+      <div class="markdown-body" data-content>
+        {%- unless content_head == "<h1" %}
+        <h1>{{ page_title }}</h1>
+        {%- endunless %}
+        {{ content }}
+      </div>
+      <footer class="filebox-foot">
+        <a href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener">{% include icon.html name="pencil" %}Edit this page on GitHub</a>
+        <a href="{{ repo_url }}/issues/new?title={{ 'Docs: ' | append: page.path | url_encode }}" rel="nofollow noopener">{% include icon.html name="issue-opened" %}Report a problem</a>
+      </footer>
+    </article>
+
+    {%- if prev_doc or next_doc %}
+    <nav class="pager" aria-label="Docs pagination">
+      {%- if prev_doc -%}
+        {%- assign m = portal.docs | where: "file", prev_doc.name | first %}
+      <a class="pager-link pager-prev" href="{{ prev_doc.url | relative_url }}">
+        <span class="pager-dir">{% include icon.html name="arrow-left" %}Previous</span>
+        <span class="pager-title">{% if m %}{{ m.label | escape }}{% else %}{{ prev_doc.title | strip_html }}{% endif %}</span>
+      </a>
+      {%- else %}
+      <span></span>
+      {%- endif -%}
+      {%- if next_doc -%}
+        {%- assign m = portal.docs | where: "file", next_doc.name | first %}
+      <a class="pager-link pager-next" href="{{ next_doc.url | relative_url }}">
+        <span class="pager-dir">Next{% include icon.html name="arrow-right" %}</span>
+        <span class="pager-title">{% if m %}{{ m.label | escape }}{% else %}{{ next_doc.title | strip_html }}{% endif %}</span>
+      </a>
+      {%- endif %}
+    </nav>
+    {%- endif %}
+  </div>
+
+  <aside class="rail" aria-label="Page tools">
+    <div class="rail-box" data-toc-rail hidden>
+      <h2>{% include icon.html name="list-unordered" %}On this page</h2>
+      <nav class="toc" aria-label="On this page"></nav>
+    </div>
+    <div class="rail-box rail-help">
+      <h2>{% include icon.html name="comment-discussion" %}Questions?</h2>
+      <ul class="rail-links">
+        {%- for c in portal.community %}
+        <li><a href="{{ c.url }}" rel="noopener">{% include icon.html name=c.icon %}{{ c.label | escape }}</a></li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </aside>
+</div>

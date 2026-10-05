@@ -1,0 +1,101 @@
+{%- comment -%} Global top bar. Page-independent: rendered once via include_cached. {%- endcomment -%}
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn topbar-burger" type="button" data-drawer-open aria-label="Open navigation" aria-controls="sidebar">{% include icon.html name="three-bars" %}</button>
+    <a class="brand" href="{{ '/' | relative_url }}" aria-label="{{ portal.name | escape }} - home">
+      <img class="brand-logo" src="{{ '/assets/android-chrome-192x192.png' | relative_url }}" width="32" height="32" alt="">
+      <span class="brand-name">{{ portal.name | escape }}</span>
+      <span class="brand-tag">{{ portal.tagline | escape }}</span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <div class="topnav-item has-menu">
+        <a class="topnav-link" href="{{ '/docs/' | relative_url }}">Docs{% include icon.html name="chevron-down" class="chev" px=12 %}</a>
+        <div class="mega">
+          <div class="mega-cols">
+            {%- for g in portal.doc_groups %}
+            <div class="mega-col">
+              <div class="mega-title">{{ g | escape }}</div>
+              {%- for d in portal.docs -%}
+                {%- if d.group == g -%}
+                  {%- assign dp = docs | where: "name", d.file | first -%}
+                  {%- if dp %}
+              <a class="mega-link" href="{{ dp.url | relative_url }}">
+                <span class="mega-icon">{% include icon.html name=d.icon %}</span>
+                <span class="mega-text"><strong>{{ d.label | escape }}</strong><small>{{ d.summary | escape }}</small></span>
+              </a>
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor %}
+            </div>
+            {%- endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="topnav-item has-menu">
+        <a class="topnav-link" href="{{ '/indicators/' | relative_url }}">Indicators{% include icon.html name="chevron-down" class="chev" px=12 %}</a>
+        <div class="mega mega-cats">
+          <div class="mega-title">Browse by type</div>
+          <div class="mega-catgrid">
+            {%- for c in portal.categories -%}
+              {%- include cat-rows.html cat=c.id -%}
+              {%- if cat_rows.size > 0 %}
+            <a class="mega-cat" href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">
+              <span class="mega-icon">{% include icon.html name=c.icon %}</span>
+              <span class="mega-cat-label">{{ c.label | escape }}</span>
+              <span class="counter">{{ cat_rows.size }}</span>
+            </a>
+              {%- endif -%}
+            {%- endfor %}
+          </div>
+          <a class="mega-foot" href="{{ '/indicators/' | relative_url }}">Browse all {{ indicators.size }} indicators{% include icon.html name="arrow-right" %}</a>
+        </div>
+      </div>
+      <div class="topnav-item has-menu">
+        <button class="topnav-link" type="button">Community{% include icon.html name="chevron-down" class="chev" px=12 %}</button>
+        <div class="mega mega-narrow">
+          <div class="mega-title">Talk to other Indie developers</div>
+          {%- for c in portal.community %}
+          <a class="mega-cat" href="{{ c.url }}" rel="noopener">
+            <span class="mega-icon">{% include icon.html name=c.icon %}</span>
+            <span class="mega-cat-label">{{ c.label | escape }}</span>
+            {% include icon.html name="link-external" class="ext" px=12 %}
+          </a>
+          {%- endfor %}
+          <div class="mega-title">Contribute</div>
+          <a class="mega-cat" href="{{ repo_url }}" rel="noopener">
+            <span class="mega-icon">{% include icon.html name="mark-github" %}</span>
+            <span class="mega-cat-label">GitHub repository</span>
+            {% include icon.html name="link-external" class="ext" px=12 %}
+          </a>
+          <a class="mega-cat" href="{{ repo_url }}/issues" rel="nofollow noopener">
+            <span class="mega-icon">{% include icon.html name="issue-opened" %}</span>
+            <span class="mega-cat-label">Report an issue</span>
+            {% include icon.html name="link-external" class="ext" px=12 %}
+          </a>
+        </div>
+      </div>
+    </nav>
+    <button class="searchbtn" type="button" data-palette-open aria-label="Search (press /)">
+      {% include icon.html name="search" %}
+      <span class="searchbtn-text">Search or jump to...</span>
+      <kbd>/</kbd>
+    </button>
+    <div class="topbar-actions">
+      <details class="dropdown" data-dropdown>
+        <summary class="icon-btn" aria-label="Theme" title="Theme">
+          <span class="theme-icon theme-icon-light">{% include icon.html name="sun" %}</span>
+          <span class="theme-icon theme-icon-dark">{% include icon.html name="moon" %}</span>
+        </summary>
+        <div class="dropdown-menu dropdown-menu-right" role="menu">
+          <div class="dropdown-header">Theme</div>
+          <button class="dropdown-item" type="button" role="menuitemradio" data-theme-set="light">{% include icon.html name="sun" %}<span>Light</span>{% include icon.html name="check" class="tick" %}</button>
+          <button class="dropdown-item" type="button" role="menuitemradio" data-theme-set="dark">{% include icon.html name="moon" %}<span>Dark</span>{% include icon.html name="check" class="tick" %}</button>
+          <button class="dropdown-item" type="button" role="menuitemradio" data-theme-set="dimmed">{% include icon.html name="moon" %}<span>Dark dimmed</span>{% include icon.html name="check" class="tick" %}</button>
+          <button class="dropdown-item" type="button" role="menuitemradio" data-theme-set="auto">{% include icon.html name="device-desktop" %}<span>Sync with system</span>{% include icon.html name="check" class="tick" %}</button>
+        </div>
+      </details>
+      <button class="icon-btn hide-sm" type="button" data-shortcuts-open aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">{% include icon.html name="command-palette" %}</button>
+      <a class="icon-btn" href="{{ repo_url }}" rel="noopener" aria-label="GitHub repository" title="GitHub repository">{% include icon.html name="mark-github" px=20 %}</a>
+    </div>
+  </div>
+</header>
