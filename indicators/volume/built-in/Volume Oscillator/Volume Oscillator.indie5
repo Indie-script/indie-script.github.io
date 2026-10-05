@@ -1,0 +1,15 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot
+from indie.algorithms import Ema
+from indie.math import divide
+
+
+@indicator('Volume Osc', format=format.PRICE)  # Volume Oscillator  # TODO: format=format.PERCENT
+@param.int('short_len', default=5, min=1, title='Short Length')
+@param.int('long_len', default=10, min=1, title='Long Length')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.BLUE, title='VO')
+def Main(self, short_len, long_len):
+    short = Ema.new(self.volume, short_len)[0]
+    long = Ema.new(self.volume, long_len)[0]
+    return 100 * divide(short - long, long)

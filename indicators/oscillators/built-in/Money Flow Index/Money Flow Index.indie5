@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, band, color, level, plot
+from indie.algorithms import Mfi
+
+
+@indicator('MFI', format=format.PRICE)  # Money Flow Index
+@param.int('length', default=14, min=1)
+@param.source('src', default=source.HLC3, title='Source')
+@band(20, 80, line_color=color.GRAY, fill_color=color.PURPLE(0.1), title='Background')
+@level(50, line_color=color.GRAY, title='Middle Band')
+@plot.line(color=color.PURPLE, title='MF')
+def Main(self, length, src):
+    return Mfi.new(src, length)[0]

@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Sma
+
+
+@indicator('SMA', overlay_main_pane=True)  # Simple Moving Average
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('offset', default=0, min=-500, max=500, title='Offset')
+@plot.line(color=color.BLUE)
+def Main(self, length, src, offset):
+    sma = Sma.new(src, length)
+    return plot.Line(sma[0], offset=offset)
+    # TODO: implement smoothing when display.none is supported

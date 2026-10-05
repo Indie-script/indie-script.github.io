@@ -1,0 +1,10 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color
+from indie.algorithms import CumSum, NanToZero, NetVolume
+
+
+@indicator('OBV', format=format.VOLUME)  # On Balance Volume
+@plot.line(color=color.BLUE)
+def Main(self):
+    return CumSum.new(NanToZero.new(NetVolume.new(self.close)))[0]
+    # TODO: implement smoothing when display.none is supported

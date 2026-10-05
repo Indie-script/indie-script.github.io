@@ -1,0 +1,42 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, format, param, band, color, level, plot, MutSeriesF
+from indie.algorithms import StdDev, Ema, Change, Bb, Ma
+from indie.math import divide
+
+
+@indicator('RVI', format=format.PRICE)  # Relative Volatility Index
+@param.int('length', default=10, min=1)
+@param.int('offset', default=0, min=-500, max=500)
+@param.str('ma_type', default='SMA', title='MA Type', options=['SMA', 'Bollinger Bands', 'EMA', 'SMMA (RMA)', 'WMA', 'VWMA'])
+@param.int('ma_length', default=14, title='MA Length', min=1)
+@param.float('bb_mult', default=2.0, title='BB StdDev', min=0.001, max=50)
+@band(20, 80, line_color=color.GRAY, fill_color=color.PURPLE(0.1))
+@level(50, line_color=color.GRAY(0.5))
+@plot.line(color=color.YELLOW, title='RVI-based MA')
+@plot.line(color=color.PURPLE, title='RVI')
+@plot.line('bb_lower', color=color.GREEN, title='Lower Bollinger Band')
+@plot.line('bb_upper', color=color.GREEN, title='Upper Bollinger Band')
+@plot.fill('bb_lower', 'bb_upper', color=color.GREEN(0.1), title='Bollinger Bands Background Fill')
+def Main(self, length, offset, ma_type, ma_length, bb_mult):
+    dev = StdDev.new(self.close, length)[0]
+    upper = Ema.new(MutSeriesF.new(0 if Change.new(self.close)[0] <= 0 else dev), 14)[0]
+    lower = Ema.new(MutSeriesF.new(0 if Change.new(self.close)[0] > 0 else dev), 14)[0]
+    rvi = MutSeriesF.new(100 * divide(upper, upper + lower))
+
+    low_value, rvi_ma, high_value = nan, nan, nan
+    if ma_type == 'Bollinger Bands':
+        (bb_lower, bb_middle, bb_upper) = Bb.new(rvi, ma_length, bb_mult)
+        low_value = bb_lower[0]
+        rvi_ma = bb_middle[0]
+        high_value = bb_upper[0]
+    else:
+        rvi_ma = Ma.new(rvi, ma_length, ma_type)[0]
+
+    return (
+        plot.Line(rvi_ma, offset=offset),
+        plot.Line(rvi[0], offset=offset),
+        low_value,
+        high_value,
+        plot.Fill(),
+    )

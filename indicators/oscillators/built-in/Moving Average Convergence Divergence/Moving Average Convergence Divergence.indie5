@@ -1,0 +1,36 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, level, color, plot, Color
+from indie.algorithms import Macd
+
+
+@indicator('MACD')  # Moving Average Convergence Divergence
+@param.int('fast_length', default=12, min=1, title='Fast Length')
+@param.int('slow_length', default=26, min=1, title='Slow Length')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('signal_length', default=9, min=1, max=50, title='Signal Smoothing')
+@param.str('sma_source', default='EMA', title='Oscillator MA Type', options=['SMA', 'EMA'])
+@param.str('sma_signal', default='EMA', title='Signal Line MA Type', options=['SMA', 'EMA'])
+@level(0, line_color=color.GRAY(0.5))
+@plot.columns(title='Histogram')
+@plot.line(color=color.BLUE, title='MACD')
+@plot.line(color=color.MAROON, title='Signal')
+def Main(self, fast_length, slow_length, src, signal_length, sma_source, sma_signal):
+    macd, signal, hist = Macd.new(src, fast_length, slow_length, signal_length, sma_source, sma_signal)
+
+    hist_color = color.BLACK  # default value
+    if hist[0] >= 0:
+        if hist[1] < hist[0]:
+            hist_color = color.GREEN
+        else:
+            hist_color = color.LIME
+    else:
+        if hist[1] < hist[0]:
+            hist_color = color.RED
+        else:
+            hist_color = color.MAROON
+
+    return (
+        plot.Columns(hist[0], color=hist_color),
+        macd[0],
+        signal[0],
+    )

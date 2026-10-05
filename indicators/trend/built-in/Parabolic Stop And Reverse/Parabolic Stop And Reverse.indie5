@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Sar
+
+
+@indicator('SAR', overlay_main_pane=True)  # Parabolic Stop And Reverse
+@param.float('start', default=0.02)
+@param.float('increment', default=0.02)
+@param.float('maximum', default=0.2)
+@plot.marker(style=plot.marker_style.CROSS, color=color.BLUE, title='ParabolicSAR')
+def Main(self, start, increment, maximum):
+    return Sar.new(start, increment, maximum)[0]

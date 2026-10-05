@@ -1,0 +1,22 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, level, color, plot
+from indie.algorithms import Ema, Sma
+from indie.math import divide
+
+
+@indicator('PPO', format=format.PRICE)  # Price Oscillator
+@param.int('short_len', default=10, min=1, title='Short Length')
+@param.int('long_len', default=21, min=1, title='Long Length')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.bool('exponential', default=False)
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.GREEN, title='OSC')
+def Main(self, short_len, long_len, src, exponential):
+    short, long = 0.0, 0.0
+    if exponential:
+        short = Ema.new(src, short_len)[0]
+        long = Ema.new(src, long_len)[0]
+    else:
+        short = Sma.new(src, short_len)[0]
+        long = Sma.new(src, long_len)[0]
+    return 100 * divide(short - long, long)

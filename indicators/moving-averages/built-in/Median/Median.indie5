@@ -1,0 +1,30 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color, MutSeriesF
+from indie.algorithms import Median, Atr, Ema
+
+
+@indicator('Median', overlay_main_pane=True)
+@param.source('src', default=source.HL2, title='Source')
+@param.int('length', default=3, min=1, title='Median Length')
+@param.int('atr_length', default=14, min=1, title='ATR Length')
+@param.int('atr_mult', default=2, min=1, title='ATR Multiplier')
+@plot.line('ema', color=color.BLUE, title='Median EMA')
+@plot.line(color=color.FUCHSIA, title='Lower Band')
+@plot.line('median', color=color.RED, line_width=3, title='Median')
+@plot.line(color=color.LIME, title='Upper Band')
+@plot.fill('median', 'ema', title='Background')
+def Main(self, src, length, atr_length, atr_mult):
+    median = Median.new(src, length)[0]
+
+    atr = atr_mult * Atr.new(atr_length)[0]
+
+    median_ema = Ema.new(MutSeriesF.new(median), length)[0]
+
+    fill_color = color.LIME(0.9) if median > median_ema else color.FUCHSIA(0.9)
+    return (
+        median_ema,
+        median - atr,
+        median,
+        median + atr,
+        plot.Fill(color=fill_color),
+    )

@@ -1,0 +1,21 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Supertrend
+
+
+@indicator('Supertrend', overlay_main_pane=True)
+@param.int('atr_period', default=10, min=1)
+@param.float('factor', default=3.0)
+@param.str('ma_algorithm', default='RMA', options=['RMA', 'SMA', 'EMA', 'WMA'])
+@plot.line('middle', color=color.GRAY(0.5), title='Body Middle')  # TODO: support display.none
+@plot.line('down', color=color.RED, title='Down Trend')
+@plot.line('up', color=color.GREEN, title='Up Trend')
+@plot.fill('down', 'middle', color=color.RED(0.1), title='Down-Middle Fill')
+@plot.fill('middle', 'up', color=color.GREEN(0.1), title='Middle-Up Fill')
+def Main(self, factor, atr_period, ma_algorithm):
+    st, direction = Supertrend.new(factor, atr_period, ma_algorithm)
+    st_down = st[0] if direction[0] > 0 else nan
+    st_up = st[0] if direction[0] < 0 else nan
+    middle = (self.open[0] + self.close[0]) / 2
+    return middle, st_down, st_up, plot.Fill(), plot.Fill()

@@ -1,0 +1,22 @@
+# indie:lang_version = 5
+from indie import algorithm, SeriesF, MutSeriesF, indicator, format, param, plot, color
+from indie.algorithms import Sum
+from indie.math import divide
+
+
+@algorithm  # Symmetrically Weighted Moving Average
+def Swma(self, src: SeriesF) -> SeriesF:
+    return MutSeriesF.new(src[3] / 6 + src[2] / 3 + src[1] / 3 + src[0] / 6)
+
+
+@indicator('RVGI', format=format.PRICE, precision=4)  # Relative Vigor Index
+@param.int('length', default=10, min=1)
+@param.int('offset', default=0, min=-500, max=500)
+@plot.line(color=color.GREEN, title='RVGI')
+@plot.line(color=color.RED, title='Signal')
+def Main(self, length, offset):
+    cl_op_sum = Sum.new(Swma.new(MutSeriesF.new(self.close[0] - self.open[0])), length)[0]
+    hi_lo_sum = Sum.new(Swma.new(MutSeriesF.new(self.high[0] - self.low[0])), length)[0]
+    rvi = divide(cl_op_sum, hi_lo_sum)
+    sig = Swma.new(MutSeriesF.new(rvi))[0]
+    return plot.Line(rvi, offset=offset), plot.Line(sig, offset=offset)

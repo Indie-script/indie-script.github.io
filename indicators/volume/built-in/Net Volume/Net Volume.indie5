@@ -1,0 +1,9 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color
+from indie.algorithms import NetVolume
+
+
+@indicator('Net Volume', format=format.VOLUME)
+@plot.line(color=color.BLUE)
+def Main(self):
+    return NetVolume.new(self.close)[0]

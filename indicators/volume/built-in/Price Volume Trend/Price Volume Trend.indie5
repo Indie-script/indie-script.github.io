@@ -1,0 +1,11 @@
+# indie:lang_version = 5
+from indie import indicator, format, plot, color, MutSeriesF
+from indie.algorithms import CumSum, NanToZero, Change
+from indie.math import divide
+
+
+@indicator('PVT', format=format.VOLUME)  # Price Volume Trend
+@plot.line(color=color.BLUE)
+def Main(self):
+    return CumSum.new(NanToZero.new(MutSeriesF.new(
+        divide(Change.new(self.close)[0], self.close[1]) * self.volume[0])))[0]

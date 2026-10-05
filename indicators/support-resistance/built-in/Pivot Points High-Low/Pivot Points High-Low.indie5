@@ -1,0 +1,105 @@
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, param, Optional, MainContext, color
+from indie.algorithms import PivotHighLow, SinceHighest, SinceLowest
+from indie.drawings import LabelAbs, AbsolutePosition, callout_position
+
+
+@indicator('Pivots High/Low', overlay_main_pane=True)
+@param.int('length_high_left', default=10, min=1, title='High left length')
+@param.int('length_low_left', default=10, min=1, title='Low left length')
+@param.int('length_high_right', default=10, min=1, title='High right length')
+@param.int('length_low_right', default=10, min=1, title='Low right length')
+# Display potential pivot points in real-time before right-side confirmation
+@param.bool('show_unconfirmed', default=True, title='Show potential pivot points')
+class Main(MainContext):
+    def __init__(self):
+        none_label: Optional[LabelAbs] = None
+        self._prev_high_pivot = self.new_var(none_label)
+        self._prev_high_pivot_bar_index = self.new_var(0)
+        self._prev_low_pivot = self.new_var(none_label)
+        self._prev_low_pivot_bar_index = self.new_var(0)
+
+    def calc(self, length_high_left, length_low_left, length_high_right, length_low_right, show_unconfirmed):
+        if show_unconfirmed:
+            sh = SinceHighest.new(self.high, length_high_left + 1)
+            sl = SinceLowest.new(self.low, length_low_left + 1)
+
+            if sh[0] == 0:
+                # we have a new high pivot candidate
+                new_h_pivot_candidate_y = self.high[0]
+                hp_opt: Optional[LabelAbs] = self._prev_high_pivot.get()
+                if hp_opt is not None:  # we have a previous high pivot, must decide which one is better
+                    if self.bar_index - self._prev_high_pivot_bar_index.get() > length_high_right:
+                        self._prev_high_pivot.set(None)  # prev_high_pivot is too far away in history, forget about it
+                    elif hp_opt.value().position.price < new_h_pivot_candidate_y:
+                        self._update_high_pivot()  # new pivot candidate is better, update previous pivot
+                    # else new pivot candidate is worse, keep the previous pivot
+                if self._prev_high_pivot.get() is None:
+                    self._update_high_pivot()  # create new low pivot
+            if sl[0] == 0:
+                new_l_pivot_candidate_y = self.low[0]
+                lp_opt: Optional[LabelAbs] = self._prev_low_pivot.get()
+                if lp_opt is not None:  # we have a previous low pivot, must decide which one is better
+                    if self.bar_index - self._prev_low_pivot_bar_index.get() > length_low_right:
+                        self._prev_low_pivot.set(None)  # prev_low_pivot is too far away in history, forget about it
+                    elif lp_opt.value().position.price > new_l_pivot_candidate_y:
+                        self._update_low_pivot()  # new pivot candidate is better, update previous pivot
+                    # else new pivot candidate is worse, keep the previous pivot
+                if self._prev_low_pivot.get() is None:
+                    self._update_low_pivot()  # create new low pivot
+        else:
+            ph, _ = PivotHighLow.new(self.high, left_bars=length_high_left, right_bars=length_high_right)
+            _, pl = PivotHighLow.new(self.low, left_bars=length_low_left, right_bars=length_low_right)
+
+            if not isnan(ph[0]):
+                new_pivot_y = self.high[length_high_right]
+                new_pivot_x = self.time[length_high_right]
+                self.chart.draw(self._create_new_label(new_pivot_x, new_pivot_y, is_high=True))  # create and draw
+
+            if not isnan(pl[0]):
+                new_pivot_y = self.low[length_low_right]
+                new_pivot_x = self.time[length_low_right]
+                self.chart.draw(self._create_new_label(new_pivot_x, new_pivot_y, is_high=False))  # create and draw
+
+    def _update_high_pivot(self) -> None:
+        new_pivot_y = self.high[0]
+        new_pivot_x = self.time[0]
+        new_pivot_bar_index = self.bar_index
+
+        if self._prev_high_pivot.get() is None:  # create and draw
+            self._prev_high_pivot.set(self._create_new_label(new_pivot_x, new_pivot_y, is_high=True))
+        else:  # update field values and redraw
+            hp = self._prev_high_pivot.get().value()
+            hp.position = AbsolutePosition(new_pivot_x, new_pivot_y)
+            hp.text = str(round(new_pivot_y, self.info.price_precision))
+
+        self._prev_high_pivot_bar_index.set(new_pivot_bar_index)
+        self.chart.draw(self._prev_high_pivot.get().value())
+
+    def _update_low_pivot(self) -> None:
+        new_pivot_y = self.low[0]
+        new_pivot_x = self.time[0]
+        new_pivot_bar_index = self.bar_index
+
+        if self._prev_low_pivot.get() is None:  # create and draw
+            self._prev_low_pivot.set(self._create_new_label(new_pivot_x, new_pivot_y, is_high=False))
+        else:  # update field values and redraw
+            lp = self._prev_low_pivot.get().value()
+            lp.position = AbsolutePosition(new_pivot_x, new_pivot_y)
+            lp.text = str(round(new_pivot_y, self.info.price_precision))
+
+        self._prev_low_pivot_bar_index.set(new_pivot_bar_index)
+        self.chart.draw(self._prev_low_pivot.get().value())
+
+    def _create_new_label(self, time: float, price: float, is_high: bool) -> LabelAbs:
+        text_color = color.GREEN if is_high else color.RED
+        callout_pos = callout_position.TOP_RIGHT if is_high else callout_position.BOTTOM_LEFT
+        return LabelAbs(
+            str(round(price, self.info.price_precision)),
+            AbsolutePosition(time, price),
+            callout_position=callout_pos,
+            bg_color=color.TRANSPARENT,
+            text_color=text_color,
+            font_size=11,
+        )

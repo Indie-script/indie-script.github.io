@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, level, color, plot
+from indie.algorithms import Roc
+
+
+@indicator('ROC', format=format.PRICE)  # Rate Of Change
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.BLUE, title='ROC')
+def Main(self, length, src):
+    return Roc.new(src, length)[0]

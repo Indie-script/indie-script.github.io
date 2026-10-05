@@ -226,9 +226,57 @@
   description: "Computes a least-squares linear regression line as a moving average, often used as a smoother with reduced lag."
 "Moving Average Ribbon":
   description: "Plots up to four configurable moving averages (SMA, EMA, WMA, VWMA, SMMA) as separate lines on the chart."
+"Moving Average Convergence Divergence":
+  description: "Computes the Moving Average Convergence Divergence (MACD) with histogram, signal line, and customizable MA types."
+"Mass Index":
+  description: "Computes the sum of the ratio of two EMAs of the high-low range over a given period, used to identify trend reversals."
 "McGinley Dynamic":
   description: "Adaptive moving average that smooths price while responding faster to trends."
+"Median":
+  description: "Computes a rolling median of the chosen source, an EMA of that median, and ATR-based upper/lower bands around the median."
 "Momentum":
   description: "Computes the price change over a specified lookback period, displayed as a blue line."
+"Money Flow Index":
+  description: "Computes the Money Flow Index (MFI) using typical price and volume to measure overbought/oversold conditions."
+"Net Volume":
+  description: "Computes net volume from close prices using the built-in NetVolume algorithm."
+"On Balance Volume":
+  description: "Cumulative volume indicator that adds or subtracts volume based on price direction."
+"Parabolic Stop And Reverse":
+  description: "Computes the Parabolic Stop and Reverse (SAR) with configurable acceleration factors."
+"Pivot Points High-Low":
+  description: "Draws pivot high and low labels using configurable left/right lengths, with optional real-time unconfirmed candidates."
+"Price Oscillator":
+  description: "Computes the Price Oscillator (PPO) as the percentage difference between two moving averages."
+"Price Volume Trend":
+  description: "Cumulative sum of volume-weighted price change, measuring money flow."
+"Rate Of Change":
+  description: "Calculates the Rate of Change (momentum) of a selected price source over a given period."
+"Relative Vigor Index":
+  description: "Relative Vigor Index (RVGI) measures trend strength via smoothed close-open vs high-low ranges."
+"Relative Volatility Index":
+  description: "Computes the Relative Volatility Index (RVI) oscillator and a moving average of it, with optional Bollinger Bands."
 "Relative Strength Index":
-  description: "Computes the Relative Strength Index (RSI) with optional smoothing and Bollinger Bands."
+  description: "Computes the Relative Strength Index (RSI) with an optional moving average and Bollinger Bands overlay."
+"Simple Moving Average":
+  description: "Computes the Simple Moving Average (SMA) of a chosen source over a specified length, with an optional offset."
+"SMI Ergodic Indicator":
+  description: "Computes the True Strength Index (TSI) with an EMA signal line, plotted as the SMI Ergodic Indicator."
+"SMI Ergodic Oscillator":
+  description: "Computes the SMI Ergodic Oscillator as the difference between the True Strength Index and its EMA signal line."
+"Smoothed Moving Average":
+  description: "Smoothed Moving Average (SMMA) that applies a recursive smoothing to price data."
+"Stochastic Oscillator":
+  description: "Computes smoothed stochastic oscillator lines %K and %D from price data using Stoch and Sma algorithms."
+"Stochastic RSI":
+  description: "Computes Stochastic RSI: RSI of the source, converted to a stochastic oscillator, with smoothed K and D lines."
+"Supertrend":
+  description: "Computes Supertrend lines based on ATR and moving average, with directional fills."
+"Triple EMA":
+  description: "Computes Triple Exponential Moving Average (TEMA) for the specified source and length."
+"Trading Sessions":
+  description: "Shades chart bars that fall in the pre-market and after-hours trading sessions; transparent on daily or higher timeframes."
+"TRIX":
+  description: "Computes the TRIX oscillator as 10000 times the rate of change of a triple exponential moving average of log(close)."
+"Volume Oscillator":
+  description: "Computes the percentage difference between short and long exponential moving averages of volume."

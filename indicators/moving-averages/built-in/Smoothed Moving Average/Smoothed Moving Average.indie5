@@ -1,0 +1,11 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Rma
+
+
+@indicator('SMMA', overlay_main_pane=True)  # Smoothed Moving Average
+@param.int('length', default=7, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(color=color.PURPLE)
+def Main(self, length, src):
+    return Rma.new(src, length)[0]

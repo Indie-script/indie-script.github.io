@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Ema
+
+
+@indicator('TEMA', overlay_main_pane=True)  # Triple EMA
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(color=color.BLUE)
+def Main(self, length, src):
+    ema1 = Ema.new(src, length)
+    ema2 = Ema.new(ema1, length)
+    ema3 = Ema.new(ema2, length)
+    return 3 * (ema1[0] - ema2[0]) + ema3[0]

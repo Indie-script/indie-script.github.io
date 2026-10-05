@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from math import log
+from indie import indicator, format, param, level, color, plot, MutSeriesF
+from indie.algorithms import Change, Ema
+
+
+@indicator('TRIX', format=format.PRICE)
+@param.int('length', default=18, min=1)
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.RED, title='TRIX')
+def Main(self, length):
+    return 10000 * Change.new(Ema.new(Ema.new(Ema.new(MutSeriesF.new(log(self.close[0])), length), length), length))[0]

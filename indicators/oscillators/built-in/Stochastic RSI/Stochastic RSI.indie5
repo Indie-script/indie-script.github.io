@@ -1,0 +1,20 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, band, color, level, plot
+from indie.algorithms import Rsi, Stoch, Sma
+
+
+@indicator('Stoch RSI', format=format.PRICE)  # Stochastic RSI
+@param.int('k_smoothing', default=3, min=1, title='Fast K stochastic smoothing')
+@param.int('d_smoothing', default=3, min=1, title='Slow D stochastic smoothing')
+@param.int('rsi_length', default=14, min=1, title='RSI length')
+@param.int('k_length', default=14, min=1, title='Stochastic Length')
+@param.source('src', default=source.CLOSE, title='Source')
+@band(20, 80, fill_color=color.AQUA(0.1), line_color=color.GRAY, title='Background')
+@level(50, line_color=color.GRAY(0.5), title='Middle Band')
+@plot.line(color=color.BLUE, title='K')
+@plot.line(color=color.RED, title='D')
+def Main(self, k_smoothing, d_smoothing, rsi_length, k_length, src):
+    rsi = Rsi.new(src, rsi_length)
+    k = Sma.new(Stoch.new(rsi, rsi, rsi, k_length), k_smoothing)
+    d = Sma.new(k, d_smoothing)
+    return k[0], d[0]

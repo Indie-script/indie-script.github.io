@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color, MutSeriesF
+from indie.algorithms import Ema, Sum
+from indie.math import divide
+
+
+@indicator('Mass Index', format=format.PRICE)
+@param.int('length', default=10, min=1)
+@plot.line(color=color.BLUE)
+def Main(self, length):
+    span = MutSeriesF.new(self.high[0] - self.low[0])
+    ema1 = Ema.new(span, 9)
+    ema2 = Ema.new(ema1, 9)
+    return Sum.new(MutSeriesF.new(divide(ema1[0], ema2[0])), length)[0]

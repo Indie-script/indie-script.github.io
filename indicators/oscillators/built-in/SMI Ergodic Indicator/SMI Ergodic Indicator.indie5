@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+from indie.algorithms import Tsi, Ema
+
+
+@indicator('SMII', format=format.PRICE, precision=4)  # SMI Ergodic Indicator
+@param.int('long_len', default=20, min=1, title='Long Length')
+@param.int('short_len', default=5, min=1, title='Short Length')
+@param.int('signal_len', default=5, min=1, title='Signal Length')
+@plot.line(color=color.BLUE, title='SMI')
+@plot.line(color=color.MAROON, title='Signal')
+def Main(self, long_len, short_len, signal_len):
+    tsi = Tsi.new(self.close, long_len, short_len)
+    return tsi[0], Ema.new(tsi, signal_len)[0]
