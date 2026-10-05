@@ -1,0 +1,18 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, level
+from indie.algorithms import Rsi
+
+@indicator('RSI Divergence')
+@param.int('len_fast', default=5, min=1, title='Length Fast RSI')
+@param.int('len_slow', default=14, min=1, title='Length Slow RSI')
+@level(0, line_color=color.GRAY)
+@plot.line(line_width=2, title='Divergence')
+def Main(self, len_fast, len_slow):
+    rsi_fast = Rsi.new(self.close, len_fast)
+    rsi_slow = Rsi.new(self.close, len_slow)
+    
+    divergence = rsi_fast[0] - rsi_slow[0]
+    
+    div_color = color.LIME if divergence > 0 else color.RED
+    
+    return plot.Line(divergence, color=div_color)

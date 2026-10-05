@@ -1,0 +1,78 @@
+# Copyright (c) 2025 @TakeProfit. All rights reserved.
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import indicator, param, color, MainContext, Optional
+from indie.algorithms import SinceHighest, SinceLowest
+from indie.drawings import LabelAbs, AbsolutePosition, callout_position
+
+@indicator('PivotsHL(S)', overlay_main_pane=True)
+@param.int('length', default=10, min=1, title='Lookback period')
+class Main(MainContext):
+    def __init__(self, length):
+        none_label: Optional[LabelAbs] = None
+        self._high_pivot = self.new_var(none_label)
+        self._low_pivot = self.new_var(none_label)
+        self._high_pivot_bar = self.new_var(0)
+        self._low_pivot_bar = self.new_var(0)
+        self._length = length
+
+    def calc(self) -> None:
+        # Search for new extremes
+        since_high = SinceHighest.new(self.high, self._length + 1)
+        since_low = SinceLowest.new(self.low, self._length + 1)
+
+        if since_high[0] == 0:
+            self._handle_high_pivot()
+
+        if since_low[0] == 0:
+            self._handle_low_pivot()
+
+    def _handle_high_pivot(self) -> None:
+        existing_pivot = self._high_pivot.get()
+
+        if (existing_pivot is not None and
+            self.bar_index - self._high_pivot_bar.get() <= self._length):
+            # Update existing label (recent pivot)
+            existing_pivot.value().position = AbsolutePosition(self.time[0], self.high[0])
+            existing_pivot.value().text = str(round(self.high[0], 2))
+            self.chart.draw(existing_pivot.value())
+            self._high_pivot_bar.set(self.bar_index)
+        else:
+            # Create new label (no pivot or old pivot)
+            new_label = LabelAbs(
+                str(round(self.high[0], 2)),
+                AbsolutePosition(self.time[0], self.high[0]),
+                text_color=color.GREEN,
+                bg_color=color.BLACK(0),
+                callout_position=callout_position.TOP_RIGHT,
+                font_size=11
+            )
+            self.chart.draw(new_label)
+            self._high_pivot.set(new_label)
+            self._high_pivot_bar.set(self.bar_index)
+
+    def _handle_low_pivot(self) -> None:
+        existing_pivot = self._low_pivot.get()
+
+        if (existing_pivot is not None and
+            self.bar_index - self._low_pivot_bar.get() <= self._length):
+            # Update existing label (recent pivot)
+            existing_pivot.value().position = AbsolutePosition(self.time[0], self.low[0])
+            existing_pivot.value().text = str(round(self.low[0], 2))
+            self.chart.draw(existing_pivot.value())
+            self._low_pivot_bar.set(self.bar_index)
+        else:
+            # Create new label (no pivot or old pivot)
+            new_label = LabelAbs(
+                str(round(self.low[0], 2)),
+                AbsolutePosition(self.time[0], self.low[0]),
+                text_color=color.RED,
+                bg_color=color.BLACK(0),
+                callout_position=callout_position.BOTTOM_LEFT,
+                font_size=11
+            )
+            self.chart.draw(new_label)
+            self._low_pivot.set(new_label)
+            self._low_pivot_bar.set(self.bar_index)

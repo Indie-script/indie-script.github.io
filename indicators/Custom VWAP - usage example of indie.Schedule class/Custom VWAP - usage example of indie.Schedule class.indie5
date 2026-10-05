@@ -1,0 +1,98 @@
+# Copyright (c) 2024 @TakeProfit. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from math import sqrt
+from datetime import datetime, time
+from indie import algorithm, SeriesF, MutSeriesF, Var, Optional, IndieError, MainContext, plot as plot1
+from indie import indicator, param, source, plot, color
+from indie.schedule import Schedule, ScheduleRule
+
+
+@algorithm
+def Vwap(self, src: SeriesF, anchor: str, std_dev_mult: float, schedule: Optional[Schedule] = None) -> tuple[SeriesF, SeriesF, SeriesF]:
+    '''
+    Custom Volume Weighted Average Price
+    anchor can be 'Session', 'Day', 'Week', 'Month', 'Year', 'Schedule'
+    '''
+    cum_weighted_price = Var[float].new(0)
+    cum_volume = Var[float].new(0)
+    vwap_sum = Var[float].new(0)
+    vwap_count = Var[int].new(0)
+    vwap_dev_squares = Var[float].new(0)
+
+    current_datetime = datetime.utcfromtimestamp(self.ctx.time[0])
+    prev_datetime = datetime.utcfromtimestamp(self.ctx.time.get(1, 0))
+    need_reset = False
+    
+    if anchor == 'Schedule' and schedule is None:
+        raise IndieError("Schedule parameter cannot be None when anchor is set to 'Schedule'")
+
+    if anchor == 'Schedule' and \
+            not schedule.value().is_same_period(self.ctx.time[0], self.ctx.time.get(1, 0)):
+        need_reset = True
+    if anchor == 'Session' and \
+            not self.ctx.trading_session.is_same_period(self.ctx.time[0], self.ctx.time.get(1, 0)):
+        need_reset = True
+    if anchor == 'Day' and (current_datetime.day != prev_datetime.day or
+                            (current_datetime-prev_datetime).days >= 1):
+        need_reset = True
+    elif anchor == 'Week' and ((current_datetime.weekday() == 0 and prev_datetime.weekday() != 0) or
+                               (current_datetime-prev_datetime).days >= 7):
+        need_reset = True
+    elif anchor == 'Month' and (current_datetime.month != prev_datetime.month or
+                                (current_datetime-prev_datetime).days >= 31):
+        need_reset = True
+    elif anchor == 'Year' and current_datetime.year != prev_datetime.year:
+        need_reset = True
+
+    if need_reset:
+        cum_weighted_price.set(0)
+        cum_volume.set(0)
+        vwap_sum.set(0)
+        vwap_count.set(0)
+        vwap_dev_squares.set(0)
+
+    cum_weighted_price.set(cum_weighted_price.get() + src[0] * self.ctx.volume[0])
+    cum_volume.set(cum_volume.get() + self.ctx.volume[0])
+    vwap_value = cum_weighted_price.get() / cum_volume.get()
+
+    vwap_sum.set(vwap_sum.get() + vwap_value)
+    vwap_count.set(vwap_count.get() + 1)
+    vwap_avg = vwap_sum.get() / vwap_count.get()
+    vwap_dev_squares.set(vwap_dev_squares.get() + (vwap_value - vwap_avg) ** 2)
+    vwap_std_dev = sqrt(vwap_dev_squares.get() / vwap_count.get())
+
+    std_dev = std_dev_mult * vwap_std_dev
+    lower = MutSeriesF.new(vwap_value - std_dev)
+    upper = MutSeriesF.new(vwap_value + std_dev)
+
+    return MutSeriesF.new(vwap_value), upper, lower
+
+@indicator('Custom VWAP', overlay_main_pane=True)  # Volume Weighted Average Price
+@param.source('src', default=source.HLC3, title='Source')
+@param.str('anchor', default='Schedule', options=['Session', 'Day', 'Week', 'Month', 'Year', 'Schedule'], title='Anchor')
+@param.int('offset', default=0, min=-500, max=500, title='Offset')
+@plot.line('vwap', title='VWAP', color=color.BLUE)
+@plot.line('upper', title='Upper band', color=color.GREEN)
+@plot.line('lower', title='Lower band', color=color.GREEN)
+@plot1.fill('upper', 'lower', color=color.GREEN(0.1), title='Background', id='#fill_3')
+class Main(MainContext):
+    def __init__(self, src, anchor, offset):
+        rule = ScheduleRule(start=time(hour=0), end=time(hour=0)) # 24-hour rule
+        self.schedule = Schedule(rules=[rule], timezone='America/New_York')
+        self.src = src
+        self.anchor = anchor
+        self.offset = offset
+
+    def calc(self):
+        std_dev_mult = 1.0
+        main_line, upper, lower = Vwap.new(self.src, self.anchor, std_dev_mult, self.schedule)
+        return (
+            plot1.Line(main_line[0], offset=self.offset),
+            plot1.Line(upper[0], offset=self.offset),
+            plot1.Line(lower[0], offset=self.offset),
+            plot1.Fill(),
+        )

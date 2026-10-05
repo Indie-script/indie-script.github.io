@@ -1,0 +1,49 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, MainContext, MutSeriesF
+from indie.algorithms import Sma
+
+@indicator('NVI/PVI Fosback', overlay_main_pane=False)
+@param.str('mode', default='NVI', options=['NVI', 'PVI'], title='Indicator Type')
+@param.int('ma_length', default=255, min=1, title='Signal Line Period (SMA)')
+@param.float('start_val', default=100.0, title='Starting Value')
+@plot.line(id='index_line', title='Index Value')
+@plot.line(id='signal_line', color=color.GRAY, title='Signal MA')
+@plot.fill('index_line', 'signal_line')
+def Main(self, mode: str, ma_length: int, start_val: float):
+    # Persistent series that carry values forward
+    nvi = MutSeriesF.new(init=start_val)
+    pvi = MutSeriesF.new(init=start_val)
+
+    # Calculate price change
+    if self.bar_index > 0 and self.close[1] != 0:
+        price_change_pct = (self.close[0] - self.close[1]) / self.close[1]
+
+        # NVI: update only when volume decreases
+        if self.volume[0] < self.volume[1]:
+            nvi[0] = nvi[1] * (1.0 + price_change_pct)
+        else:
+            nvi[0] = nvi[1]
+
+        # PVI: update only when volume increases
+        if self.volume[0] > self.volume[1]:
+            pvi[0] = pvi[1] * (1.0 + price_change_pct)
+        else:
+            pvi[0] = pvi[1]
+
+    # Mode selection
+    index_val = nvi[0] if mode == 'NVI' else pvi[0]
+
+    # Signal line
+    index_series = MutSeriesF.new(index_val)
+    sig_line = Sma.new(index_series, ma_length)[0]
+
+    # Trend colors
+    is_bull = index_val > sig_line
+    line_col = color.GREEN if is_bull else color.RED
+    fill_col = color.GREEN(0.1) if is_bull else color.RED(0.1)
+
+    return (
+        plot.Line(index_val, color=line_col),
+        sig_line,
+        plot.Fill(color=fill_col)
+    )

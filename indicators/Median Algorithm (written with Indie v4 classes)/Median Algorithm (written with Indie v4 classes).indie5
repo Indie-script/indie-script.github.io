@@ -1,0 +1,80 @@
+# indie:lang_version = 5
+import math
+from indie import indicator, Algorithm, Context, SeriesF, MutSeriesF, plot, color, param
+
+
+def swap(a: list[float], i: int, j: int) -> None:
+    tmp = a[i]
+    a[i] = a[j]
+    a[j] = tmp
+
+
+# The main idea of this algorithm is to have a sliding window 
+# of `length` last values of `src` series and keep them in a sorted order.
+# Having such an array, the median is easily calculated as the value 
+# in the middle of such an array.
+class Median(Algorithm):
+    def __init__(self, ctx: Context):
+        super().__init__(ctx)
+        self._sorted_vals: list[float] = []
+        self._prev_src_val = math.nan
+        self._bar_count = 0
+        
+    def calc(self, src: SeriesF, length: int) -> SeriesF:
+        # TODO: Need self.ctx.is_new_bar here
+        is_new_bar = self._bar_count != len(src)
+        self._bar_count = len(src)
+
+        # First we search in our sorted array for an index where 
+        # the new element will be inserted. We add new element at position 
+        # of some existing element which is need to leave the array anyway
+        insert_index = -1
+        if len(self._sorted_vals) == length or not is_new_bar:
+            val_to_remove = math.nan
+            if not is_new_bar:
+                val_to_remove = self._prev_src_val
+            else:
+                val_to_remove = src[length]
+            for i in range(len(self._sorted_vals)):
+                val = self._sorted_vals[i]
+                if val == val_to_remove:
+                    insert_index = i
+                    break
+        else:
+            self._sorted_vals.append(math.nan)
+            insert_index = len(self._sorted_vals) - 1
+
+        # Insert the new element in our sorted array.
+        # After this line the sorted order could be broken (most likely it is)
+        self._sorted_vals[insert_index] = self._prev_src_val = src[0]
+
+        # Restore sorted order in our array
+        while insert_index > 0 and self._sorted_vals[insert_index - 1] > self._sorted_vals[insert_index]:
+            swap(self._sorted_vals, insert_index, insert_index - 1)
+            insert_index -= 1
+        while insert_index < len(self._sorted_vals) - 1 and self._sorted_vals[insert_index] > self._sorted_vals[insert_index + 1]:
+            swap(self._sorted_vals, insert_index, insert_index + 1)
+            insert_index += 1
+
+        # Find the median value
+        res = math.nan
+        if len(self._sorted_vals) == length:
+            if length % 2 == 1:
+                # Odd number of elements, e.g. [1, 3, 5] so the median is 3
+                res = self._sorted_vals[(length - 1) // 2]
+            else:
+                # Even number of elements, e.g. [1, 3, 5, 7] 
+                # so the median is (3 + 5) / 2 = 8
+                mid_index = (length - 1) // 2
+                left = self._sorted_vals[mid_index]
+                right = self._sorted_vals[mid_index + 1]
+                res = (left + right) / 2
+
+        return MutSeriesF.new(res)
+
+
+@indicator('Median', overlay_main_pane=True)
+@param.int('length', default=10)
+@plot.line(color=color.WHITE, id='#plot_0')
+def Main(self, length):
+    return Median.new(self.close, length)[0]

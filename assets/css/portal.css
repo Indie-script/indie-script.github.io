@@ -865,3 +865,7 @@ body.viewer-full { overflow: hidden; }
   .layout { display: block; padding: 0; }
   .filebox { border: 0; }
 }
+
+/* rich content: mermaid diagrams and KaTeX math (assets/js/rich.js) */
+.markdown-body pre.mermaid { background: transparent; border: 1px solid var(--border, #d0d7de); border-radius: 6px; padding: 16px; text-align: center; overflow-x: auto; }
+.markdown-body .math-block { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }

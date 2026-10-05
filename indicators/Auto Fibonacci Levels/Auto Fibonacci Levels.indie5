@@ -1,0 +1,53 @@
+# indie:lang_version = 5
+from indie import indicator, param, color, plot
+from indie.color import rgba
+from indie.algorithms import Highest, Lowest
+
+@indicator('AutoFib', overlay_main_pane=True)
+@param.int('fiblength', default=265, min=1, title='Fib Length')
+# Plot lines (7 lines for Fibonacci levels)
+@plot.line('p_one', title='1', color=color.BLACK)
+@plot.line('p_764', title='0.764', color=rgba(51, 153, 255))
+@plot.line('p_618', title='0.618', color=color.BLUE)
+@plot.line('p_50', title='0.5', color=color.LIME)
+@plot.line('p_382', title='0.382', color=color.GREEN)
+@plot.line('p_236', title='0.236', color=color.RED)
+@plot.line('p_zero', title='0', color=color.BLACK)
+# Fills between plots (6 fills)
+@plot.fill('p_one', 'p_764', color=color.RED(0.3))
+@plot.fill('p_764', 'p_618', color=rgba(51, 153, 255, 0.3))
+@plot.fill('p_618', 'p_50', color=color.LIME(0.3))
+@plot.fill('p_50', 'p_382', color=color.LIME(0.3))
+@plot.fill('p_382', 'p_236', color=rgba(51, 153, 255, 0.3))
+@plot.fill('p_236', 'p_zero', color=color.RED(0.3))
+def Main(self, fiblength):
+    # Calculate highest and lowest close over the period
+    maxr = Highest.new(self.close, fiblength)[0]
+    minr = Lowest.new(self.close, fiblength)[0]
+    ranr = maxr - minr
+    
+    # Calculate Fibonacci levels
+    level_one = maxr                      # 1.0 (100%)
+    level_764 = maxr - 0.236 * ranr       # 0.764 (76.4%)
+    level_618 = maxr - 0.382 * ranr       # 0.618 (61.8%)
+    level_50 = maxr - 0.50 * ranr         # 0.5 (50%)
+    level_382 = minr + 0.382 * ranr       # 0.382 (38.2%)
+    level_236 = minr + 0.236 * ranr       # 0.236 (23.6%)
+    level_zero = minr                     # 0 (0%)
+    
+    # Return all levels and fills
+    return (
+        level_one,
+        level_764,
+        level_618,
+        level_50,
+        level_382,
+        level_236,
+        level_zero,
+        plot.Fill(),
+        plot.Fill(),
+        plot.Fill(),
+        plot.Fill(),
+        plot.Fill(),
+        plot.Fill()
+    )

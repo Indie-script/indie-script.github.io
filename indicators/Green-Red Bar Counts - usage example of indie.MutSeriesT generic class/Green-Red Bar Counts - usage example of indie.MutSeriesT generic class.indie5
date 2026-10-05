@@ -1,0 +1,24 @@
+# indie:lang_version = 5
+import math
+from indie import indicator, MutSeries, Context, plot, color
+
+def is_green_bar(ctx: Context) -> bool:
+    return ctx.close[0] >= ctx.open[0]
+
+@indicator('Green/Red Bar Counts')
+@plot.steps(color=color.GREEN, id='#plot_0')
+@plot.steps(color=color.RED, id='#plot_1')
+def Main(self):
+    # `indie.MutSeries[T]` is a generic class, 
+    # `T` can be `float`, `int`, `bool`, `str`, etc.
+    green_count = MutSeries[int].new(0)
+    red_count = MutSeries[int].new(0)
+    if is_green_bar(self):
+        green_count[0] = green_count[1] + 1
+        red_count[0] = 0
+    else:
+        green_count[0] = 0
+        red_count[0] = red_count[1] - 1
+
+    return green_count[0], red_count[0]
+    

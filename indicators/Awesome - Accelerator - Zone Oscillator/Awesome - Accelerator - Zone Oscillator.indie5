@@ -1,0 +1,82 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, MutSeriesF, Var, MainContext
+from indie.algorithms import Ma
+
+@indicator('Awesome / Accelerator / Accelerator', overlay_main_pane=False)
+@param.bool('hideAwesome', default=False, title='Hide AO')
+@param.bool('hideAccelerator', default=False, title='Hide AC')
+@param.bool('hideZone', default=True, title='Hide Zone Histogram')
+@param.str('maType', default='SMA', title='Moving Average Type',
+           options=['SMA', 'EMA', 'RMA', 'WMA', 'VWMA'])
+@param.int('fastLength', default=5, min=1, title='Fast MA Length')
+@param.int('slowLength', default=34, min=1, title='Slow MA Length')
+@param.int('acLength', default=5, min=1, title='AC MA Length')
+@param.str('priceType', default='hl2', title='Price Type',
+           options=['close', 'hl2', 'hlc3', 'ohlc4', 'lhcc4', 'open', 'high', 'low'])
+@plot.columns(title='AO')
+@plot.columns(title='AC')
+@plot.columns(title='Zone')
+class Main(MainContext):
+    def __init__(self):
+        self.ao_prev = self.new_var(0.0)
+        self.ac_prev = self.new_var(0.0)
+    
+    def calc(self, hideAwesome, hideAccelerator, hideZone,
+             maType, fastLength, slowLength, acLength, priceType):
+        
+        # Price selection
+        price = 0.0
+        if priceType == 'close':
+            price = self.close[0]
+        elif priceType == 'hl2':
+            price = self.hl2[0]
+        elif priceType == 'hlc3':
+            price = self.hlc3[0]
+        elif priceType == 'ohlc4':
+            price = self.ohlc4[0]
+        elif priceType == 'lhcc4':
+            price = (self.low[0] + self.high[0] + self.close[0] + self.close[0]) / 4
+        elif priceType == 'open':
+            price = self.open[0]
+        elif priceType == 'high':
+            price = self.high[0]
+        else:  # 'low'
+            price = self.low[0]
+        
+        # AO calculation
+        price_series = MutSeriesF.new(price)
+        fastMA = Ma.new(price_series, fastLength, maType)[0]
+        slowMA = Ma.new(price_series, slowLength, maType)[0]
+        ao = fastMA - slowMA
+        
+        # AC calculation
+        ao_series = MutSeriesF.new(ao)
+        acMA = Ma.new(ao_series, acLength, maType)[0]
+        ac = ao - acMA
+        
+        # Красивые цвета как в TradingView
+        # AO colors - cyan/navy (светлый/темный синий)
+        aoColor = color.rgba(0, 230, 255) if ao > self.ao_prev.get() else color.rgba(0, 50, 150)
+        
+        # AC colors - magenta/purple (яркий розовый/фиолетовый)
+        acColor = color.rgba(255, 0, 255) if ac > self.ac_prev.get() else color.rgba(150, 0, 150)
+        
+        # Zone colors - green/red/gray (зеленый/красный/серый)
+        zoneColor = color.GRAY
+        if ao > self.ao_prev.get() and ac > self.ac_prev.get():
+            zoneColor = color.rgba(0, 200, 100)  # Яркий зеленый
+        elif ao < self.ao_prev.get() and ac < self.ac_prev.get():
+            zoneColor = color.rgba(255, 50, 100)  # Яркий красный
+        else:
+            zoneColor = color.rgba(120, 120, 140)  # Серый
+        
+        # Store current values for next iteration
+        self.ao_prev.set(ao)
+        self.ac_prev.set(ac)
+        
+        # Plots
+        ao_plot = plot.Columns(0, color=color.TRANSPARENT) if hideAwesome else plot.Columns(ao, color=aoColor)
+        ac_plot = plot.Columns(0, color=color.TRANSPARENT) if hideAccelerator else plot.Columns(ac, color=acColor)
+        zone_plot = plot.Columns(0, color=color.TRANSPARENT) if hideZone else plot.Columns(ao, color=zoneColor)
+        
+        return ao_plot, ac_plot, zone_plot

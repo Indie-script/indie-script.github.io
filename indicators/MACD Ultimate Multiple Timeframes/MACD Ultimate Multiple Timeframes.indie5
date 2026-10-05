@@ -1,0 +1,90 @@
+# Ported to Indie from https://www.tradingview.com/script/OQx7vju0-MacD-Custom-Indicator-Multiple-Time-Frame-All-Available-Options/ created by @ChrisMoody
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.  
+# If a copy of the MPL was not distributed with this file, you can obtain one at  
+# <https://mozilla.org/MPL/2.0/>.
+
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, sec_context, param_ref, param, plot, color, level, MutSeriesF, MainContext
+from indie.algorithms import Ema, Sma
+from indie.math import cross
+
+
+@sec_context
+@param_ref('fast_length')
+@param_ref('slow_length')
+@param_ref('signal_length')
+def SecMain(self, fast_length, slow_length, signal_length):
+    fast_ma = Ema.new(self.close, fast_length)[0]
+    slow_ma = Ema.new(self.close, slow_length)[0]
+
+    macd = MutSeriesF.new(fast_ma - slow_ma)
+    signal = Sma.new(macd, signal_length)[0]
+    hist = macd[0] - signal
+    return macd[0], signal, hist
+
+
+@indicator('MACD_Ult_MTF')
+@param.bool('use_current_res', default=True, title='Use Current Chart Time Frame?')
+@param.time_frame('res_custom', default='1D', title='Use Different Timeframe? Uncheck Box Above')
+@param.bool('smd', default=True, title='Show MacD & Signal Line? Also Turn Off Dots Below')
+@param.bool('sd', default=True, title='Show Dots When MacD Crosses Signal Line?')
+@param.bool('sh', default=True, title='Show Histogram?')
+@param.bool('macd_color_change', default=True, title='Change MacD Line Color-Signal Line Cross?')
+@param.bool('hist_color_change', default=True, title='MacD Histogram 4 Colors?')
+@param.int('fast_length', default=12, min=1, title='Fast Length')
+@param.int('slow_length', default=26, min=1, title='Slow Length')
+@param.int('signal_length', default=9, min=1, title='Signal Length')
+@plot.line(line_width=4, title='MACD')
+@plot.line(line_width=2, title='Signal Line')
+@plot.histogram(line_width=4, title='Histogram')
+@plot.marker(size=7, position=plot.marker_position.CENTER, title='Cross')
+@level(0, line_width=2, line_color=color.WHITE, title='0 Line')
+class Main(MainContext):
+    def __init__(self, use_current_res, res_custom):
+        tf_chosen = self.time_frame if use_current_res else res_custom
+        self._out_macd, self._out_signal, self._out_hist = self.calc_on(SecMain, time_frame=tf_chosen)
+
+    def calc(self, smd, sd, sh, macd_color_change, hist_color_change):
+        hist_a_is_up = self._out_hist[0] > self._out_hist[1] and self._out_hist[0] > 0
+        hist_a_is_down = self._out_hist[0] < self._out_hist[1] and self._out_hist[0] > 0
+        hist_b_is_down = self._out_hist[0] < self._out_hist[1] and self._out_hist[0] <= 0
+        hist_b_is_up = self._out_hist[0] > self._out_hist[1] and self._out_hist[0] <= 0
+
+        macd_is_above = self._out_macd[0] >= self._out_signal[0]
+
+        plot_color = color.GRAY
+        if hist_color_change:
+            if hist_a_is_up:
+                plot_color = color.AQUA
+            elif hist_a_is_down:
+                plot_color = color.BLUE
+            elif hist_b_is_down:
+                plot_color = color.RED
+            elif hist_b_is_up:
+                plot_color = color.MAROON
+            else:
+                plot_color = color.YELLOW
+
+        macd_color = color.RED
+        signal_color = color.GREEN
+        if macd_color_change:
+            if macd_is_above:
+                macd_color = color.GREEN
+            else:
+                macd_color = color.RED
+            signal_color = color.YELLOW
+
+
+        macd_value = self._out_macd[0] if smd and self._out_macd[0] else nan
+        signal_value = self._out_signal[0] if smd and self._out_signal[0] else nan
+        hist_value = self._out_hist[0] if sh and self._out_hist[0] else 0.0
+        cross_value = self._out_signal[0] if sd and cross(self._out_macd, self._out_signal) else nan
+
+        return (
+            plot.Line(macd_value, color=macd_color),
+            plot.Line(signal_value, color=signal_color),
+            plot.Histogram(hist_value, color=plot_color),
+            plot.Marker(cross_value, color=macd_color),
+        )

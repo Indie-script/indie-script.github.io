@@ -1,0 +1,255 @@
+# indie:lang_version = 5
+from datetime import time
+from math import nan
+from indie import indicator, MainContext, param, plot, color, Optional
+from indie.algorithms import Ema, Rma
+from indie.schedule import Schedule, ScheduleRule, week_day
+
+
+@indicator('Enhanced TMA Overlay', overlay_main_pane=True)
+# === Smoothed MA Inputs ===
+@param.bool('h100', default=True, title='Show 100 Line')
+@param.bool('trend_fill', default=True, title='Show Trend Fill')
+
+# === 3 Line Strike ===
+@param.bool('bear_s', default=True, title='Show Bearish 3 Line Strike')
+@param.bool('bull_s', default=True, title='Show Bullish 3 Line Strike')
+@param.bool('strict_3s', default=False, title='Strict 3 Line Strike (canonical)')
+
+# === Big A$$ Candles (Engulfing) ===
+@param.bool('bear_e', default=True, title='Show Bearish Big A$$ Candles')
+@param.bool('bull_e', default=True, title='Show Bullish Big A$$ Candles')
+@param.bool('strict_eng', default=False, title='Strict Engulfing (require opposite color)')
+
+# === Trade Session ===
+@param.bool('ts', default=True, title='Show Trade Session')
+@param.str('tz', default='America/Chicago', title='Timezone',
+           options=['Asia/Sydney', 'Asia/Tokyo', 'Europe/Frankfurt', 'Europe/London', 
+                    'UTC', 'America/New_York', 'America/Chicago'])
+@param.int('start_hour', default=7, min=0, max=23, title='Analysis Start hour')
+@param.int('start_minute', default=0, min=0, max=59, title='Analysis Start minute')
+@param.int('start_hour2', default=8, min=0, max=23, title='Session Start hour')
+@param.int('start_minute2', default=30, min=0, max=59, title='Session Start minute')
+@param.int('end_hour2', default=12, min=0, max=23, title='Session End hour')
+@param.int('end_minute2', default=0, min=0, max=59, title='Session End minute')
+@param.bool('show_mon', default=True, title='Monday')
+@param.bool('show_tue', default=True, title='Tuesday')
+@param.bool('show_wed', default=True, title='Wednesday')
+@param.bool('show_thu', default=True, title='Thursday')
+@param.bool('show_fri', default=True, title='Friday')
+@param.bool('show_sat', default=False, title='Saturday')
+@param.bool('show_sun', default=False, title='Sunday')
+
+# === Plot decorators ===
+@plot.line('smma21', color=color.WHITE, line_width=2, title='21 SMMA')
+@plot.line('smma50', color=color.rgba(106, 255, 0, 1.0), line_width=2, title='50 SMMA')
+@plot.line('smma100', color=color.YELLOW, line_width=2, title='100 SMMA')
+@plot.line('smma200', color=color.rgba(255, 5, 0, 1.0), line_width=2, title='200 SMMA')
+@plot.line('ema2_plot', color=color.rgba(46, 204, 113, 0), title='EMA(2)')
+@plot.fill('ema2_plot', 'smma200', title='Trend Fill')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, 
+             color=color.GREEN, size=4, title='3 Line Strike Up')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, 
+             color=color.RED, size=4, title='3 Line Strike Down')
+@plot.marker(style=plot.marker_style.CIRCLE, position=plot.marker_position.BELOW, 
+             color=color.GREEN, size=2, title='Big Ass Candle Up')
+@plot.marker(style=plot.marker_style.CIRCLE, position=plot.marker_position.ABOVE, 
+             color=color.RED, size=2, title='Big Ass Candle Down')
+@plot.background(title='Session Background')
+class Main(MainContext):
+    def __init__(self, tz, start_hour, start_minute, start_hour2, start_minute2, 
+                 end_hour2, end_minute2, show_mon, show_tue, show_wed, show_thu, 
+                 show_fri, show_sat, show_sun):
+        # Build weekdays list for schedule
+        days: list[week_day] = []
+        if show_mon:
+            days.append(week_day.MONDAY)
+        if show_tue:
+            days.append(week_day.TUESDAY)
+        if show_wed:
+            days.append(week_day.WEDNESDAY)
+        if show_thu:
+            days.append(week_day.THURSDAY)
+        if show_fri:
+            days.append(week_day.FRIDAY)
+        if show_sat:
+            days.append(week_day.SATURDAY)
+        if show_sun:
+            days.append(week_day.SUNDAY)
+
+        # Two independent schedules matching Pine's two bgcolor() calls
+        self._schedule_analysis: Optional[Schedule] = None
+        self._schedule_trading: Optional[Schedule] = None
+        
+        if len(days) > 0:
+            rule1 = ScheduleRule(
+                start=time(hour=start_hour, minute=start_minute),
+                end=time(hour=end_hour2, minute=end_minute2),
+                days=days
+            )
+            self._schedule_analysis = Schedule(rules=[rule1], timezone=tz)
+            
+            rule2 = ScheduleRule(
+                start=time(hour=start_hour2, minute=start_minute2),
+                end=time(hour=end_hour2, minute=end_minute2),
+                days=days
+            )
+            self._schedule_trading = Schedule(rules=[rule2], timezone=tz)
+
+    def calc(self, h100, trend_fill, bear_s, bull_s, strict_3s, bear_e, bull_e, strict_eng, ts):
+        # === SMMA Calculations ===
+        # Note: Rma.new() uses internal caching - same params return cached instance
+        # This is the standard Indie pattern, not recreating each bar
+        smma21 = Rma.new(self.close, 21)
+        smma50 = Rma.new(self.close, 50)
+        smma100 = Rma.new(self.close, 100)
+        smma200 = Rma.new(self.close, 200)
+        ema2_series = Ema.new(self.close, 2)
+        
+        smma1_val = smma21[0]
+        smma2_val = smma50[0]
+        smma3_val = smma100[0] if h100 else nan
+        smma4_val = smma200[0]
+        ema2 = ema2_series[0]
+        
+        # === Trend Fill - explicit RGBA for consistent alpha ===
+        fill_color = color.TRANSPARENT
+        if trend_fill:
+            if ema2 > smma4_val:
+                fill_color = color.rgba(0, 128, 0, 0.15)  # Green with 15% opacity
+            elif ema2 < smma4_val:
+                fill_color = color.rgba(255, 0, 0, 0.15)  # Red with 15% opacity
+
+        # === 3 Line Strike ===
+        bear_sig = False
+        bull_sig = False
+        
+        if strict_3s:
+            # STRICT (Canonical) Logic:
+            # Bearish 3 Line Strike:
+            # - 3 consecutive BULLISH candles (close > open)
+            # - Bodies going progressively HIGHER (close[3] < close[2] < close[1])
+            # - 4th candle is BEARISH
+            # - 4th candle ENGULFS all 3 bodies: open[0] > close[1] AND close[0] < open[3]
+            three_bulls = (self.close[3] > self.open[3] and 
+                           self.close[2] > self.open[2] and 
+                           self.close[1] > self.open[1])
+            bodies_rising = (self.close[3] < self.close[2] and 
+                             self.close[2] < self.close[1])
+            fourth_bearish = self.close[0] < self.open[0]
+            engulfs_bulls = (self.open[0] > self.close[1] and 
+                             self.close[0] < self.open[3])
+            
+            bear_sig = three_bulls and bodies_rising and fourth_bearish and engulfs_bulls
+            
+            # Bullish 3 Line Strike:
+            # - 3 consecutive BEARISH candles (close < open)
+            # - Bodies going progressively LOWER (close[3] > close[2] > close[1])
+            # - 4th candle is BULLISH
+            # - 4th candle ENGULFS all 3 bodies: open[0] < close[1] AND close[0] > open[3]
+            three_bears = (self.close[3] < self.open[3] and 
+                           self.close[2] < self.open[2] and 
+                           self.close[1] < self.open[1])
+            bodies_falling = (self.close[3] > self.close[2] and 
+                              self.close[2] > self.close[1])
+            fourth_bullish = self.close[0] > self.open[0]
+            engulfs_bears = (self.open[0] < self.close[1] and 
+                             self.close[0] > self.open[3])
+            
+            bull_sig = three_bears and bodies_falling and fourth_bullish and engulfs_bears
+        else:
+            # ORIGINAL (Pine) Logic - simpler, more signals:
+            # Bearish: 3 bullish candles, 4th closes below open[1]
+            bear_sig = (self.close[3] > self.open[3] and 
+                        self.close[2] > self.open[2] and 
+                        self.close[1] > self.open[1] and 
+                        self.close[0] < self.open[1])
+            
+            # Bullish: 3 bearish candles, 4th closes above open[1]
+            bull_sig = (self.close[3] < self.open[3] and 
+                        self.close[2] < self.open[2] and 
+                        self.close[1] < self.open[1] and 
+                        self.close[0] > self.open[1])
+        
+        # Markers for 3 Line Strike
+        bull_3s_marker = self.close[0] if (bull_s and bull_sig) else nan
+        bear_3s_marker = self.close[0] if (bear_s and bear_sig) else nan
+
+        # === Engulfing Candles (Big A$$ Candles) ===
+        open_prev = self.open[1]
+        close_prev = self.close[1]
+        open_curr = self.open[0]
+        close_curr = self.close[0]
+        
+        bullish_engulfing = False
+        bearish_engulfing = False
+        
+        if strict_eng:
+            # STRICT Logic - require opposite color candle (reversal confirmation)
+            # Bullish Engulfing:
+            # - Previous candle MUST be BEARISH (close[1] < open[1])
+            # - Current opens at or below previous close
+            # - Current opens below previous open  
+            # - Current closes above previous open
+            prev_is_bearish = close_prev < open_prev
+            bullish_engulfing = (prev_is_bearish and
+                                open_curr <= close_prev and 
+                                open_curr < open_prev and 
+                                close_curr > open_prev)
+            
+            # Bearish Engulfing:
+            # - Previous candle MUST be BULLISH (close[1] > open[1])
+            # - Current opens at or above previous close
+            # - Current opens above previous open
+            # - Current closes below previous open
+            prev_is_bullish = close_prev > open_prev
+            bearish_engulfing = (prev_is_bullish and
+                                open_curr >= close_prev and 
+                                open_curr > open_prev and 
+                                close_curr < open_prev)
+        else:
+            # ORIGINAL (Pine) Logic - no color filter on previous candle
+            # Bullish Engulfing
+            bullish_engulfing = (open_curr <= close_prev and 
+                                open_curr < open_prev and 
+                                close_curr > open_prev)
+            
+            # Bearish Engulfing
+            bearish_engulfing = (open_curr >= close_prev and 
+                                open_curr > open_prev and 
+                                close_curr < open_prev)
+        
+        # Markers for Engulfing
+        bull_eng_marker = self.close[0] if (bull_e and bullish_engulfing) else nan
+        bear_eng_marker = self.close[0] if (bear_e and bearish_engulfing) else nan
+
+        # === Trading Session Background ===
+        session_color = color.rgba(25, 118, 210, 0.12)
+        session_bg = plot.Background(color=color.TRANSPARENT)
+        
+        if ts:
+            in_analysis = False
+            in_trading = False
+            
+            if self._schedule_analysis is not None:
+                in_analysis = self.time[0] in self._schedule_analysis.value()
+            
+            if self._schedule_trading is not None:
+                in_trading = self.time[0] in self._schedule_trading.value()
+            
+            if in_analysis or in_trading:
+                session_bg = plot.Background(color=session_color)
+
+        return (
+            smma1_val,                                              # 21 SMMA
+            smma2_val,                                              # 50 SMMA
+            smma3_val,                                              # 100 SMMA
+            smma4_val,                                              # 200 SMMA
+            ema2,                                                   # EMA(2)
+            plot.Fill(color=fill_color),                            # Trend Fill
+            plot.Marker(bull_3s_marker, text='3s-Bull'),            # 3 Line Strike Up
+            plot.Marker(bear_3s_marker, text='3s-Bear'),            # 3 Line Strike Down
+            plot.Marker(bull_eng_marker),                           # Engulfing Up
+            plot.Marker(bear_eng_marker),                           # Engulfing Down
+            session_bg,                                             # Session Background
+        )

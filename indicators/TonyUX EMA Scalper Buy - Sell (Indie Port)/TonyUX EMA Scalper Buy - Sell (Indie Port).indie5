@@ -1,0 +1,30 @@
+# indie:lang_version = 5
+# Original indicator “TonyUX EMA Scalper – Buy / Sell”
+# Author: tux
+# Published on TradingView
+# Adapted and rewritten for TakeProfit Platform.
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Ema, Highest, Lowest
+from indie.math import cross
+
+@indicator("TonyUX EMA Scalper – Buy / Sell (Indie Port)", overlay_main_pane=True)
+@param.int('length', default=20, min=1, title='Length')
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(title='EMA', color=color.BLUE)
+@plot.line(title='Recent High', color=color.RED, line_width=2)
+@plot.line(title='Recent Low', color=color.GREEN, line_width=2)
+@plot.marker(title='Sell', color=color.RED, style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE)
+@plot.marker(title='Buy', color=color.GREEN, style=plot.marker_style.LABEL, position=plot.marker_position.BELOW)
+def Main(self, length, src):
+    ema_out = Ema.new(src, length)
+    last8h = Highest.new(self.close, 8)
+    lastl8 = Lowest.new(self.close, 8)
+    
+    is_cross = cross(self.close, ema_out)
+    bearish = is_cross and self.close[1] > self.close[0]
+    bullish = is_cross and self.close[1] < self.close[0]
+    
+    sell_marker = plot.Marker(value=self.high[0], color=color.RED, text="Sell") if bearish else plot.Marker(value=float('nan'), color=color.rgba(0,0,0,0))
+    buy_marker = plot.Marker(value=self.low[0], color=color.GREEN, text="Buy") if bullish else plot.Marker(value=float('nan'), color=color.rgba(0,0,0,0))
+    
+    return ema_out[0], last8h[0], lastl8[0], sell_marker, buy_marker

@@ -1,0 +1,86 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Atr
+from indie.math import cross_over, cross_under
+
+
+@indicator('Ultra Trend Alerts', overlay_main_pane=True)
+@param.float('key_value', default=1.0, min=0.1, title="Key Value (Sensitivity)")
+@param.int('atr_period', default=10, min=1, title="ATR Period")
+@plot.line(id='trailing_stop', title='ATR Trailing Stop', color=color.BLUE)
+@plot.marker(
+    title='Buy',
+    style=plot.marker_style.LABEL,
+    position=plot.marker_position.BELOW,
+    size=5,
+    color=color.GREEN,
+)
+@plot.marker(
+    title='Sell',
+    style=plot.marker_style.LABEL,
+    position=plot.marker_position.ABOVE,
+    size=5,
+    color=color.RED,
+)
+def Main(self, key_value, atr_period):
+    src = self.close
+    
+    # Calculate ATR-based loss
+    x_atr = Atr.new(length=atr_period)
+    n_loss = key_value * x_atr[0]
+    
+    # ATR Trailing Stop calculation
+    x_atr_trailing_stop = MutSeriesF.new(init=0.0)
+    
+    prev_stop = x_atr_trailing_stop[1]
+    prev_src = src[1]
+    
+    if src[0] > prev_stop and prev_src > prev_stop:
+        x_atr_trailing_stop[0] = max(prev_stop, src[0] - n_loss)
+    elif src[0] < prev_stop and prev_src < prev_stop:
+        x_atr_trailing_stop[0] = min(prev_stop, src[0] + n_loss)
+    elif src[0] > prev_stop:
+        x_atr_trailing_stop[0] = src[0] - n_loss
+    else:
+        x_atr_trailing_stop[0] = src[0] + n_loss
+    
+    # Position tracking
+    pos = MutSeriesF.new(init=0.0)
+    
+    if prev_src < prev_stop and src[0] > prev_stop:
+        pos[0] = 1.0
+    elif prev_src > prev_stop and src[0] < prev_stop:
+        pos[0] = -1.0
+    else:
+        pos[0] = pos[1]
+    
+    # Color for trailing stop line based on position
+    x_color = color.RED if pos[0] == -1 else (color.GREEN if pos[0] == 1 else color.BLUE)
+    
+    # Crossover detection (src used directly instead of EMA(src,1))
+    above = cross_over(src, x_atr_trailing_stop)
+    below = cross_under(src, x_atr_trailing_stop)
+    
+    # Buy/Sell signals
+    buy = src[0] > x_atr_trailing_stop[0] and above
+    sell = src[0] < x_atr_trailing_stop[0] and below
+    
+    # Return trailing stop line and markers
+    buy_marker = plot.Marker(
+        value=self.low[0],
+        color=color.GREEN,
+        text='Buy'
+    ) if buy else plot.Marker(value=nan, color=color.TRANSPARENT)
+    
+    sell_marker = plot.Marker(
+        value=self.high[0],
+        color=color.RED,
+        text='Sell'
+    ) if sell else plot.Marker(value=nan, color=color.TRANSPARENT)
+    
+    return (
+        plot.Line(x_atr_trailing_stop[0], color=x_color),
+        buy_marker,
+        sell_marker
+    )

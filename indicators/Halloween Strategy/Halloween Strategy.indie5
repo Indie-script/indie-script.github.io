@@ -1,0 +1,229 @@
+# indie:lang_version = 5
+from datetime import datetime
+from statistics import mean, stdev
+from indie import indicator, color, plot, MainContext, Optional, MutSeries, param
+from indie.math import divide
+from indie.drawings import LabelAbs, AbsolutePosition, callout_position, LabelRel, RelativePosition, vertical_anchor, horizontal_anchor
+
+
+@indicator('🎃 Halloween Strategy', overlay_main_pane=True)
+# Strategy Dates
+@param.int('winter_start_month', default=10, min=1, max=12, title='Winter Period - Start Month')
+@param.int('winter_start_day', default=31, min=1, max=31, title='Winter Period - Start Day')
+@param.int('summer_start_month', default=5, min=1, max=12, title='Summer Period - Start Month')
+@param.int('summer_start_day', default=1, min=1, max=31, title='Summer Period - Start Day')
+# Initial Settings
+@param.float('initial_equity', default=100.0, min=1.0, max=1000000.0, title='Initial Equity (%)')
+# Visual Settings
+@param.int('buy_label_size', default=11, min=8, max=16, title='Buy Label Font Size')
+@param.int('sell_label_size', default=11, min=8, max=16, title='Sell Label Font Size')
+@param.int('stats_label_size', default=10, min=8, max=16, title='Stats Panel Font Size')
+# Toggle Settings
+@param.bool('show_labels', default=True, title='Show Buy/Sell Labels')
+@param.bool('show_stats', default=True, title='Show Statistics Panel')
+# Background Settings
+@plot.background(color=color.ORANGE(0.12), title='Winter Period Background')
+@plot.background(color=color.NAVY(0.12), title='Summer Period Background')
+class Main(MainContext):
+    def __init__(self, initial_equity, stats_label_size):
+        self._position = 0
+        self._open_price: Optional[float] = None
+        self._total_trades = 0
+        self._win_trades = 0
+
+        self._initial_equity = initial_equity
+
+        # Trade history storage
+        self._total_profit = 0.0
+        self._total_loss = 0.0
+        self._trades_pnl_list: list[float] = []
+
+        # Max Drawdown calculation
+        self._current_equity = initial_equity
+        self._peak_equity = initial_equity
+        self._max_drawdown = 0.0
+
+        self._stats_label = LabelRel(
+            'Stats text',
+            position=RelativePosition(
+                vertical_anchor=vertical_anchor.BOTTOM,
+                horizontal_anchor=horizontal_anchor.RIGHT,
+                top_bottom_ratio=0.98,
+                left_right_ratio=0.98,
+            ),
+            bg_color=color.BLACK,
+            text_color=color.WHITE,
+            font_size=stats_label_size
+        )
+
+    def calc(self,
+             winter_start_month, winter_start_day, summer_start_month, summer_start_day,
+             buy_label_size, sell_label_size,
+             show_labels, show_stats):
+        timestamp = self.time[0]
+        dt = datetime.utcfromtimestamp(timestamp)
+
+        month = dt.month
+        day = dt.day
+
+        is_winter = MutSeries[bool].new(False)
+
+        # Halloween strategy logic with customizable dates
+        # Check if current date is in winter period (holding position)
+
+        # Determine if we're in winter period based on custom dates
+        # Winter starts at winter_start_month/winter_start_day
+        # Winter ends at summer_start_month/summer_start_day
+
+        if month < summer_start_month:
+            # Before summer start - depends on winter start month
+            if winter_start_month > summer_start_month:
+                # Winter wraps around year end (e.g., Oct-May)
+                is_winter[0] = True
+            else:
+                # Winter doesn't wrap (e.g., Jan-May)
+                if month >= winter_start_month:
+                    if month == winter_start_month:
+                        is_winter[0] = day >= winter_start_day
+                    else:
+                        is_winter[0] = True
+                else:
+                    is_winter[0] = False
+        elif month == summer_start_month:
+            # At summer start month
+            if day < summer_start_day:
+                if winter_start_month > summer_start_month:
+                    # Winter wraps around year
+                    is_winter[0] = True
+                else:
+                    if month >= winter_start_month:
+                        if month == winter_start_month:
+                            is_winter[0] = day >= winter_start_day
+                        else:
+                            is_winter[0] = True
+                    else:
+                        is_winter[0] = False
+            else:
+                is_winter[0] = False
+        elif month < winter_start_month:
+            # Between summer start and winter start (same year)
+            is_winter[0] = False
+        elif month == winter_start_month:
+            # At winter start month
+            if day < winter_start_day:
+                is_winter[0] = False
+            else:
+                is_winter[0] = True
+        else:
+            # After winter start month
+            is_winter[0] = True
+
+        # ============================================
+        # CHART LABELS LOGIC
+        # ============================================
+
+        is_winter_start = is_winter[0] and not is_winter[1]
+        # Winter period starts - BUY according to Halloween strategy
+        if is_winter_start:
+            if self._open_price is None:
+                self._open_price = self.close[0]
+                self._position += 1
+            if show_labels:
+                self.chart.draw(
+                    LabelAbs(
+                        'Buy',
+                        AbsolutePosition(self.time[0], self.low[0]),
+                        bg_color=color.NAVY,
+                        text_color=color.WHITE,
+                        font_size=buy_label_size,
+                        callout_position=callout_position.BOTTOM_LEFT,
+                    )
+                )
+
+        is_winter_end = not is_winter[0] and is_winter[1]
+        # Summer period starts - SELL according to Halloween strategy
+        if is_winter_end:
+            if self._open_price is not None:
+                trade_pnl_percent = (divide(self.close[0], self._open_price.value()) - 1.0) * 100.0
+
+                # Save P&L for Sharpe Ratio calculation
+                self._trades_pnl_list.append(trade_pnl_percent)
+
+                # Update equity with closed trade
+                self._current_equity = self._current_equity * (1.0 + trade_pnl_percent / 100.0)
+
+                if self._current_equity > self._peak_equity:
+                    self._peak_equity = self._current_equity
+
+                current_dd = divide(self._peak_equity - self._current_equity, self._peak_equity) * 100.0
+
+                if current_dd > self._max_drawdown:
+                    self._max_drawdown = current_dd
+
+                # Separate profitable and losing trades for Profit Factor
+                if trade_pnl_percent > 0.0:
+                    self._win_trades += 1
+                    self._total_profit += trade_pnl_percent
+                elif trade_pnl_percent < 0.0:
+                    self._total_loss += abs(trade_pnl_percent)
+
+                self._total_trades += 1
+                self._open_price = None
+                self._position -= 1
+
+            if show_labels:
+                self.chart.draw(
+                    LabelAbs(
+                        'Sell',
+                        AbsolutePosition(self.time[0], self.high[0]),
+                        bg_color=color.ORANGE,
+                        text_color=color.WHITE,
+                        font_size=sell_label_size,
+                        callout_position=callout_position.TOP_RIGHT,
+                    )
+                )
+
+        # ============================================
+        # STATISTICS CALCULATION AND DISPLAY
+        # ============================================
+
+        open_pnl = 0.0
+        if self._position > 0:
+            open_pnl = (divide(self.close[0], self._open_price.value()) - 1.0) * 100.0
+
+        win_rate = divide(self._win_trades, self._total_trades, 0) * 100.0
+
+        # Real compounded Total P&L through equity
+        total_pnl_real = self._current_equity - self._initial_equity
+
+        profit_factor = divide(self._total_profit, self._total_loss, 0)
+
+        sharpe_ratio = 0.0
+        if len(self._trades_pnl_list) > 1:
+            avg_return = mean(self._trades_pnl_list)
+            std_return = stdev(self._trades_pnl_list)
+            sharpe_ratio = divide(avg_return, std_return, 0)
+
+        stats_text = (
+            'Total P&L: ' + str(round(total_pnl_real, 2)) + '%\n' +
+            'Win Rate:  ' + str(round(win_rate, 2)) + '%\n' +
+            'Trades:    ' + str(self._total_trades) + '\n' +
+            'Profit F:  ' + str(round(profit_factor, 2)) + '\n' +
+            'Sharpe:    ' + str(round(sharpe_ratio, 2)) + '\n' +
+            'Max DD:    ' + str(round(self._max_drawdown, 2)) + '%\n' +
+            '---\n' +
+            'CURRENT PERIOD\n' +
+            'Open P&L:  ' + str(round(open_pnl, 2)) + '%'
+        )
+
+        self._stats_label.text = stats_text
+        if show_stats:
+            self.chart.draw(self._stats_label)
+
+        # ============================================
+        # PERIOD VISUALIZATION LOGIC
+        # ============================================
+
+        if is_winter[0]:
+            return plot.Background(), plot.Background(color=color.TRANSPARENT)
+        return plot.Background(color=color.TRANSPARENT), plot.Background()

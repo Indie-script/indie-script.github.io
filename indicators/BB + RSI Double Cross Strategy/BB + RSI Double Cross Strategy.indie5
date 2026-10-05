@@ -1,0 +1,134 @@
+# indie:lang_version = 5
+#
+# Bollinger Bands + RSI Double Cross Strategy Indicator
+# Based on ChartArt's strategy concept (v1.1)
+#
+# This indicator combines RSI momentum with Bollinger Bands volatility to identify
+# high-probability reversal points. Signals are generated only when BOTH conditions
+# align simultaneously, filtering out false signals common in single-indicator systems.
+#
+# SIGNAL LOGIC:
+# - LONG:  RSI crosses ABOVE 50 AND Price crosses ABOVE lower BB (bullish reversal)
+# - SHORT: RSI crosses BELOW 50 AND Price crosses BELOW upper BB (bearish reversal)
+#
+# The strategy targets mean-reversion setups where price has reached BB extremes
+# and RSI confirms momentum shift through the 50 centerline.
+#
+# TREND COLOR MARKERS:
+# - Red (Down ▼):  Price re-enters from above upper BB while basis is declining
+# - Green (Up ▲): Price re-enters from below lower BB while basis is rising
+#
+from indie import indicator, param, color, plot, MainContext
+from indie.algorithms import Rsi, Bb
+from indie.math import cross_over, cross_under
+from indie.drawings import (
+    LabelAbs, LabelRel, AbsolutePosition, RelativePosition,
+    vertical_anchor as va, horizontal_anchor as ha, callout_position as cp
+)
+
+
+@indicator('BB + RSI Double Strategy', overlay_main_pane=True)
+@param.int('rsi_length', default=6, min=1, title='RSI Period')
+@param.int('bb_length', default=200, min=1, title='BB Period')
+@param.float('bb_mult', default=2.0, min=0.001, max=50.0, title='BB StdDev')
+@param.int('rsi_level', default=50, min=0, max=100, title='RSI Trigger Level')
+@param.bool('show_signals', default=True, title='Show Signal Labels')
+@param.bool('show_trend_marks', default=True, title='Show Trend Markers')
+@plot.line('lower', color=color.SILVER, title='BB Lower')
+@plot.line('basis', color=color.AQUA, title='BB Basis')
+@plot.line('upper', color=color.SILVER, title='BB Upper')
+@plot.fill('lower', 'upper', color=color.SILVER(0.1), title='BB Zone')
+class Main(MainContext):
+    def __init__(self):
+        self.long_count = 0
+        self.short_count = 0
+        self.info_label = LabelRel(
+            "",
+            RelativePosition(va.TOP, ha.RIGHT, 0.02, 0.98),
+            font_size=11,
+            text_color=color.WHITE,
+            bg_color=color.rgba(30, 30, 60, 0.9)
+        )
+
+    def calc(self, rsi_length, bb_length, bb_mult, rsi_level, show_signals, show_trend_marks):
+        # Calculate indicators
+        vrsi = Rsi.new(self.close, rsi_length)
+        bb_lower, bb_basis, bb_upper = Bb.new(self.close, bb_length, bb_mult)
+        
+        # LONG: RSI crosses above level AND price crosses above lower BB
+        rsi_cross_up = cross_over(vrsi, float(rsi_level))
+        price_cross_up_lower = cross_over(self.close, bb_lower)
+        long_signal = rsi_cross_up and price_cross_up_lower
+        
+        # SHORT: RSI crosses below level AND price crosses below upper BB
+        rsi_cross_down = cross_under(vrsi, float(rsi_level))
+        price_cross_down_upper = cross_under(self.close, bb_upper)
+        short_signal = rsi_cross_down and price_cross_down_upper
+        
+        # Trend color conditions
+        trend_red = (self.close[1] > bb_upper[1] and self.close[0] < bb_upper[0]) and (bb_basis[0] < bb_basis[1])
+        trend_green = (self.close[1] < bb_lower[1] and self.close[0] > bb_lower[0]) and (bb_basis[0] > bb_basis[1])
+        
+        # Draw signal labels
+        if show_signals:
+            if long_signal:
+                self.long_count += 1
+                self.chart.draw(LabelAbs(
+                    "L",
+                    AbsolutePosition(self.time[0], bb_lower[0]),
+                    font_size=12,
+                    text_color=color.WHITE,
+                    bg_color=color.GREEN,
+                    callout_position=cp.TOP_RIGHT
+                ))
+            
+            if short_signal:
+                self.short_count += 1
+                self.chart.draw(LabelAbs(
+                    "S",
+                    AbsolutePosition(self.time[0], bb_upper[0]),
+                    font_size=12,
+                    text_color=color.WHITE,
+                    bg_color=color.RED,
+                    callout_position=cp.BOTTOM_RIGHT
+                ))
+        
+        # Draw trend markers
+        if show_trend_marks:
+            if trend_red:
+                self.chart.draw(LabelAbs(
+                    "Down",
+                    AbsolutePosition(self.time[0], self.high[0]),
+                    font_size=12,
+                    text_color=color.RED,
+                    bg_color=color.rgba(0, 0, 0, 0),
+                    callout_position=cp.BOTTOM_RIGHT
+                ))
+            elif trend_green:
+                self.chart.draw(LabelAbs(
+                    "Up",
+                    AbsolutePosition(self.time[0], self.low[0]),
+                    font_size=12,
+                    text_color=color.GREEN,
+                    bg_color=color.rgba(0, 0, 0, 0),
+                    callout_position=cp.TOP_RIGHT
+                ))
+        
+        # Update info panel
+        info_text = "BB + RSI Strategy"
+        info_text += "\n─────────────"
+        info_text += "\nRSI(" + str(rsi_length) + "): " + str(round(vrsi[0], 1))
+        info_text += "\nBB(" + str(bb_length) + "): " + str(round(bb_basis[0], 2))
+        info_text += "\n─────────────"
+        info_text += "\nLONG: " + str(self.long_count)
+        info_text += "\nSHORT: " + str(self.short_count)
+        
+        self.info_label.text = info_text
+        self.chart.draw(self.info_label)
+        
+        return (
+            bb_lower[0],
+            bb_basis[0],
+            bb_upper[0],
+            plot.Fill()
+        )

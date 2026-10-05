@@ -1,0 +1,88 @@
+# Ported to Indie from https://www.tradingview.com/script/d3IaFa7c-Trend-Impulse-Channels-Zeiierman/ created by @Zeiierman
+
+# This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+# indie:lang_version = 5
+from math import isnan, nan
+from indie import indicator, param, color, plot, Var, MutSeriesF
+from indie.algorithms import Atr
+from indie.math import cross_under, cross_over
+
+
+@indicator('Trend Impulse Channels', overlay_main_pane=True)
+@param.float('flip_mult', default=2.86, step=0.01, title='Trigger Threshold')
+@param.float('max_step_atr', default=-0.034, step=0.001, title='Max Step Size')
+@param.float('band_mult', default=2.02, step=0.01, title='Band Multiplier')
+@param.int('hold_bars', default=0, min=0, title='Trend Hold')
+@param.bool('show_fill', default=True, title='Channel Fill')
+@param.bool('channel_retest_signal', default=True, title='Retest Signals')
+@param.bool('trend_filter', default=True, title='Filter by Trend')
+@param.bool('trend_step_signal', default=False, title='Trend Step Signals')
+@plot.line('trend', title='Trend Line', line_width=2)
+@plot.line('upper', title='Upper Band', display_options=plot.LineDisplayOptions())
+@plot.line('lower', title='Lower Band', display_options=plot.LineDisplayOptions())
+@plot.fill('lower', 'upper', title='Fill')
+@plot.marker(color=color.LIME, title='Lower Retest', position=plot.marker_position.BELOW, style=plot.marker_style.LABEL, size=7)
+@plot.marker(color=color.RED, title='Upper Retest', position=plot.marker_position.ABOVE, style=plot.marker_style.LABEL, size=7)
+@plot.marker(color=color.LIME, title='Bullish Step', position=plot.marker_position.CENTER, style=plot.marker_style.CIRCLE)
+@plot.marker(color=color.RED, title='Bearish Step', position=plot.marker_position.CENTER, style=plot.marker_style.CIRCLE)
+@plot.marker(color=color.LIME(0.5), title='Bullish Step', position=plot.marker_position.CENTER, style=plot.marker_style.CIRCLE, size=7, display_options=plot.MarkerDisplayOptions(pane=True))
+@plot.marker(color=color.RED(0.5), title='Bearish Step', position=plot.marker_position.CENTER, style=plot.marker_style.CIRCLE, size=7, display_options=plot.MarkerDisplayOptions(pane=True))
+def Main(self, flip_mult, max_step_atr, band_mult, hold_bars, show_fill, channel_retest_signal, trend_filter, trend_step_signal):
+    atr = Atr.new(200)[0]
+    step_base = atr * 2.52
+    max_step  = atr * max_step_atr
+    trigger  = atr * flip_mult
+
+    trend = MutSeriesF.new(init=nan)
+    dir = Var[int].new(0)
+    bars_in_trend = Var[int].new(0)
+    extension = Var[int].new(0)
+
+    start_long = self.close[0] > (trend[0] if not isnan(trend[0]) else 0) + trigger
+    start_short = self.close[0] < (trend[0] if not isnan(trend[0]) else 0) - trigger
+    flip = (start_long or start_short) and bars_in_trend.get() >= 0
+    step_size = min(step_base + 0.0093 * bars_in_trend.get() * atr, max_step)
+
+    if isnan(trend[0]):
+        trend[0] = self.close[0]
+        dir.set(0)
+        bars_in_trend.set(0)
+        extension.set(0)
+    else:
+        if flip and extension.get() <= 0:
+            trend[0] = self.close[0]
+            dir.set(1 if start_long else -1)
+            bars_in_trend.set(1)
+            extension.set(hold_bars)
+        else:
+            trend[0] += step_size if dir.get() == 1 else -step_size if dir.get() == -1 else 0
+            bars_in_trend.set(bars_in_trend.get() + 1)
+            extension.set(max(extension.get() - 1, 0))
+
+    trend_direction = 1 if dir.get() == 1 else -1 if dir.get() == -1 else 0
+    upper = trend[0] + atr * band_mult
+    lower = trend[0] - atr * band_mult
+
+    trend_color = color.LIME if dir.get() == 1 else color.RED if dir.get() == -1 else color.GRAY
+    trend_step  = (dir.get() != 0) and (trend[0] != trend[1]) and ((trend[0] > trend[1] and dir.get() == 1) or (trend[0] < trend[1] and dir.get() == -1))
+
+    crossunder = cross_under(self.low, MutSeriesF.new(lower))
+    crossover  = cross_over(self.high, MutSeriesF.new(upper))
+
+    if trend_filter:
+        crossunder = crossunder and trend_direction == 1
+        crossover = crossover and trend_direction == -1
+
+    return (
+        plot.Line(trend[0], color=trend_color),
+        upper,
+        lower,
+        plot.Fill(trend_color(0.35 if show_fill else 0)),
+        self.low[0] if crossunder and channel_retest_signal else nan,
+        self.high[0] if crossover and channel_retest_signal else nan,
+        self.high[0] if trend_step_signal and trend_step and dir.get() == 1 else nan,
+        self.low[0] if trend_step_signal and trend_step and dir.get() == -1 else nan,
+        self.high[0] if trend_step_signal and trend_step and dir.get() == 1 else nan,
+        self.low[0] if trend_step_signal and trend_step and dir.get() == -1 else nan,
+    )

@@ -1,0 +1,45 @@
+# Ported to Indie from https://www.tradingview.com/v/og7JPrRA/ 
+# The author of the original indicator is @ChrisMoody
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.  
+# If a copy of the MPL was not distributed with this file, you can obtain one at  
+# <https://mozilla.org/MPL/2.0/>.
+
+# indie:lang_version = 5
+import math
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Highest, StdDev, Sma, Lowest
+
+
+@indicator('Williams_VIX_Fix')
+@param.int('pd', default=22, min=1, title='LookBack Period Standard Deviation High')
+@param.int('bbl', default=20, min=1, title='Bolinger Band Length')
+@param.float('mult', default=2.0, min=1.0, max=5.0, title='Bollinger Band Standard Devaition Up')
+@param.int('lb', default=50, min=1, title='Look Back Period Percentile High')
+@param.float('ph', default=0.85, min=0.0, max=1.0, title='Highest Percentile - 0.90=90%, 0.95=95%, 0.99=99%')
+@param.float('pl', default=1.01, min=1.0, max=2.0, title='Lowest Percentile - 1.10=90%, 1.05=95%, 1.01=99%')
+@param.bool('hp', default=False, title='Show High Range - Based on Percentile and LookBack Period?')
+@param.bool('sd', default=False, title='Show Standard Deviation Line?')
+@plot.line(line_width=4, color=color.RED, title='Range High Percentile', id='#plot_0')
+@plot.line(line_width=4, color=color.RED, title='Range Low Percentile', id='#plot_1')
+@plot.histogram(line_width=4, title='Williams Vix Fix', id='#plot_2')
+@plot.line(line_width=3, color=color.AQUA, title='Upper Band', id='#plot_3')
+def Main(self, pd, bbl, mult, lb, ph, pl, hp, sd):
+    highest_close = Highest.new(self.close, pd)[0]
+    wvf = MutSeriesF.new((highest_close - self.low[0]) / highest_close * 100)
+
+    s_dev = mult * StdDev.new(wvf, bbl)[0]
+    mid_line = Sma.new(wvf, bbl)[0]
+    upper_band = mid_line + s_dev
+    
+    range_high = Highest.new(wvf, lb)[0] * ph
+    range_low = Lowest.new(wvf, lb)[0] * pl
+    
+    col = color.LIME if wvf[0] >= upper_band or wvf[0] >= range_high else color.GRAY
+
+    return (
+        range_high if hp and range_high else math.nan,
+        range_low if hp and range_low else math.nan,
+        plot.Histogram(wvf[0], color=col),
+        upper_band if sd and upper_band else math.nan,
+    )

@@ -1,0 +1,48 @@
+# indie:lang_version = 5
+from indie import (
+    indicator, MutSeriesF, algorithm, SeriesF, plot, 
+    color, param, line_style)
+from indie.algorithms import CumSum, Sma
+
+
+@algorithm
+def MySum(self, src: SeriesF, length: int) -> SeriesF:
+    cs = CumSum.new(src)
+    return MutSeriesF.new(cs[0] - cs[length])
+
+
+@algorithm
+def MySma(self, src: SeriesF, length: int) -> SeriesF:
+    s = MySum.new(src, length)
+    return MutSeriesF.new(s[0] / length)
+
+
+@indicator("Sma with 'series' length", overlay_main_pane=True)
+@param.int('short_len', default=12)
+@param.int('long_len', default=24)
+@plot.line(color=color.BLUE(alpha=0.65), line_width=7, id='#plot_0')
+@plot.line(color=color.RED, id='#plot_1')
+@plot.line(color=color.GREEN, id='#plot_2')
+def Main(self, short_len, long_len):
+    # The long and short `Sma`s are calculated here with the algorithm 
+    # from the `indie.algorithms` standard library, they accept only 
+    # non-series lengths and they are plotted to be a reference that 
+    # proves that MySma gives correct results.
+    short_sma = Sma.new(self.high, short_len)
+    long_sma = Sma.new(self.high, long_len)
+    
+    length = short_len
+    if long_sma[0] >= short_sma[0]:
+        length = long_len
+    # So, strictly speaking, `length` is not a series, but just a number.
+    # But it is kinda series, because it may have different values on different bars.
+    # NOTE: If you need a truly series length, wrap it with `MutSeriesF.new(length)`.
+    
+    return (
+        MySma.new(self.high, length)[0], # Do not use indie.algorithms.Sma here, 
+                                         # because `length` is not constant over 
+                                         # different bars. You may try and see how 
+                                         # indicator starts giving bad results.
+        short_sma[0],
+        long_sma[0], 
+    )

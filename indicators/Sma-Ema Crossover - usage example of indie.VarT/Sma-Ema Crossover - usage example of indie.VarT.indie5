@@ -1,0 +1,32 @@
+# Copyright (c) 2024 @TakeProfit. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import indicator, Var, plot, MutSeriesF, SeriesF, color, algorithm
+from indie.algorithms import Sma, Ema
+
+@algorithm
+def CrossoverWithVar(self, s1: SeriesF, s2: SeriesF) -> float:
+    my_var = Var[float].new(0)
+    if s1[1] > s2[1] and s1[0] < s2[0]:
+        my_var.set(s1[0])
+    return my_var.get()
+
+# Note: this function does the same thing but using MutSeriesF
+@algorithm
+def CrossoverWithSeries(self, s1: SeriesF, s2: SeriesF) -> float:
+    my_ser = MutSeriesF.new(init=0)
+    if s1[1] > s2[1] and s1[0] < s2[0]:
+        my_ser[0] = s1[0]
+    return my_ser[0]
+
+@indicator('Sma-Ema Crossover', overlay_main_pane=True)
+@plot.line(color=color.MAROON, id='#plot_0')
+@plot.line(color=color.LIME, id='#plot_1')
+@plot.line(color=color.BLUE, line_width=2, id='#plot_2')
+def Main(self):
+    sma = Sma.new(self.close, 5)
+    ema = Ema.new(self.close, 5)
+    return sma[0], ema[0], CrossoverWithVar.new(sma, ema)

@@ -1,0 +1,24 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, level
+from indie.algorithms import Adx
+
+
+@indicator('ADX + DI (Wilder Plus)')
+@param.int('len', default=14, min=1, title='Length')
+@param.bool('show_fill', default=False, title='Fill between DI+ and DI-')
+@level(20, line_color=color.GRAY, title='Weak Trend')
+@level(25, line_color=color.GRAY, title='Trend')
+@level(40, line_color=color.GRAY, title='Strong')
+@plot.line('di_plus', color=color.GREEN, title='+DI')
+@plot.line('di_minus', color=color.RED, title='-DI')
+@plot.line(color=color.NAVY, line_width=2, title='ADX')
+@plot.fill('di_plus', 'di_minus', title='DI Trend Zone')
+def Main(self, len, show_fill):
+    minus_di, adx, plus_di = Adx.new(adx_len=len, di_len=len)
+    
+    # Dynamic fill color based on DI crossover
+    fill_color = color.GREEN(0.15) if plus_di[0] > minus_di[0] else color.RED(0.15)
+    # Only show fill if show_fill is True
+    actual_fill_color = fill_color if show_fill else color.TRANSPARENT
+    
+    return plus_di[0], minus_di[0], adx[0], plot.Fill(color=actual_fill_color)

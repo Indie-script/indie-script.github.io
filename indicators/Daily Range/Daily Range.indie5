@@ -1,0 +1,31 @@
+# Ported to Indie from https://www.tradingview.com/v/XwKEDE3y/ created by @AndreSolbach
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.  
+# If a copy of the MPL was not distributed with this file, you can obtain one at  
+# <https://mozilla.org/MPL/2.0/>.
+
+
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, sec_context, param, format, MutSeriesF, param_ref, MainContext, TimeFrame, plot, color
+from indie.algorithms import Sma
+
+@sec_context
+@param_ref('days_used_for_calculation')
+def HighLowSma(self, days_used_for_calculation):
+    block_mult = nan
+    if self.is_last_bar:
+        block_mult = 1.0
+        if self.info.tick_size == 0.00001 or self.info.tick_size == 0.001 and 'JPY' in self.info.ticker:
+            block_mult = self.info.tick_size * 10
+    return 1 / block_mult * Sma.new(MutSeriesF.new(self.high[0] - self.low[0]), days_used_for_calculation)[0]
+
+@indicator('Daily Range', format=format.PRICE, precision=2, overlay_main_pane=True)
+@param.int('days_used_for_calculation', default=50, min=1, title='Days used for calculation')
+@plot.line(color=color.rgba(233, 30, 99), display_options=plot.LineDisplayOptions(status_line=True))
+class Main(MainContext):
+    def __init__(self):
+        self._high_low_sma = self.calc_on(time_frame=TimeFrame.from_str('1D'), sec_context=HighLowSma, lookahead=True)
+
+    def calc(self):
+        return self._high_low_sma[0] if self.is_last_bar else nan

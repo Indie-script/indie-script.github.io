@@ -1,0 +1,49 @@
+# Ported to Indie from https://www.tradingview.com/script/qIKR3tbN-Fibonacci-Bollinger-Bands/
+# The author of the original indicator is @Rashad
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.  
+# If a copy of the MPL was not distributed with this file, you can obtain one at  
+# <https://mozilla.org/MPL/2.0/>.
+
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Vwma, StdDev
+
+
+@indicator('FBB', overlay_main_pane=True)  # Fibonacci Bollinger Bands
+@param.int('length', default=200, min=1)
+@param.source('src', default=source.HLC3, title='Source')
+@param.float('mult', default=3.0, min=0.001, max=50.0, title='StdDev')
+@plot.line(color=color.FUCHSIA, line_width=2, title='Basis', id='#plot_0')
+@plot.line(color=color.WHITE(0.5), title='0.236', id='#plot_1')
+@plot.line(color=color.WHITE(0.5), title='0.382', id='#plot_2')
+@plot.line(color=color.WHITE(0.5), title='0.5', id='#plot_3')
+@plot.line(color=color.WHITE(0.5), title='0.618', id='#plot_4')
+@plot.line(color=color.WHITE(0.5), title='0.764', id='#plot_5')
+@plot.line(color=color.RED, line_width=2, title='1', id='#plot_6')
+@plot.line(color=color.WHITE(0.5), title='0.236', id='#plot_7')
+@plot.line(color=color.WHITE(0.5), title='0.382', id='#plot_8')
+@plot.line(color=color.WHITE(0.5), title='0.5', id='#plot_9')
+@plot.line(color=color.WHITE(0.5), title='0.618', id='#plot_10')
+@plot.line(color=color.WHITE(0.5), title='0.764', id='#plot_11')
+@plot.line(color=color.GREEN, line_width=2, title='1', id='#plot_12')
+def Main(self, length, src, mult):
+    basis = Vwma.new(src, length)[0]
+    dev = mult * StdDev.new(src, length)[0]
+    upper_1 = basis + dev * 0.236
+    upper_2 = basis + dev * 0.382
+    upper_3 = basis + dev * 0.5
+    upper_4 = basis + dev * 0.618
+    upper_5 = basis + dev * 0.764
+    upper_6 = basis + dev * 1
+    lower_1 = basis - dev * 0.236
+    lower_2 = basis - dev * 0.382
+    lower_3 = basis - dev * 0.5
+    lower_4 = basis - dev * 0.618
+    lower_5 = basis - dev * 0.764
+    lower_6 = basis - dev * 1
+    return (
+        basis,
+        upper_1, upper_2, upper_3, upper_4, upper_5, upper_6,
+        lower_1, lower_2, lower_3, lower_4, lower_5, lower_6,
+    )

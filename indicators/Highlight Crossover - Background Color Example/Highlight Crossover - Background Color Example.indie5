@@ -1,0 +1,20 @@
+# indie:lang_version = 5
+from indie import indicator, Var, plot, color
+from indie.algorithms import Sma
+from indie.math import cross_over
+
+@indicator('Highlight Crossover', overlay_main_pane=True)
+@plot.background()
+@plot.line(color=color.LIME)
+@plot.line(color=color.MAROON)
+def Main(self):
+    cross_over_index = Var[int].new(0)
+    
+    sma30 = Sma.new(self.close, 30)
+    sma15 = Sma.new(self.close, 15)
+
+    if cross_over(sma15, sma30):
+        cross_over_index.set(self.bar_index)
+
+    alpha = 0.5 / (self.bar_index - cross_over_index.get() + 1) ** 0.6
+    return plot.Background(color=color.TEAL(alpha)), sma15[0], sma30[0]

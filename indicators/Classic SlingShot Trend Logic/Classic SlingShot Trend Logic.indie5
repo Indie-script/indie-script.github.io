@@ -1,0 +1,142 @@
+# indie:lang_version = 5
+# Original author: ChrisMoody (10-05-2014)
+# Ported to Indie language
+
+from indie import indicator, param, MainContext
+from indie.algorithms import Ema
+from indie import plot, color
+from math import nan
+
+
+@indicator('SlingShot System', overlay_main_pane=True)
+
+# --- Moving averages
+@plot.line('ema_slow', title='Slow MA', line_width=4)
+@plot.line('ema_fast', title='Fast MA', line_width=2)
+@plot.fill('ema_slow', 'ema_fast', color=color.SILVER(0.5))
+
+# --- Background highlight
+@plot.background(title='Backgorund pullback', color=color.YELLOW(0.35))
+@plot.background(title='Background entry', color=color.AQUA(0.45))
+
+# --- Trend markers (circles near price)
+@plot.marker(title='Trend Up', style=plot.marker_style.CIRCLE, position=plot.marker_position.BELOW, size=4)
+@plot.marker(title='Trend Down', style=plot.marker_style.CIRCLE, position=plot.marker_position.ABOVE, size=4)
+
+# --- Entry arrows (larger, with offset)
+@plot.marker(title='Buy Arrow', style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=7)
+@plot.marker(title='Sell Arrow', style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=7)
+
+# --- Entry letters B / S
+@plot.marker(title='Buy Letter', style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=7)
+@plot.marker(title='Sell Letter', style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=7)
+
+# --- Input parameters (1:1 with Pine Script)
+@param.bool('sae', default=True, title='Show Aggressive Entry')
+@param.bool('sce', default=True, title='Show Conservative Entry')
+@param.bool('st', default=True, title='Show Trend Arrows')
+@param.bool('def_', default=False, title="Only Choose 1 - Arrows or Letters")
+@param.bool('pa', default=True, title='Show Conservative Entry Arrows')
+@param.bool('sl', default=False, title="Show 'B'-'S' Letters")
+
+
+class Main(MainContext):
+    def calc(self, sae: bool, sce: bool, st: bool, def_: bool, pa: bool, sl: bool):
+
+        # === EMA calculations ===
+        ema_slow = Ema.new(self.close, 62)
+        ema_fast = Ema.new(self.close, 38)
+
+        ema_slow_0 = ema_slow[0]
+        ema_fast_0 = ema_fast[0]
+
+        close_0 = self.close[0]
+        close_1 = self.close[1]
+
+        # === Trend color (exact Pine logic) ===
+        ma_color = color.YELLOW
+        if ema_fast_0 > ema_slow_0:
+            ma_color = color.LIME
+        elif ema_fast_0 < ema_slow_0:
+            ma_color = color.RED
+
+        # === Aggressive entry (pullback zone) ===
+        pullback_up = ema_fast_0 > ema_slow_0 and close_0 < ema_fast_0
+        pullback_dn = ema_fast_0 < ema_slow_0 and close_0 > ema_fast_0
+
+        # === Conservative entry (price crosses fast EMA) ===
+        entry_up = (
+            ema_fast_0 > ema_slow_0 and
+            close_1 < ema_fast_0 and
+            close_0 > ema_fast_0
+        )
+
+        entry_dn = (
+            ema_fast_0 < ema_slow_0 and
+            close_1 > ema_fast_0 and
+            close_0 < ema_fast_0
+        )
+
+        # === Entry signals ===
+        codiff = 1 if entry_up else 0
+        codiff2 = 1 if entry_dn else 0
+
+        # === Trend definition ===
+        up_trend = ema_fast_0 >= ema_slow_0
+        down_trend = ema_fast_0 < ema_slow_0
+
+        # === Background color (barcolor equivalent) ===
+        bg_pullback = plot.Background(color=color.TRANSPARENT)
+        bg_entry = plot.Background(color=color.TRANSPARENT)
+        if sae and (pullback_up or pullback_dn):
+            bg_pullback = plot.Background()
+        if sce and (entry_up or entry_dn):
+            bg_entry = plot.Background()
+
+        # === Trend markers (circles near price) ===
+        trend_up = plot.Marker(nan)
+        if st and up_trend:
+            trend_up = plot.Marker(self.low[0], color=color.LIME)
+
+        trend_dn = plot.Marker(nan)
+        if st and down_trend:
+            trend_dn = plot.Marker(self.high[0], color=color.RED)
+
+        # === Mutual exclusion for arrows vs letters ===
+        show_arrows = pa and not def_
+        show_letters = sl and def_
+
+        # === Price offset for entry markers ===
+        atr_offset = (self.high[0] - self.low[0]) * 0.5
+
+        # === Entry arrows ===
+        buy_arrow = plot.Marker(nan)
+        if show_arrows and codiff == 1:
+            buy_arrow = plot.Marker(self.low[0] - atr_offset, color=color.LIME, text='▲')
+
+        sell_arrow = plot.Marker(nan)
+        if show_arrows and codiff2 == 1:
+            sell_arrow = plot.Marker(self.high[0] + atr_offset, color=color.RED, text='▼')
+
+        # === Entry letters B / S ===
+        buy_letter = plot.Marker(nan)
+        if show_letters and codiff == 1:
+            buy_letter = plot.Marker(self.low[0] - atr_offset, color=color.LIME, text='B')
+
+        sell_letter = plot.Marker(nan)
+        if show_letters and codiff2 == 1:
+            sell_letter = plot.Marker(self.high[0] + atr_offset, color=color.RED, text='S')
+
+        return (
+            plot.Line(ema_slow_0, color=ma_color),
+            plot.Line(ema_fast_0, color=ma_color),
+            plot.Fill(),
+            bg_pullback,
+            bg_entry,
+            trend_up,
+            trend_dn,
+            buy_arrow,
+            sell_arrow,
+            buy_letter,
+            sell_letter
+        )
