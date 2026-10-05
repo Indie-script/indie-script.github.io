@@ -1,0 +1,123 @@
+# indie:lang_version = 5
+# Turtle Trade Channels (TuTCI) — Indie port
+# Original Pine Script by KivancOzbilgic (© KivancOzbilgic)
+# License: Mozilla Public License 2.0
+# Migration notes:
+#   Logic ported 1:1 from the Pine original: Upper/Lower (high/low channel), Trend Line K1, Exit Line K2,
+#   entry/exit signals via barssince() counters, background highlighter
+#   plotshape circle+label pairs -> CIRCLE markers (always) + LABEL markers (show_signals)
+#   alertcondition() — no Indie equivalent
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, format, MutSeriesF
+from indie.algorithms import Highest, Lowest
+
+def _bs(cond: bool, prev: float) -> float:
+    if cond:
+        return 0.0
+    return prev + 1.0
+
+@indicator('Turtle Trade Channels', overlay_main_pane=True, format=format.PRICE)
+@param.int('length', default=20, min=1, title='Entry Length')
+@param.int('len2', default=10, min=1, title='Exit Length')
+@param.bool('show_signals', default=True, title='Show Entry/Exit Signals ?')
+@param.bool('highlighting', default=True, title='Highlighter On/Off ?')
+@plot.line('upper', color=color.rgba(0, 148, 255, 1.0), line_width=1, title='Upper')
+@plot.line('lower', color=color.rgba(0, 148, 255, 1.0), line_width=1, title='Lower')
+@plot.line('k1', color=color.RED, line_width=2, title='Trend Line')
+@plot.line('k2', color=color.BLUE, line_width=1, title='Exit Line')
+@plot.fill('upper', 'k2', id='fill_up')
+@plot.fill('lower', 'k2', id='fill_dn')
+@plot.marker('long_entry', color=color.GREEN, style=plot.marker_style.CIRCLE)
+@plot.marker('long_entry_lbl', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('short_entry', color=color.RED, style=plot.marker_style.CIRCLE)
+@plot.marker('short_entry_lbl', color=color.RED, style=plot.marker_style.LABEL)
+@plot.marker('long_exit', color=color.BLUE, style=plot.marker_style.CIRCLE)
+@plot.marker('long_exit_lbl', color=color.BLUE, style=plot.marker_style.LABEL)
+@plot.marker('short_exit', color=color.BLUE, style=plot.marker_style.CIRCLE)
+@plot.marker('short_exit_lbl', color=color.BLUE, style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, length, len2, show_signals, highlighting):
+        # Pine v4: highest(length)/lowest(length) без источника берут high/low, не close
+        upper_s = Highest.new(self.high, length)
+        lower_s = Lowest.new(self.low, length)
+        up_s    = Highest.new(self.high, length)
+        down_s  = Lowest.new(self.low, length)
+        sup_s   = Highest.new(self.high, len2)
+        sdown_s = Lowest.new(self.low, len2)
+
+        upper: float = upper_s[0]
+        lower: float = lower_s[0]
+        up: float = up_s[0]
+        down: float = down_s[0]
+        sup: float = sup_s[0]
+        sdown: float = sdown_s[0]
+        h: float = self.high[0]
+        l: float = self.low[0]
+
+        # barssince(high >= up[1]) / barssince(low <= down[1]) for K1/K2
+        bu_s = MutSeriesF.new(nan)
+        bd_s = MutSeriesF.new(nan)
+        bu_s[0] = _bs(h >= up_s[1], bu_s[1])
+        bd_s[0] = _bs(l <= down_s[1], bd_s[1])
+        cond: bool = bu_s[0] <= bd_s[0]
+        k1: float = down if cond else up
+        k2: float = sdown if cond else sup
+
+        # signals
+        us1: float = upper_s[1]
+        us2: float = upper_s[2]
+        ls1: float = lower_s[1]
+        ls2: float = lower_s[2]
+        sd1: float = sdown_s[1]
+        sd2: float = sdown_s[2]
+        su1: float = sup_s[1]
+        su2: float = sup_s[2]
+        h_p: float = self.high[1]
+        l_p: float = self.low[1]
+        buy: bool  = h == us1 or (h > us1 and h_p <= us2)
+        sell: bool = l == ls1 or (ls1 > l and ls2 <= l_p)
+        bex: bool  = l == sd1 or (sd1 > l and sd2 <= l_p)
+        sex: bool  = h == su1 or (h > su1 and h_p <= su2)
+
+        o1_s = MutSeriesF.new(nan)
+        o2_s = MutSeriesF.new(nan)
+        o3_s = MutSeriesF.new(nan)
+        o4_s = MutSeriesF.new(nan)
+        o1_s[0] = _bs(buy, o1_s[1])
+        o2_s[0] = _bs(sell, o2_s[1])
+        o3_s[0] = _bs(bex, o3_s[1])
+        o4_s[0] = _bs(sex, o4_s[1])
+        o1: float = o1_s[0]
+        o2: float = o2_s[0]
+        o3: float = o3_s[0]
+        o4: float = o4_s[0]
+
+        long_entry: bool  = buy and o3 < o1_s[1]
+        short_entry: bool = sell and o4 < o2_s[1]
+        long_exit: bool   = bex and o1 < o3_s[1]
+        short_exit: bool  = sex and o2 < o4_s[1]
+
+        ok123: bool = not (isnan(o1) or isnan(o2) or isnan(o3))
+        ok124: bool = not (isnan(o1) or isnan(o2) or isnan(o4))
+        green_on: bool = highlighting and ok123 and min(o1, o2, o3) == o1
+        red_on: bool   = highlighting and ok124 and min(o1, o2, o4) == o2
+        fill1 = color.rgba(0, 200, 0, 0.12) if green_on else color.TRANSPARENT
+        fill2 = color.rgba(255, 0, 0, 0.12) if red_on else color.TRANSPARENT
+
+        return (
+            plot.Line(upper),
+            plot.Line(lower),
+            plot.Line(k1),
+            plot.Line(k2),
+            plot.Fill(fill1),
+            plot.Fill(fill2),
+            plot.Marker(down if long_entry else nan),
+            plot.Marker(down if (long_entry and show_signals) else nan, text='Long Entry'),
+            plot.Marker(up if short_entry else nan),
+            plot.Marker(up if (short_entry and show_signals) else nan, text='Short Entry'),
+            plot.Marker(up if long_exit else nan),
+            plot.Marker(up if (long_exit and show_signals) else nan, text='Exit Long'),
+            plot.Marker(down if short_exit else nan),
+            plot.Marker(down if (short_exit and show_signals) else nan, text='Exit Short'),
+        )

@@ -1,0 +1,398 @@
+# Optimized Trend Tracker - Indie Port Guide
+
+> Computes a trend-following OTT line based on a chosen moving average with percentage bands and generates buy/sell signals.
+
+| | |
+| --- | --- |
+| **Language** | Indie Script v5 |
+| **Platform** | [TakeProfit](https://takeprofit.com) |
+| **Category** | Trend |
+| **Type** | Indicator, port from Pine Script |
+| **Original** | Optimized Trend Tracker by KivancOzbilgic (Pine Script v4) |
+| **License** | MPL-2.0 (see the header of the source files) |
+| **Original source** | [Optimized Trend Tracker.pinescript4](Optimized%20Trend%20Tracker.pinescript4) |
+| **Source file** | [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5) |
+
+## Overview
+
+The Optimized Trend Tracker (OTT) is a trend-following indicator that plots a dynamic support/resistance line derived from a moving average and a user-defined percentage band. It is designed to identify trend direction and potential reversal points in trending markets, while filtering out noise in range-bound conditions. The indicator was originally created by KivancOzbilgic.
+
+On the chart, it draws a colored OTT line (purple by default, green/red when highlighting is enabled), a support line (the selected moving average), and a semi-transparent fill between the OHLC4 price and the OTT line to visualize trend bias. Optional markers signal crossovers of the MA or price with the OTT line, as well as OTT color changes.
+
+## How it works
+
+1. Choose a moving average type (SMA, EMA, WMA, TMA, VAR, WWMA, ZLEMA) and compute its value on the source price.
+2. Calculate a percentage offset ‘fark’ as MA * percent * 0.01, then derive long (MA - fark) and short (MA + fark) levels.
+3. Smooth the long and short levels using previous values: long is max(current, previous) if MA > previous long, else current; short is min(current, previous) if MA < previous short, else current.
+4. Determine the trend direction: start with +1, flip to -1 when MA < previous long, and flip back to +1 when MA > previous short.
+5. Set the middle trend line (mt) to long level when direction is +1, else to short level, then compute OTT as mt * (200 + percent)/200 if MA > mt, else mt * (200 - percent)/200.
+6. Shift the OTT line two bars forward (o2 = ott_s[2]) to avoid repainting; signals are based on crossovers of the shifted OTT with the MA, price, or itself.
+7. Buy signals occur when MA/o2 crosses above prior MA/o3, when price crosses above o2, or when o2 rises above o3. Sell signals are the opposite.
+8. Optionally fill the area between OHLC4 and OTT with a transparent green (bullish) or red (bearish) tint, and color the OTT line green when rising, red when falling.
+
+## Mathematical model
+
+**Key formulas:**
+
+Moving average selection (example VAR):
+
+$$
+\text{valpha} = \frac{2}{n+1}, \quad \text{vcmo} = \frac{\text{vud\_sum} - \text{vdd\_sum}}{\text{vud\_sum} + \text{vdd\_sum}}
+$$
+
+$$
+\text{var} = \text{valpha} \cdot |\text{vcmo}| \cdot \text{src} + (1 - \text{valpha} \cdot |\text{vcmo}|) \cdot \text{var}_{t-1}
+$$
+
+Fark and levels:
+
+$$
+\text{fark} = MA \cdot \frac{\text{percent}}{100}
+$$
+
+$$
+\text{long} = MA - \text{fark}, \quad \text{short} = MA + \text{fark}
+$$
+
+OTT calculation:
+
+$$
+mt = \begin{cases} \text{long} & \text{if dir = +1} \\ \text{short} & \text{if dir = -1} \end{cases}
+$$
+
+$$
+\text{OTT} = \begin{cases} mt \cdot \frac{200 + \text{percent}}{200} & \text{if } MA > mt \\ mt \cdot \frac{200 - \text{percent}}{200} & \text{otherwise} \end{cases}
+$$
+
+## Logic flow
+
+```mermaid
+flowchart TD
+A["Compute src, MA"] --> B["fark = MA * percent * 0.01"]
+B --> C["long = MA - fark\nshort = MA + fark"]
+C --> D["Smooth long/short with previous"]
+D --> E["Determine direction"]
+E --> F["Set mt = long if dir=1 else short"]
+F --> G["Compute OTT"]
+G --> H["Shift OTT by 2"]
+H --> I{"Signals: crossovers"}
+I --> J["Set colors"]
+J --> K["Plot lines, fill, markers"]
+```
+
+## Parameters
+
+| Parameter | Type | Default | Range | Description |
+| --- | --- | --- | --- | --- |
+| `src` | source | source.CLOSE |  | Source |
+| `length` | int | 2 | ≥ 1 | OTT Period |
+| `percent` | float | 1.4 | ≥ 0.0 | OTT Percent |
+| `showsupport` | bool | true |  | Show Support Line? |
+| `showsignalsk` | bool | true |  | Show Support Line Crossing Signals? |
+| `showsignalsc` | bool | false |  | Show Price/OTT Crossing Signals? |
+| `highlight` | bool | false |  | Show OTT Color Changes? |
+| `showsignalsr` | bool | false |  | Show OTT Color Change Signals? |
+| `highlighting` | bool | true |  | Highlighter On/Off ? |
+| `mav` | str | VAR |  | MA Type: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA |
+
+## Code walkthrough
+
+### VAR Moving Average Calculation
+
+Lines 50-62 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        # VAR
+        valpha: float = 2.0 / (length + 1)
+        vud1: float = (src_val - src_prev) if src_val > src_prev else 0.0
+        vdd1: float = (src_prev - src_val) if src_val < src_prev else 0.0
+        vud_s = MutSeriesF.new(vud1)
+        vdd_s = MutSeriesF.new(vdd1)
+        vud_sum: float = Sma.new(vud_s, 9)[0] * 9.0
+        vdd_sum: float = Sma.new(vdd_s, 9)[0] * 9.0
+        vden: float = vud_sum + vdd_sum
+        vcmo: float = (vud_sum - vdd_sum) / vden if (not isnan(vden) and vden != 0.0) else 0.0
+        var_s = MutSeriesF.new(0.0)
+        var_prev: float = var_s[1] if not isnan(var_s[1]) else 0.0
+        var_s[0] = valpha * abs(vcmo) * src_val + (1.0 - valpha * abs(vcmo)) * var_prev
+```
+
+Implements the Variable Adaptive Moving Average (VAR) using a volatility-based smoothing factor. It computes upward and downward changes, sums them over 9 bars via SMA, derives the CMO ratio, and updates the VAR recursively. This section also demonstrates the use of MutSeriesF to store state between bars.
+
+### Long/Short Level Smoothing
+
+Lines 92-100 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        fark: float = mavg * percent * 0.01
+        long0: float = mavg - fark
+        short0: float = mavg + fark
+        ls_s = MutSeriesF.new(long0)
+        ss_s = MutSeriesF.new(short0)
+        long_prev: float = ls_s[1] if not isnan(ls_s[1]) else long0
+        short_prev: float = ss_s[1] if not isnan(ss_s[1]) else short0
+        ls_s[0] = max(long0, long_prev) if mavg > long_prev else long0
+        ss_s[0] = min(short0, short_prev) if mavg < short_prev else short0
+```
+
+Calculates the percentage offset (fark) and initial long and short levels. The actual long and short values are smoothed by comparing the current MA to the previous levels: long takes the maximum of current and previous when MA is above the previous long level, short takes the minimum when MA is below the previous short level. This prevents excessive flipping and reduces noise.
+
+### Direction Logic
+
+Lines 102-109 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        dir_s = MutSeriesF.new(1.0)
+        dir_prev: float = dir_s[1] if not isnan(dir_s[1]) else 1.0
+        if dir_prev == -1.0 and mavg > short_prev:
+            dir_s[0] = 1.0
+        elif dir_prev == 1.0 and mavg < long_prev:
+            dir_s[0] = -1.0
+        else:
+            dir_s[0] = dir_prev
+```
+
+Tracks the trend direction with a state variable (dir_s). It flips to +1 when MA exceeds the previous short level, and to -1 when MA falls below the previous long level. Otherwise, the direction persists, providing a smooth trend signal.
+
+### OTT Line Calculation and Shift
+
+Lines 111-116 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        mt: float = ls_s[0] if dir_s[0] == 1.0 else ss_s[0]
+        ott: float = (mt * (200.0 + percent) / 200.0) if mavg > mt else (mt * (200.0 - percent) / 200.0)
+        ott_s = MutSeriesF.new(ott)
+        o2: float = ott_s[2]
+        o3: float = ott_s[3]
+        o4: float = ott_s[4]
+```
+
+Sets mt to the long or short level based on direction, then computes the OTT value with a percent scaling factor. The OTT is stored in a series (ott_s) and the final plotted value is taken from 2 bars ago (ott_s[2]) to avoid repainting on historical bars. o2, o3, o4 are used for signal detection.
+
+### Signal Generation
+
+Lines 118-123 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        buy_k: bool  = mavg > o2 and mavg_prev <= o3
+        sell_k: bool = mavg < o2 and mavg_prev >= o3
+        buy_c: bool  = src_val > o2 and src_prev <= o3
+        sell_c: bool = src_val < o2 and src_prev >= o3
+        buy_r: bool  = o2 > o3 and o3 <= o4
+        sell_r: bool = o2 < o3 and o3 >= o4
+```
+
+Defines three sets of buy/sell conditions: based on MA crossing the shifted OTT (buy_k/sell_k), price crossing the shifted OTT (buy_c/sell_c), and OTT color change (buy_r/sell_r when o2 changes from non-rising to rising (buy) or non-falling to falling (sell)). These are gated by the corresponding show parameters and plotted as markers near the OTT level.
+
+### Fill and Color Highlighting
+
+Lines 125-132 of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5):
+
+```python
+        ott_c = (color.GREEN if o2 > o3 else color.RED) if highlight else color.rgba(184, 0, 217, 1.0)
+        fill_c = color.TRANSPARENT
+        if highlighting:
+            if mavg > ott:
+                fill_c = color.rgba(0, 128, 0, 0.1)
+            elif mavg < ott:
+                fill_c = color.rgba(255, 0, 0, 0.1)
+        ohlc4: float = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4.0
+```
+
+When the highlight parameter is true, the OTT line color changes to green if rising (o2 > o3) or red if falling. The background fill between OHLC4 and OTT is semi-transparent green when MA > OTT (bullish) and red when MA < OTT (bearish), providing a quick visual cue of trend bias.
+
+## Reading the chart
+
+- **Support Line**: The selected moving average (default blue) – shows the average price trend.
+- **OTT Line**: The purple thick line (default) – shifts two bars to the right; when highlighting is enabled, it turns green when rising and red when falling.
+- **Fill**: A semi-transparent green/red area between OHLC4 and OTT – green if MA is above OTT (bullish), red if below (bearish).
+- **Buy/Sell Markers**: Small labels positioned near the OTT level at 99.5% (Buy) and 100.5% (Sell). Three types:
+  - 'K' signals: MA crossing the OTT line.
+  - 'C' signals: Price crossing the OTT line.
+  - 'R' signals: OTT color change (rise/fall).
+- Each signal type can be toggled independently via parameters.
+
+## Implementation notes
+
+- The OTT line is plotted with a 2-bar delay (using ott_s[2]) to prevent repainting; all signals are based on this shifted value, so they are non-repainting on historical bars.
+- State variables (dir_s, ls_s, ss_s, var_s, etc.) are managed with MutSeriesF, which keeps the previous bar’s value accessible via [1] and [2] indices.
+- The VAR moving average uses a 9-bar SMA of up/down changes; this is hardcoded (line 56-57) and not user-adjustable.
+- When the MA type is set to 'VAR', 'WWMA', or 'ZLEMA', the calculation involves recursive series that require careful initialization to NaN avoidance.
+
+## Port notes
+
+Differences and decisions in the Indie port of the Pine Script v4 original (taken from the header of [Optimized Trend Tracker.indie5](Optimized%20Trend%20Tracker.indie5)):
+
+- Logic ported 1:1 from the Pine original (stops, dir flip, OTT line shifted by 2 bars, signals)
+- alertcondition() — no Indie equivalent; use platform alerts on lines
+- TSF (linreg) not ported; MA types: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA
+- The two Pine fills (long/short highlighter) are merged into one dynamic-color fill
+
+The plotted series of the port were compared bar by bar with the original script running on the same candles, and the compared series matched.
+
+## FAQ
+
+**Can I use this indicator with timeframes different from the chart's?**
+
+The indicator calculates on the chart's current timeframe. To use on a different timeframe, you would need to wrap it with sec_context/calc_on, which is not implemented in this version but can be added manually.
+
+**Why does the OTT line appear shifted to the right?**
+
+The OTT line is deliberately shifted by 2 bars (using ott_s[2]) to avoid repainting. This means the last two bars will not show a value until a new bar closes, ensuring signals do not change after the fact.
+
+**How do I change the moving average type used in the calculation?**
+
+Set the parameter 'MA Type' to one of the supported strings: SMA, EMA, WMA, TMA, VAR, WWMA, or ZLEMA. The default is VAR, which is an adaptive moving average.
+
+## Full source code
+
+Indie Script v5. Copy it into the platform's script editor. The original Pine Script is published next to it as [Optimized Trend Tracker.pinescript4](Optimized%20Trend%20Tracker.pinescript4).
+
+```python
+# indie:lang_version = 5
+# Optimized Trend Tracker (OTT) — Indie port
+# Original Pine Script by KivancOzbilgic (© KivancOzbilgic)
+# License: Mozilla Public License 2.0
+# Migration notes:
+#   Logic ported 1:1 from the Pine original (stops, dir flip, OTT line shifted by 2 bars, signals)
+#   alertcondition() — no Indie equivalent; use platform alerts on lines
+#   TSF (linreg) not ported; MA types: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA
+#   The two Pine fills (long/short highlighter) are merged into one dynamic-color fill
+
+from math import nan, isnan, ceil, floor
+from indie import indicator, param, plot, MainContext, color, source, format, MutSeriesF
+from indie.algorithms import Sma, Ema, Wma
+
+@indicator('Optimized Trend Tracker', overlay_main_pane=True, format=format.PRICE)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('length', default=2, min=1, title='OTT Period')
+@param.float('percent', default=1.4, min=0.0, step=0.1, title='OTT Percent')
+@param.bool('showsupport', default=True, title='Show Support Line?')
+@param.bool('showsignalsk', default=True, title='Show Support Line Crossing Signals?')
+@param.bool('showsignalsc', default=False, title='Show Price/OTT Crossing Signals?')
+@param.bool('highlight', default=False, title='Show OTT Color Changes?')
+@param.bool('showsignalsr', default=False, title='Show OTT Color Change Signals?')
+@param.bool('highlighting', default=True, title='Highlighter On/Off ?')
+@param.str('mav', default='VAR', title='MA Type: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA')
+@plot.line('support', color=color.rgba(5, 133, 225, 1.0), line_width=2, title='Support Line')
+@plot.line('ott', color=color.rgba(184, 0, 217, 1.0), line_width=2, title='OTT')
+@plot.line('ohlc4_hidden', color=color.TRANSPARENT, line_width=1, title='OHLC4')
+@plot.fill('ohlc4_hidden', 'ott', id='trend_fill')
+@plot.marker('buy_k', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell_k', color=color.RED, style=plot.marker_style.LABEL)
+@plot.marker('buy_c', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell_c', color=color.RED, style=plot.marker_style.LABEL)
+@plot.marker('buy_r', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell_r', color=color.RED, style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, src, length, percent, showsupport, showsignalsk, showsignalsc,
+             highlight, showsignalsr, highlighting, mav):
+        src_val: float = src[0]
+        src_prev: float = src[1]
+
+        sma_s = Sma.new(src, length)
+        ema_s = Ema.new(src, length)
+        wma_s = Wma.new(src, length)
+        half: int  = max(1, int(ceil(length / 2.0)))
+        half2: int = max(1, int(floor(length / 2.0)) + 1)
+        tma1_s = Sma.new(src, half)
+        tma_s  = Sma.new(tma1_s, half2)
+
+        # VAR
+        valpha: float = 2.0 / (length + 1)
+        vud1: float = (src_val - src_prev) if src_val > src_prev else 0.0
+        vdd1: float = (src_prev - src_val) if src_val < src_prev else 0.0
+        vud_s = MutSeriesF.new(vud1)
+        vdd_s = MutSeriesF.new(vdd1)
+        vud_sum: float = Sma.new(vud_s, 9)[0] * 9.0
+        vdd_sum: float = Sma.new(vdd_s, 9)[0] * 9.0
+        vden: float = vud_sum + vdd_sum
+        vcmo: float = (vud_sum - vdd_sum) / vden if (not isnan(vden) and vden != 0.0) else 0.0
+        var_s = MutSeriesF.new(0.0)
+        var_prev: float = var_s[1] if not isnan(var_s[1]) else 0.0
+        var_s[0] = valpha * abs(vcmo) * src_val + (1.0 - valpha * abs(vcmo)) * var_prev
+
+        # WWMA
+        wwalpha: float = 1.0 / length
+        wwma_s = MutSeriesF.new(0.0)
+        wwma_prev: float = wwma_s[1] if not isnan(wwma_s[1]) else 0.0
+        wwma_s[0] = wwalpha * src_val + (1.0 - wwalpha) * wwma_prev
+
+        # ZLEMA
+        zxlag: int = length // 2 if length % 2 == 0 else (length - 1) // 2
+        zx_val: float = src_val + (src_val - src[zxlag])
+        zx_s = MutSeriesF.new(zx_val)
+        zlema_s = Ema.new(zx_s, length)
+
+        mavg: float = var_s[0]
+        if mav == 'SMA':
+            mavg = sma_s[0]
+        elif mav == 'EMA':
+            mavg = ema_s[0]
+        elif mav == 'WMA':
+            mavg = wma_s[0]
+        elif mav == 'TMA':
+            mavg = tma_s[0]
+        elif mav == 'WWMA':
+            mavg = wwma_s[0]
+        elif mav == 'ZLEMA':
+            mavg = zlema_s[0]
+        mavg_s = MutSeriesF.new(mavg)
+        mavg_prev: float = mavg_s[1]
+
+        fark: float = mavg * percent * 0.01
+        long0: float = mavg - fark
+        short0: float = mavg + fark
+        ls_s = MutSeriesF.new(long0)
+        ss_s = MutSeriesF.new(short0)
+        long_prev: float = ls_s[1] if not isnan(ls_s[1]) else long0
+        short_prev: float = ss_s[1] if not isnan(ss_s[1]) else short0
+        ls_s[0] = max(long0, long_prev) if mavg > long_prev else long0
+        ss_s[0] = min(short0, short_prev) if mavg < short_prev else short0
+
+        dir_s = MutSeriesF.new(1.0)
+        dir_prev: float = dir_s[1] if not isnan(dir_s[1]) else 1.0
+        if dir_prev == -1.0 and mavg > short_prev:
+            dir_s[0] = 1.0
+        elif dir_prev == 1.0 and mavg < long_prev:
+            dir_s[0] = -1.0
+        else:
+            dir_s[0] = dir_prev
+
+        mt: float = ls_s[0] if dir_s[0] == 1.0 else ss_s[0]
+        ott: float = (mt * (200.0 + percent) / 200.0) if mavg > mt else (mt * (200.0 - percent) / 200.0)
+        ott_s = MutSeriesF.new(ott)
+        o2: float = ott_s[2]
+        o3: float = ott_s[3]
+        o4: float = ott_s[4]
+
+        buy_k: bool  = mavg > o2 and mavg_prev <= o3
+        sell_k: bool = mavg < o2 and mavg_prev >= o3
+        buy_c: bool  = src_val > o2 and src_prev <= o3
+        sell_c: bool = src_val < o2 and src_prev >= o3
+        buy_r: bool  = o2 > o3 and o3 <= o4
+        sell_r: bool = o2 < o3 and o3 >= o4
+
+        ott_c = (color.GREEN if o2 > o3 else color.RED) if highlight else color.rgba(184, 0, 217, 1.0)
+        fill_c = color.TRANSPARENT
+        if highlighting:
+            if mavg > ott:
+                fill_c = color.rgba(0, 128, 0, 0.1)
+            elif mavg < ott:
+                fill_c = color.rgba(255, 0, 0, 0.1)
+        ohlc4: float = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4.0
+        ott_plot: float = 0.0 if isnan(o2) else o2
+
+        return (
+            plot.Line(mavg if showsupport else nan),
+            plot.Line(ott_plot, color=ott_c),
+            plot.Line(ohlc4),
+            plot.Fill(fill_c),
+            plot.Marker(ott * 0.995 if (buy_k and showsignalsk) else nan, text='Buy'),
+            plot.Marker(ott * 1.005 if (sell_k and showsignalsk) else nan, text='Sell'),
+            plot.Marker(ott * 0.995 if (buy_c and showsignalsc) else nan, text='Buy'),
+            plot.Marker(ott * 1.005 if (sell_c and showsignalsc) else nan, text='Sell'),
+            plot.Marker(ott * 0.995 if (buy_r and showsignalsr) else nan, text='Buy'),
+            plot.Marker(ott * 1.005 if (sell_r and showsignalsr) else nan, text='Sell'),
+        )
+```

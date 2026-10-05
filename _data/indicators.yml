@@ -312,3 +312,21 @@
   description: "Plots CCI Turbo and CCI 14 lines; histogram colored based on five consecutive bars' positivity/negativity or current bar direction."
 "Zig Zag":
   description: "Detects significant price reversals and draws zigzag lines between pivot points, with optional labels for price, change, and cumulative volume."
+"QQE Signals":
+  category: oscillators
+  description: "Computes QQE trend signals using smoothed RSI and ATR-based bands, plotting long/short markers on price."
+"RSI Cyclic Smoothed":
+  category: oscillators
+  description: "Computes a cyclically smoothed RSI (cRSI) with adaptive high/low bands based on a dominant cycle length."
+"Optimized Trend Tracker":
+  category: trend
+  description: "Computes a trend-following OTT line based on a chosen moving average with percentage bands and generates buy/sell signals."
+"Madrid Moving Average Ribbon":
+  category: moving-averages
+  description: "Plots 18 exponential or simple moving averages (periods 5–90) with dynamic coloring based on direction and position relative to a 100-period MA."
+"Ripster EMA Clouds":
+  category: moving-averages
+  description: "Plots five pairs of short and long moving averages (EMA or SMA) with colored fills between them to visualize trend strength and direction."
+"Turtle Trade Channels":
+  category: trend
+  description: "Computes Donchian-based channels with trend line K1 and exit line K2, generating entry/exit signals and background highlights."

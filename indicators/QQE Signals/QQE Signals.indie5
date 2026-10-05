@@ -1,0 +1,76 @@
+# indie:lang_version = 5
+# QQE Signals — Indie port
+# Original Pine Script by colinmck (© colinmck)
+# License: Mozilla Public License 2.0
+# Migration notes:
+#   alertcondition() — no Indie equivalent
+#   Logic ported 1:1 from the Pine original, incl. cross() in BOTH directions for the trend flip
+#   threshold param kept for compat but unused (as in the original)
+#   labels: belowbar/abovebar -> markers at bar low/high
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, format, MutSeriesF
+from indie.algorithms import Rsi, Ema
+
+def _cross(x: float, y: float, xp: float, yp: float) -> bool:
+    return (x > y and xp <= yp) or (x < y and xp >= yp)
+
+@indicator('QQE Signals', overlay_main_pane=True)
+@param.int('rsi_period', default=14, min=1, title='RSI Length')
+@param.int('sf', default=5, min=1, title='RSI Smoothing')
+@param.float('qqe_factor', default=4.238, min=0.0, step=0.001, title='Fast QQE Factor')
+@param.int('threshold', default=10, min=0, title='Thresh-hold')
+@plot.marker('long_signal',  color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('short_signal', color=color.RED,   style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, rsi_period, sf, qqe_factor, threshold):
+        wilders: int = rsi_period * 2 - 1
+
+        rsi_s    = Rsi.new(self.close, rsi_period)
+        rsi_ma_s = Ema.new(rsi_s, sf)
+        rsi_ma: float      = rsi_ma_s[0]
+        rsi_ma_prev: float = rsi_ma_s[1]
+
+        atr_rsi_s = MutSeriesF.new(abs(rsi_ma_prev - rsi_ma))
+        ma_atr_s = Ema.new(atr_rsi_s, wilders)
+        dar: float = Ema.new(ma_atr_s, wilders)[0] * qqe_factor
+
+        new_long: float  = rsi_ma - dar
+        new_short: float = rsi_ma + dar
+
+        long_s = MutSeriesF.new(new_long)
+        short_s = MutSeriesF.new(new_short)
+        long_p1: float = long_s[1]
+        short_p1: float = short_s[1]
+        long_s[0] = max(long_p1, new_long) if (rsi_ma_prev > long_p1 and rsi_ma > long_p1) else new_long
+        short_s[0] = min(short_p1, new_short) if (rsi_ma_prev < short_p1 and rsi_ma < short_p1) else new_short
+
+        cross_up: bool = _cross(rsi_ma, short_s[1], rsi_ma_prev, short_s[2])
+        cross_dn: bool = _cross(long_s[1], rsi_ma, long_s[2], rsi_ma_prev)
+
+        trend_s = MutSeriesF.new(1.0)
+        trend_prev: float = trend_s[1] if not isnan(trend_s[1]) else 1.0
+        if cross_up:
+            trend_s[0] = 1.0
+        elif cross_dn:
+            trend_s[0] = -1.0
+        else:
+            trend_s[0] = trend_prev
+
+        fast_tl: float = long_s[0] if trend_s[0] == 1.0 else short_s[0]
+
+        ql_s = MutSeriesF.new(0.0)
+        ql_prev: float = ql_s[1] if not isnan(ql_s[1]) else 0.0
+        ql_s[0] = (ql_prev + 1.0) if fast_tl < rsi_ma else 0.0
+
+        qs_s = MutSeriesF.new(0.0)
+        qs_prev: float = qs_s[1] if not isnan(qs_s[1]) else 0.0
+        qs_s[0] = (qs_prev + 1.0) if fast_tl > rsi_ma else 0.0
+
+        is_long: bool  = ql_s[0] == 1.0
+        is_short: bool = qs_s[0] == 1.0
+
+        return (
+            plot.Marker(self.low[0]  * 0.998 if is_long  else nan),
+            plot.Marker(self.high[0] * 1.002 if is_short else nan),
+        )

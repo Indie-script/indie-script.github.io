@@ -1,0 +1,115 @@
+# indie:lang_version = 5
+# RSI Cyclic Smoothed (cRSI) v2 — Indie port
+# Original Pine Script by whentotrade / Lars von Thienen (CC BY 4.0)
+# Source: "Decoding The Hidden Market Rhythm" book, Chapter 4
+# Migration notes:
+#   hline() replaced with plot.Line at constant values
+#   Band search ported 1:1 from the Pine original (stepped grid search, not Percentile)
+#   phasingLag = 4 (hardcoded: vibration=10, (10-1)//2=4)
+#   vibration/leveling are hardcoded constants (not inputs in original)
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, format, MutSeriesF
+from indie.algorithms import Rma
+
+@indicator('RSI Cyclic Smoothed', overlay_main_pane=False)
+@param.int('domcycle', default=20, min=10, title='Dominant Cycle Length')
+@plot.line('crsi_line',   color=color.rgba(255, 0, 255, 1.0), line_width=1, title='cRSI')
+@plot.line('low_band',    color=color.rgba(0, 210, 210, 1.0), line_width=1, title='Low Band')
+@plot.line('high_band',   color=color.rgba(0, 210, 210, 1.0), line_width=1, title='High Band')
+@plot.fill('low_band', 'high_band', id='band_fill')
+@plot.line('hline30',     color=color.rgba(192, 192, 192, 1.0), line_width=1, title='30')
+@plot.line('hline70',     color=color.rgba(192, 192, 192, 1.0), line_width=1, title='70')
+@plot.fill('hline30', 'hline70', id='hline_fill')
+class Main(MainContext):
+    def calc(self, domcycle):
+        cyclelen: int    = domcycle // 2
+        cyclicmemory: int = domcycle * 2
+
+        vibration: int   = 10
+        leveling: float  = 10.0
+        phasinglag: int  = (vibration - 1) // 2   # = 4
+
+        torque: float    = 2.0 / (vibration + 1)  # = 2/11
+
+        src_val: float  = self.close[0]
+        src_prev: float = self.close[1] if not isnan(self.close[1]) else src_val
+
+        chg: float = src_val - src_prev
+
+        # up/down RMA series (Wilder smoothing of positive/negative changes)
+        chg_up_s = MutSeriesF.new(max(chg, 0.0))
+        chg_up_s[0] = max(chg, 0.0)
+        chg_dn_s = MutSeriesF.new(max(-chg, 0.0))
+        chg_dn_s[0] = max(-chg, 0.0)
+
+        up_s  = Rma.new(chg_up_s, cyclelen)
+        dn_s  = Rma.new(chg_dn_s, cyclelen)
+        up_val: float = up_s[0]
+        dn_val: float = dn_s[0]
+
+        rsi_val: float = 100.0 if dn_val == 0.0 else (0.0 if up_val == 0.0 else 100.0 - 100.0 / (1.0 + up_val / dn_val))
+
+        # Store RSI as series to access rsi[phasinglag]
+        rsi_s = MutSeriesF.new(rsi_val)
+        rsi_s[0] = rsi_val
+        rsi_lag: float = rsi_s[phasinglag] if not isnan(rsi_s[phasinglag]) else rsi_val
+
+        # cRSI: EMA of (2*rsi - rsi[lag]) with phase correction
+        crsi_s = MutSeriesF.new(rsi_val)
+        crsi_prev: float = crsi_s[1] if not isnan(crsi_s[1]) else rsi_val
+        crsi_s[0] = torque * (2.0 * rsi_val - rsi_lag) + (1.0 - torque) * crsi_prev
+        crsi_val: float = crsi_s[0]
+
+        # Bands: stepped search exactly as in the Pine original (101 grid steps)
+        lmax: float = -999999.0
+        lmin: float = 999999.0
+        for i in range(cyclicmemory):
+            x: float = crsi_s[i]
+            xa: float = -999999.0 if isnan(x) else x
+            xb: float = 999999.0 if isnan(x) else x
+            if xa > lmax:
+                lmax = xa
+            elif xb < lmin:
+                lmin = xb
+        mstep: float = (lmax - lmin) / 100.0
+        aperc: float = leveling / 100.0
+        low_band: float = 0.0
+        found_lo: bool = False
+        for st in range(101):
+            if not found_lo:
+                tv: float = lmin + mstep * st
+                below: int = 0
+                for m in range(cyclicmemory):
+                    xm: float = crsi_s[m]
+                    if not isnan(xm) and xm < tv:
+                        below += 1
+                if below / cyclicmemory >= aperc:
+                    low_band = tv
+                    found_lo = True
+        high_band: float = 0.0
+        found_hi: bool = False
+        for st2 in range(101):
+            if not found_hi:
+                tv2: float = lmax - mstep * st2
+                above: int = 0
+                for m2 in range(cyclicmemory):
+                    xm2: float = crsi_s[m2]
+                    if not isnan(xm2) and xm2 >= tv2:
+                        above += 1
+                if above / cyclicmemory >= aperc:
+                    high_band = tv2
+                    found_hi = True
+
+        fill_band_c = color.rgba(128, 128, 128, 0.1)
+        fill_hline_c = color.rgba(192, 192, 192, 0.1)
+
+        return (
+            plot.Line(crsi_val),
+            plot.Line(low_band),
+            plot.Line(high_band),
+            plot.Fill(fill_band_c),
+            plot.Line(30.0),
+            plot.Line(70.0),
+            plot.Fill(fill_hline_c),
+        )
