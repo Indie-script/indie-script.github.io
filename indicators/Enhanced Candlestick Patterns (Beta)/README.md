@@ -1,7 +1,3 @@
----
-category: patterns
-description: "Detects 10 candlestick patterns with EMA trend confirmation, ATR-based volatility filters, and volume confirmation for engulfing patterns."
----
 # Enhanced Candlestick Patterns (Beta) - Technical Guide
 
 > Detects 10 candlestick patterns with EMA trend confirmation, ATR-based volatility filters, and volume confirmation for engulfing patterns.
@@ -40,21 +36,25 @@ The indicator places labeled markers below the bar for bullish patterns and abov
 The indicator uses several threshold comparisons. Key formulas:
 
 Body significance:
+
 $$
 \text{body} > \text{minimum\_body\_atr} \times \text{ATR}
 $$
 
 Doji condition:
+
 $$
 \text{body} \leq \text{doji\_ratio} \times (\text{high} - \text{low})
 $$
 
 Hammer lower shadow:
+
 $$
 \text{lower\_shadow} > \text{shadow\_body\_ratio} \times \text{body}
 $$
 
 Gap size for star patterns:
+
 $$
 \text{gap} > \text{gap\_atr\_ratio} \times \text{ATR}
 $$

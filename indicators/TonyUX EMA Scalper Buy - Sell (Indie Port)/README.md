@@ -1,7 +1,3 @@
----
-category: moving-averages
-description: "Plots EMA, recent 8-bar high/low, and buy/sell markers on EMA cross with close direction confirmation."
----
 # TonyUX EMA Scalper Buy / Sell (Indie Port) - Technical Guide
 
 > Plots EMA, recent 8-bar high/low, and buy/sell markers on EMA cross with close direction confirmation.

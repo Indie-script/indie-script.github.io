@@ -1,7 +1,3 @@
----
-category: trend
-description: "ADX trend strength with +DI and -DI directional movement, Wilder smoothing, optional fill between DI lines."
----
 # ADX + DI (Wilder Plus) - Technical Guide
 
 > ADX trend strength with +DI and -DI directional movement, Wilder smoothing, optional fill between DI lines.

@@ -1,10 +1,6 @@
----
-category: other
-description: "Marks up to three custom trading sessions on intraday charts with colored boxes, labels, and optional open/close/average lines."
----
 # 3 Trading Sessions - Technical Guide
 
-> Marks up to three custom trading sessions on intraday charts with colored boxes, labels, and optional open/close/average lines.
+> Highlights up to three customizable intraday trading sessions with colored rectangles, open/close lines, and optional statistics like tick range and average price.
 
 | | |
 | --- | --- |
@@ -20,55 +16,41 @@ description: "Marks up to three custom trading sessions on intraday charts with 
 
 ## Overview
 
-This is ported to Indie from the TradingView built-in Trading Sessions script. The indicator divides intraday price action into up to three configurable time windows, each defined by a start time, end time, and timezone. Any bar whose timestamp falls inside a session's schedule belongs to that session. The default configuration uses Tokyo, London, and New York trading hours.
+3 Trading Sessions draws a colored rectangle for each enabled session, spanning from the first bar that opens within the session to the last bar that opens within it. The rectangle's top and bottom correspond to the session's high and low prices. Optional dashed lines mark the session's opening and closing prices, and a dotted line shows the average price of all bars in the session.
 
-The indicator is drawn in the main chart pane as an overlay. For each active session it draws a colored rectangle bounded by the session high/low and session start/current end time. It can also draw dashed open and close lines, a dotted average price line, and a label with the session name, tick range, and average close. It is meant for observing price behavior around regional market hours on intraday charts.
+It is intended for intraday charts to visualize global market sessions. The indicator does not generate trading signals; it simply overlays time-based zones to help traders contextualize price action during specific hours.
 
 ## How it works
 
-1. Parse each enabled session's time string into a ScheduleRule with start time, end time, and timezone.
-2. On each bar, compute `is_change` using `self.trading_session.is_same_period` to detect a new session period.
-3. For each configured session, test whether the current bar time belongs to that session's schedule.
-4. If in session and no active display exists, or `is_change` is true, create a new SessionDisplay initialized with the current bar's open, high, low, close, and time.
-5. Otherwise update the active display: raise high, lower low, set close, extend end_time, add close to sum, and increment bar count.
-6. Update the box coordinates from start/end times and high/low, and update optional open/close and average lines.
-7. Build the label text from session name, tick range, and average close if the corresponding options are enabled.
-8. Draw all line segments and the label; if the bar is outside the session and a display exists, clear it.
-
-## Mathematical model
-
-$$
-\text{tick\_range} = \frac{\text{session\_high} - \text{session\_low}}{\text{tick\_size}}
-$$
-
-$$
-\text{avg} = \frac{\sum \text{close}}{\text{num\_of\_bars}}
-$$
+1. Parse user-defined session times and timezones into `Schedule` objects using `make_schedule`.
+2. On each bar, determine if a new trading day has started by comparing the current and previous bar's trading session period via `trading_session.is_same_period`.
+3. For each enabled session, check if the current bar's time falls within the session's schedule.
+4. If inside a session and no active display exists or a new day started, create a new `SessionDisplay` with the bar's OHLC and start/end times.
+5. If inside a session and an active display already exists, update the display's high, low, close, end time, and accumulate sum of closes and bar count.
+6. Update the box coordinates to span from session start time to current end time, and from session low to high.
+7. If enabled, draw open and close lines at their respective price levels, and an average line computed from accumulated closes.
+8. If enabled, set a label at the session low showing the session name, tick range, and/or average price.
+9. Draw all elements (box lines, open/close lines, average line, label) on the chart.
+10. When a bar falls outside the session, clear the active display, ending the rectangle.
 
 ## Logic flow
 
 ```mermaid
 flowchart TD
-    A["Start per-bar calculation"]
-    B["Compute is_change from trading session period"]
-    C["For each configured session"]
-    D{"Current bar time in session schedule?"}
-    E{"No active display or is_change?"}
-    F["Create new SessionDisplay from current bar"]
-    G["Update session high low close end time"]
-    H["Update box lines label and draw"]
-    I{"Active display exists?"}
-    J["Clear active display"]
-    K["Skip"]
-    A --> B --> C --> D
-    D -- "Yes" --> E
-    E -- "Yes" --> F
-    E -- "No" --> G
-    F --> H
-    G --> H
-    D -- "No" --> I
-    I -- "Yes" --> J
-    I -- "No" --> K
+  A["Start per bar"] --> B{"Current bar time in session schedule?"}
+  B -- Yes --> C{"Active display exists and not a new day?"}
+  C -- No --> D["Create new SessionDisplay with bar OHLC"]
+  C -- Yes --> E["Update existing display: high, low, close, end time, sum close, bar count"]
+  D --> F["Update box coordinates and lines"]
+  E --> F
+  F --> G["Set label text based on options"]
+  G --> H["Draw all elements on chart"]
+  B -- No --> I{"Active display exists?"}
+  I -- Yes --> J["Set active display to None (end session)"]
+  I -- No --> K["Do nothing"]
+  J --> K
+  H --> K
+  K --> L["End"]
 ```
 
 ## Parameters
@@ -94,7 +76,7 @@ flowchart TD
 
 ## Code walkthrough
 
-### Strict parsing of session time strings
+### Parsing session time strings
 
 Lines 11-19 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
 
@@ -110,52 +92,41 @@ def make_schedule(time_str: str, timezone: str) -> Schedule:
     return Schedule(rules=[schedule_rule], timezone=timezone)
 ```
 
-`make_schedule` requires exactly `hhmm-hhmm`, checking the length, the separator at index 4, and then parsing the four time digits. It constructs a `ScheduleRule` with a `time()` object and returns a `Schedule` bound to the selected timezone. Any malformed string raises `IndieError`.
+The `make_schedule` function validates that the input string is exactly 9 characters with a dash at position 4 (format `hhmm-hhmm`). It extracts start and end hours/minutes, creates a `ScheduleRule` with `time` objects, and returns a `Schedule` with that rule and the given timezone. This schedule is later used to test if a bar's timestamp falls within the session.
 
-### Session rectangle as four line segments
+### Setting up drawing primitives
 
-Lines 63-74 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
+Lines 23-38 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
 
 ```python
-    def update_box_coordinates(self) -> None:
-        self._session_box_top.point_a = AbsolutePosition(self.start_time, self.session_high)
-        self._session_box_top.point_b = AbsolutePosition(self.end_time, self.session_high)
+    def __init__(self, session_color: Color):
+        # Box elements (4 lines to replace box)
+        self._session_box_top = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0), color=session_color)
+        self._session_box_bottom = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0), color=session_color)
+        self._session_box_left = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0), color=session_color)
+        self._session_box_right = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0), color=session_color)
 
-        self._session_box_bottom.point_a = AbsolutePosition(self.start_time, self.session_low)
-        self._session_box_bottom.point_b = AbsolutePosition(self.end_time, self.session_low)
+        self._session_label = LabelAbs('', AbsolutePosition(0, 0), font_size=12, text_color=session_color,
+                                       callout_position=callout_position.BOTTOM_RIGHT, bg_color=color.BLACK(0.0))
 
-        self._session_box_left.point_a = AbsolutePosition(self.start_time, self.session_high)
-        self._session_box_left.point_b = AbsolutePosition(self.start_time, self.session_low)
-
-        self._session_box_right.point_a = AbsolutePosition(self.end_time, self.session_high)
-        self._session_box_right.point_b = AbsolutePosition(self.end_time, self.session_low)
+        self._open_line = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0),
+                                      color=session_color, line_style=line_segment_style.DASHED)
+        self._close_line = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0),
+                                       color=session_color, line_style=line_segment_style.DASHED)
+        self._avg_line = LineSegment(AbsolutePosition(0, 0), AbsolutePosition(0, 0),
+                                     color=session_color, line_style=line_segment_style.DOTTED, line_width=2)
 ```
 
-Instead of a dedicated rectangle object, the session box is drawn from four `LineSegment` objects. `update_box_coordinates` positions the top and bottom at the session high/low and the left and right at the session start/end times. Because this is called each bar, the rectangle grows as the session progresses.
+`SessionDisplay.__init__` creates four `LineSegment` objects to form a rectangle (top, bottom, left, right), a `LabelAbs` for session info, and three additional `LineSegment` objects for open, close, and average lines. All are initialized with placeholder coordinates and the session's color. The dashed and dotted line styles are set here. This approach uses line segments because Indie does not have a dedicated box drawing primitive.
 
-### Accumulating session values
+### Per‑bar session logic
 
-Lines 131-139 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
-
-```python
-    def update_session_display(self) -> None:
-        session_disp = self._active.get().value()
-        session_disp.session_high = max(session_disp.session_high, self.ctx.high[0])
-        session_disp.session_low = min(session_disp.session_low, self.ctx.low[0])
-        session_disp.session_close = self.ctx.close[0]
-        session_disp.end_time = self.ctx.time[0]
-
-        self._sum_close.set(self._sum_close.get() + self.ctx.close[0])
-        self._num_of_bars.set(self._num_of_bars.get() + 1)
-```
-
-When a bar is inside a session, the running session high is raised, the low is lowered, the close is refreshed, and `end_time` is moved to the current bar. The sum of closes and the bar counter are also updated here; these are later used for the average-price line and label.
-
-### Session start/update/clear state machine
-
-Lines 144-162 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
+Lines 141-162 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
 
 ```python
+    def calc(self, chart: Chart, is_change: bool, show_session_names: bool,
+               show_session_oc: bool, show_session_tick_range: bool, show_session_average: bool,
+               tick_size: float, price_precision: int) -> None:
         in_session = self.ctx.time[0] in self._schedule
 
         if in_session:
@@ -177,35 +148,9 @@ Lines 144-162 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
             self._active.set(None)
 ```
 
-`SessionInfo.calc` decides what to do on every bar. A bar inside the schedule creates a new display if none is active or if `is_change` signals a new period; otherwise it updates the existing display. A bar outside the schedule clears the active display, resetting state for the next session occurrence.
+`SessionInfo.calc` first checks if the current bar's time is within the session schedule. If inside, it either creates a new `SessionDisplay` (when no active display exists or `is_change` signals a new day) or updates the existing one with the latest high, low, close, and end time. It then updates the box coordinates, lines, and label text, and draws everything on the chart. When the bar leaves the session, the active display is set to `None`, effectively ending the rectangle.
 
-### Intraday restriction and session registration
-
-Lines 183-199 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
-
-```python
-    def __init__(self,
-                 show_first, first_session_name, first_session_time, first_session_tz,
-                 show_second, second_session_name, second_session_time, second_session_tz,
-                 show_third, third_session_name, third_session_time, third_session_tz):
-        if self.time_frame.to_minutes() >= TimeFrame(1, time_frame_unit.DAY).to_minutes():
-            raise IndieError('This indicator can only be used on intraday timeframes.')
-
-        self._session_infos: list[SessionInfo] = []
-        if show_first:
-            self._session_infos.append(SessionInfo(self, color.BLUE, first_session_name,
-                                                   make_schedule(first_session_time, first_session_tz)))
-        if show_second:
-            self._session_infos.append(SessionInfo(self, color.YELLOW, second_session_name,
-                                                   make_schedule(second_session_time, second_session_tz)))
-        if show_third:
-            self._session_infos.append(SessionInfo(self, color.GREEN, third_session_name,
-                                                   make_schedule(third_session_time, third_session_tz)))
-```
-
-The constructor rejects timeframes of one day or larger, since the session schedule is only meaningful on intraday bars. It then builds one `SessionInfo` per enabled session, using hardcoded blue, yellow, and green colors for the first, second, and third sessions respectively.
-
-### Detecting a change of trading period
+### Detecting a new trading day
 
 Lines 201-212 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
 
@@ -224,37 +169,36 @@ Lines 201-212 of [3 Trading Sessions.indie5](3%20Trading%20Sessions.indie5):
                       self.info.tick_size, self.info.price_precision)
 ```
 
-`Main.calc` computes `is_change` by checking that the previous bar time is not NaN and that the symbol's trading session period differs from the current bar. This flag forces each session to start a fresh display at the beginning of a new period, and the `isnan` guard avoids misfiring on the very first bar.
+In `Main.calc`, `is_change` is computed by checking that the previous bar's time is not `NaN` and that `trading_session.is_same_period` returns `False` for the current and previous times. This flag is passed to each `SessionInfo.calc` call, causing a fresh session display to be created at the start of a new day even if the time is still within the schedule. The loop then iterates over all enabled sessions, passing chart, display options, and the instrument's tick size and price precision.
 
 ## Reading the chart
 
-- First session is drawn in blue, second in yellow, third in green; these colors come from `color.BLUE`, `color.YELLOW`, and `color.GREEN`.
-- Each session rectangle is a four-sided box whose top and bottom are the running session high and low, and whose left and right are the session start time and the latest bar time in that session.
-- When `show_session_oc` is enabled, dashed lines mark the session open price and the current session close price from start to end of the session.
-- When `show_session_average` is enabled, a dotted line with width 2 is drawn at the average close price for the session.
-- The label is positioned at the session start time and low price, with a bottom-right callout, and may contain the session name, `Range: <tick range>`, and `Avg: <average close>`, depending on the enabled options.
-- If all three optional texts are disabled, the label is still drawn but with an empty string.
+- Each session is shown as a rectangle with a distinct color (blue for first, yellow for second, green for third by default).
+- The rectangle spans from the session's start time to its end time, and from the lowest low to the highest high within that period.
+- Dashed horizontal lines indicate the session's open and close prices (if enabled).
+- A dotted horizontal line shows the average price of all bars in the session (if enabled).
+- A label at the bottom-left of the rectangle can display the session name, tick range, and/or average price.
 
 ## Implementation notes
 
-- The indicator is intraday-only: `Main.__init__` raises `IndieError` when `self.time_frame.to_minutes() >= TimeFrame(1, time_frame_unit.DAY).to_minutes()`.
-- Per-session state is stored with `ctx.new_var`: `_active` is an `Optional[SessionDisplay]`, while `_sum_close` and `_num_of_bars` accumulate across bars. The state is cleared only when a bar is outside the schedule and a display exists.
-- The `is_change` flag uses `isnan` on `self.time[1]` so the first bar, where the previous bar time may be NaN, does not incorrectly trigger a new-display reset.
-- Time strings are parsed strictly as `hhmm-hhmm`; any other length or missing hyphen at index 4 raises `IndieError`.
+- The indicator raises an `IndieError` if applied to a daily or higher timeframe (line 187).
+- The `is_change` flag uses `trading_session.is_same_period` to detect a new trading day, which depends on the chart's session settings.
+- The time string must be exactly 9 characters in `hhmm-hhmm` format; otherwise an error is thrown (line 12).
+- The `SessionDisplay` uses four `LineSegment` objects to draw a rectangle because Indie does not have a dedicated box primitive.
 
 ## FAQ
 
-**What time format should I use for the session time parameter?**
+**How can I add a fourth session?**
 
-Use a 24-hour `hhmm-hhmm` string with leading zeros, for example `0930-1600`. The parser requires exactly 4 digits, a hyphen, and 4 more digits; otherwise the indicator raises `IndieError`.
+You would need to add another set of parameters (show, name, time, timezone) and create an additional `SessionInfo` instance in `Main.__init__`, similar to the existing three.
 
-**Can I run this on a daily chart?**
+**Why does the rectangle sometimes extend beyond the session's end time?**
 
-No. The constructor checks the current timeframe and raises `IndieError` if it is 1 day or longer. The indicator is designed for intraday charts only.
+The rectangle's end time is updated to the last bar that falls within the session schedule. If a bar opens before the session ends but closes after, it may still be included if its opening time is within the schedule.
 
-**Can I change the color of a session from the settings?**
+**Can I change the colors of the sessions?**
 
-There are no color parameters. The code creates the first, second, and third sessions with `color.BLUE`, `color.YELLOW`, and `color.GREEN`. To change colors, edit those constructor calls in the source.
+The colors are hardcoded in `Main.__init__` (color.BLUE, color.YELLOW, color.GREEN). To change them, you would need to modify those lines or add color parameters.
 
 ## Full source code
 

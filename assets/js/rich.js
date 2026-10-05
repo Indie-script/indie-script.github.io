@@ -63,11 +63,29 @@
     }).catch(function () {});
   }
 
+  // kramdown turns $$...$$ into \(...\) / \[...\] text; KaTeX auto-render finds those delimiters
+  function renderMathText(root) {
+    if (!/\\\(|\\\[/.test(root.textContent)) return;
+    loadCss('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css');
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js')
+      .then(function () { return loadScript('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js'); })
+      .then(function () {
+        window.renderMathInElement(root, {
+          delimiters: [
+            { left: '\\[', right: '\\]', display: true },
+            { left: '\\(', right: '\\)', display: false }
+          ],
+          throwOnError: false
+        });
+      }).catch(function () {});
+  }
+
   function init() {
     var root = document.querySelector('.markdown-body');
     if (!root) return;
     renderMermaid(root);
     renderMath(root);
+    renderMathText(root);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

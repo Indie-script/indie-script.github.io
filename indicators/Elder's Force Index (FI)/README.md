@@ -1,7 +1,3 @@
----
-category: volume
-description: "Exponentially smoothed product of price change and volume, plotted as a line colored green when positive, red when negative."
----
 # Elder's Force Index (FI) - Technical Guide
 
 > Exponentially smoothed product of price change and volume, plotted as a line colored green when positive, red when negative.
@@ -36,6 +32,7 @@ The indicator combines price movement and volume to assess the strength of buyin
 $$
 \text{rawFI}_t = (\text{close}_t - \text{close}_{t-1}) \times \text{volume}_t
 $$
+
 $$
 \text{smoothedFI}_t = \alpha \times \text{rawFI}_t + (1 - \alpha) \times \text{smoothedFI}_{t-1}, \quad \alpha = \frac{2}{\text{length} + 1}
 $$

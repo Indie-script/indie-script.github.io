@@ -1,7 +1,3 @@
----
-category: demos
-description: "Computes a 5-period SMA and EMA and plots the retained SMA value on downward crossovers, demonstrating indie.Var[T] state storage."
----
 # Sma-Ema Crossover - usage example of indie.Var[T] - Technical Guide
 
 > Computes a 5-period SMA and EMA and plots the retained SMA value on downward crossovers, demonstrating indie.Var[T] state storage.
@@ -38,6 +34,7 @@ The chart shows the SMA as a maroon line, the EMA as a lime line, and the retain
 $$
 \text{SMA}_t = \frac{1}{5}\sum_{i=0}^{4} \text{close}_{t-i}
 $$
+
 $$
 \text{EMA}_t = \alpha \cdot \text{close}_t + (1-\alpha)\cdot \text{EMA}_{t-1}, \quad \alpha = \frac{2}{5+1}
 $$

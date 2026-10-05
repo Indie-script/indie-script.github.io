@@ -1,7 +1,3 @@
----
-category: trend
-description: "ATR-based adaptive trend line with MFI/RSI momentum filter and buy/sell signals."
----
 # AlphaTrend (Indie Port) - Technical Guide
 
 > ATR-based adaptive trend line with MFI/RSI momentum filter and buy/sell signals.
@@ -38,21 +34,26 @@ The indicator plots two lines: the current AlphaTrend value and its value from t
 ## Mathematical model
 
 The AlphaTrend value is computed as:
+
 $$
 \text{ATR} = \text{SMA}(\text{TR}, \text{period})
 $$
+
 $$
 \text{up\_t} = \text{low} - \text{ATR} \cdot \text{coeff}
 $$
+
 $$
 \text{down\_t} = \text{high} + \text{ATR} \cdot \text{coeff}
 $$
+
 $$
 \text{cond} = \begin{cases}
 \text{RSI}(\text{src}, \text{period}) \geq 50 & \text{if no\_volume\_data} \\
 \text{MFI}(\text{hlc3}, \text{period}) \geq 50 & \text{otherwise}
 \end{cases}
 $$
+
 $$
 \text{AT}[0] = \begin{cases}
 \text{nz\_prev} & \text{if cond and up\_t} < \text{nz\_prev} \\

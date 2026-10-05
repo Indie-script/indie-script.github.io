@@ -47,3 +47,73 @@
   category: volume
 "Weis Wave Volume":
   category: volume
+"2-Period RSI Strategy":
+  category: oscillators
+"3 Trading Sessions":
+  category: other
+"Adaptive Trend Overlay (Enhanced TMA)":
+  category: trend
+"ADX + DI (Wilder Plus)":
+  category: trend
+"AlphaTrend (Indie Port)":
+  category: trend
+"Auto Fibonacci Levels":
+  category: support-resistance
+"Awesome - Accelerator - Zone Oscillator":
+  category: oscillators
+"BB + RSI Double Cross Strategy":
+  category: oscillators
+"Classic NVI-PVI Fosback":
+  category: volume
+"Classic SlingShot Trend Logic":
+  category: trend
+"Custom VWAP - usage example of indie.Schedule class":
+  category: demos
+"Daily Range":
+  category: volatility
+"Dynamic Andean Oscillator":
+  category: oscillators
+"Dynamic Volume Profile Oscillator v2":
+  category: oscillators
+"Elder's Force Index (FI)":
+  category: volume
+"Enhanced Candlestick Patterns (Beta)":
+  category: patterns
+"Fibonacci Bollinger Bands":
+  category: support-resistance
+"Green-Red Bar Count - usage example of indie.VarT":
+  category: demos
+"Green-Red Bar Counts - usage example of indie.MutSeriesT generic class":
+  category: demos
+"HalfTrend Indicator":
+  category: trend
+"Halloween Strategy":
+  category: patterns
+"Highlight Crossover - Background Color Example":
+  category: demos
+"MACD Ultimate Multiple Timeframes":
+  category: oscillators
+"Median Algorithm (written with Indie v4 classes)":
+  category: moving-averages
+"Pivot Points High-Low (Simplified)":
+  category: support-resistance
+"RSI Divergence Indicator":
+  category: oscillators
+"SMA algorithm that accepts 'series' length":
+  category: moving-averages
+"Sma-Ema Crossover - usage example of indie.VarT":
+  category: demos
+"TonyUX EMA Scalper Buy - Sell (Indie Port)":
+  category: moving-averages
+"Trend Impulse Channels":
+  category: trend
+"Trend Line Methods (TLM)":
+  category: support-resistance
+"Trendlines with Breaks":
+  category: trend
+"Ultra Trend Alerts":
+  category: trend
+"Universal Forecast Funnel UFF":
+  category: trend
+"Williams VIX Fix":
+  category: volatility

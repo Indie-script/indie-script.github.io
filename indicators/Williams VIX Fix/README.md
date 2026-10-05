@@ -1,7 +1,3 @@
----
-category: volatility
-description: "Computes a volatility indicator similar to VIX for any asset using highest-low ratio and Bollinger Bands."
----
 # Williams_VIX_Fix - Technical Guide
 
 > Computes a volatility indicator similar to VIX for any asset using highest-low ratio and Bollinger Bands.
@@ -37,13 +33,21 @@ On the chart, the core signal is drawn as a histogram (Williams VIX Fix) colored
 
 ## Mathematical model
 
-$$ \text{WVF} = \frac{\text{highest\_close}(pd) - \text{low}}{\text{highest\_close}(pd)} \times 100 $$
+$$
+\text{WVF} = \frac{\text{highest\_close}(pd) - \text{low}}{\text{highest\_close}(pd)} \times 100
+$$
 
-$$ \text{Upper Band} = \text{SMA}(\text{WVF}, bbl) + mult \times \text{StdDev}(\text{WVF}, bbl) $$
+$$
+\text{Upper Band} = \text{SMA}(\text{WVF}, bbl) + mult \times \text{StdDev}(\text{WVF}, bbl)
+$$
 
-$$ \text{Range High} = \max(\text{WVF}, lb) \times ph $$
+$$
+\text{Range High} = \max(\text{WVF}, lb) \times ph
+$$
 
-$$ \text{Range Low} = \min(\text{WVF}, lb) \times pl $$
+$$
+\text{Range Low} = \min(\text{WVF}, lb) \times pl
+$$
 
 ## Logic flow
 

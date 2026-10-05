@@ -1,7 +1,3 @@
----
-category: trend
-description: "Dual EMA trend-following system identifying pullbacks and continuation entries with visual markers."
----
 # Classic SlingShot Trend Logic - Technical Guide
 
 > Dual EMA trend-following system identifying pullbacks and continuation entries with visual markers.

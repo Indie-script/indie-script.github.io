@@ -1,7 +1,3 @@
----
-category: volatility
-description: "Computes the average daily range over a configurable number of days (default 50) as a take-profit reference."
----
 # Daily Range - Technical Guide
 
 > Computes the average daily range over a configurable number of days (default 50) as a take-profit reference.
@@ -40,6 +36,7 @@ tick\_size \times 10 & \text{if } tick\_size = 0.00001 \text{ or } (tick\_size =
 1.0 & \text{otherwise}
 \end{cases}
 $$
+
 $$
 \text{output} = \frac{1}{\text{block\_mult}} \times \text{SMA}(\text{high} - \text{low}, N)
 $$

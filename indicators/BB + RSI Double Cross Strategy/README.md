@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Computes Bollinger Bands and RSI, plots L/S signals when RSI crosses the trigger while price crosses a band edge, and draws trend markers."
----
 # BB + RSI Double Cross Strategy - Technical Guide
 
 > Computes Bollinger Bands and RSI, plots L/S signals when RSI crosses the trigger while price crosses a band edge, and draws trend markers.
@@ -40,9 +36,11 @@ On every bar, the script computes RSI and Bollinger Bands and draws `L` labels a
 $$
 b_t = \frac{1}{n}\sum_{i=0}^{n-1} c_{t-i}
 $$
+
 $$
 u_t = b_t + m\,\sigma_t,\quad l_t = b_t - m\,\sigma_t,\quad \sigma_t = \sqrt{\frac{1}{n}\sum_{i=0}^{n-1}\left(c_{t-i} - b_t\right)^2}
 $$
+
 $$
 RSI_t = 100 - \frac{100}{1 + RS_t},\quad RS_t = \frac{SMA(\max(c_t - c_{t-1},0),n)}{SMA(\max(c_{t-1} - c_t,0),n)}
 $$

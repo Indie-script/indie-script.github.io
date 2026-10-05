@@ -1,7 +1,3 @@
----
-category: demos
-description: "Computes a volume-weighted average price with upper and lower standard deviation bands, using configurable calendar, session, or custom schedule anchors."
----
 # Custom VWAP - usage example of indie.Schedule class - Technical Guide
 
 > Computes a volume-weighted average price with upper and lower standard deviation bands, using configurable calendar, session, or custom schedule anchors.

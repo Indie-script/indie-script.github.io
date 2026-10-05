@@ -1,7 +1,3 @@
----
-category: demos
-description: "Educational indicator that fades the chart background teal when a 15-period SMA crosses above a 30-period SMA."
----
 # Highlight Crossover - Background Color Example - Technical Guide
 
 > Educational indicator that fades the chart background teal when a 15-period SMA crosses above a 30-period SMA.

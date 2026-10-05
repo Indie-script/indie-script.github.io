@@ -1,7 +1,3 @@
----
-category: volume
-description: "Computes Negative Volume Index (NVI) or Positive Volume Index (PVI) with a signal line and trend coloring."
----
 # Classic NVI/PVI Fosback - Technical Guide
 
 > Computes Negative Volume Index (NVI) or Positive Volume Index (PVI) with a signal line and trend coloring.
@@ -37,12 +33,14 @@ The main line (index value) is colored green when above its signal line (a simpl
 $$
 \text{price\_change\_pct} = \frac{\text{close}[0] - \text{close}[1]}{\text{close}[1]}
 $$
+
 $$
 \text{NVI}[0] = \begin{cases}
 \text{NVI}[1] \times (1 + \text{price\_change\_pct}) & \text{if volume}[0] < \text{volume}[1] \\
 \text{NVI}[1] & \text{otherwise}
 \end{cases}
 $$
+
 $$
 \text{PVI}[0] = \begin{cases}
 \text{PVI}[1] \times (1 + \text{price\_change\_pct}) & \text{if volume}[0] > \text{volume}[1] \\

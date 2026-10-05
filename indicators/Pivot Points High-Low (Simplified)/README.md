@@ -1,7 +1,3 @@
----
-category: support-resistance
-description: "Labels pivot highs and pivot lows using a lookback period, updating or creating labels on the chart."
----
 # Pivot Points High/Low (Simplified) - Technical Guide
 
 > Labels pivot highs and pivot lows using a lookback period, updating or creating labels on the chart.
@@ -38,9 +34,11 @@ The indicator is meant for quickly spotting potential support and resistance lev
 $$
 \text{High pivot at } t \iff H_t = \max_{0 \le i \le n} H_{t-i}
 $$
+
 $$
 \text{Low pivot at } t \iff Lo_t = \min_{0 \le i \le n} Lo_{t-i}
 $$
+
 $$
 \text{Update label if } t - t_{\text{pivot}} \le n
 $$

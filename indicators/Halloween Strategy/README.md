@@ -1,7 +1,3 @@
----
-category: patterns
-description: "Visualizes the Halloween effect by shading winter/summer periods, placing Buy/Sell labels at transitions, and displaying a performance stats panel."
----
 # Halloween Strategy - Technical Guide
 
 > Visualizes the Halloween effect by shading winter/summer periods, placing Buy/Sell labels at transitions, and displaying a performance stats panel.

@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Plots a 2-period RSI with color-coded signals based on SMA(5), SMA(200) and oversold/overbought thresholds."
----
 # 2-Period RSI Strategy - Technical Guide
 
 > Plots a 2-period RSI with color-coded signals based on SMA(5), SMA(200) and oversold/overbought thresholds.

@@ -1,7 +1,3 @@
----
-category: demos
-description: "Counts consecutive green (up) and red (down) bars using indie.Var for state tracking."
----
 # Green/Red Bar Count - usage example of indie.Var[T] - Technical Guide
 
 > Counts consecutive green (up) and red (down) bars using indie.Var for state tracking.

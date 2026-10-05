@@ -1,7 +1,3 @@
----
-category: moving-averages
-description: "Computes the median of the last `length` values of a series using a sliding window with a sorted list."
----
 # Median Algorithm (written with Indie v4 classes) - Technical Guide
 
 > Computes the median of the last `length` values of a series using a sliding window with a sorted list.

@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Computes Awesome Oscillator, Accelerator Oscillator, and a Zone histogram with color-coded momentum."
----
 # Awesome / Accelerator / Zone Oscillator - Technical Guide
 
 > Computes Awesome Oscillator, Accelerator Oscillator, and a Zone histogram with color-coded momentum.
@@ -39,6 +35,7 @@ The indicator is designed to identify changes in momentum and potential trend re
 $$
 \text{AO} = \text{MA}_{\text{fast}}(\text{price}) - \text{MA}_{\text{slow}}(\text{price})
 $$
+
 $$
 \text{AC} = \text{AO} - \text{MA}_{\text{ac}}(\text{AO})
 $$

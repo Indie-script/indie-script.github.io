@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Enhanced MACD with multi-color histogram, crossover dots, and configurable timeframes."
----
 # MACD Ultimate Multiple Timeframes - Technical Guide
 
 > Enhanced MACD with multi-color histogram, crossover dots, and configurable timeframes.
@@ -40,9 +36,11 @@ The indicator is designed for traders who want a visually rich MACD with clear s
 $$
 \text{MACD} = \text{EMA}_{\text{fast}}(\text{close}) - \text{EMA}_{\text{slow}}(\text{close})
 $$
+
 $$
 \text{Signal} = \text{SMA}_{\text{signal}}(\text{MACD})
 $$
+
 $$
 \text{Histogram} = \text{MACD} - \text{Signal}
 $$

@@ -1,7 +1,3 @@
----
-category: trend
-description: "Computes a linear-regression basis line, volatility-scaled upper/lower funnel, R² confidence, and a projected forecast funnel with MAE label on the last bar."
----
 # Universal Forecast Funnel [UFF] - Technical Guide
 
 > Computes a linear-regression basis line, volatility-scaled upper/lower funnel, R² confidence, and a projected forecast funnel with MAE label on the last bar.

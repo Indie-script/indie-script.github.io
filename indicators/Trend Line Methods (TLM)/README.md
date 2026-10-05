@@ -1,16 +1,12 @@
----
-category: trend
-description: "Draws two-point pivot trend lines through confirmed swing highs and lows, plus OLS regression channel lines through five segment extremes."
----
 # Trend Line Methods (TLM) - Technical Guide
 
-> Draws two-point pivot trend lines through confirmed swing highs and lows, plus OLS regression channel lines through five segment extremes.
+> Draws dynamic trend lines from recent pivot points and a 5-segment linear regression channel.
 
 | | |
 | --- | --- |
 | **Language** | Indie Script v5 |
 | **Platform** | [TakeProfit](https://takeprofit.com) |
-| **Category** | Trend |
+| **Category** | Support & resistance |
 | **Type** | Indicator |
 | **Author** | @chartjunkie on TakeProfit |
 | **License** | MIT |
@@ -19,66 +15,83 @@ description: "Draws two-point pivot trend lines through confirmed swing highs an
 
 ## Overview
 
-Trend Line Methods places two independent trend-line systems on the main chart. The Pivot Span method stores confirmed pivot highs and pivot lows, connects the oldest and newest stored pivot in each list, and extends that line across a configurable lookback window. The 5-Point Channel method splits a lookback window into five segments, takes the highest high and lowest low of each segment, and fits a least-squares regression line through those extremes.
+The Trend Line Methods indicator draws two independent sets of trend lines on the price chart. The Pivot Span method connects the oldest and newest pivot highs and lows within a user-defined lookback, creating lines that adapt as new pivots form. The 5-Point Channel method divides the lookback into five segments of roughly equal length, finds the extreme high and low in each segment, and fits an ordinary least squares regression line through those points, forming a channel.
 
-Pivot Span lines appear after a pivot has been confirmed on the right, so they follow the swing structure rather than every bar. The 5-Point lines show the slope and average level of the extreme prices over the last `five_lookback` bars and can be used as channel edges. Both methods are independent; each can be enabled or disabled from the settings.
+These lines are intended to highlight potential dynamic support and resistance levels and to visualize the prevailing slope of price extremes. By default, pivot span lines are dashed orange, and the 5-point channel lines are solid fuchsia. Both methods can be enabled independently and customized with color, width, and line style.
 
 ## How it works
 
-1. On each bar, if Pivot Span is enabled, PivotHighLow.new is called on self.high and self.low with pivot_left and pivot_right.
-2. When ph[0] or pl[0] is not nan, a pivot is treated as confirmed at bar_index - pivot_right; the bar index and price are appended to the matching list.
-3. Each pivot list is trimmed to the most recent pivot_count entries, removing the oldest pivot when the limit is exceeded.
-4. With at least two stored pivots, the line slope and intercept are computed from the oldest and newest stored pivots, then the line is evaluated from pivot_lookback bars ago to the current bar.
-5. If 5-Point Channel is enabled and bar_index >= five_lookback, the lookback is split into five segments and each segment's highest high and lowest low are found.
-6. The high and low extremes are accumulated into the sums needed for ordinary least-squares regression.
-7. If at least two high or two low extremes were found, the corresponding slope and intercept are calculated and a LineSegment is drawn from five_lookback bars ago to the current bar.
-8. Before drawing a new line, any previously drawn line for that method and side is erased with chart.erase.
+1. If Pivot Span is enabled, detect pivot highs and lows using PivotHighLow with the given left/right bars.
+2. When a new pivot high is confirmed (not NaN), append its bar index and price to a rolling list, keeping only the most recent pivot_count entries.
+3. When a new pivot low is confirmed, do the same for the low list.
+4. If at least two pivot highs exist, compute the slope between the oldest and newest pivot, then draw a line segment from the start of the lookback to the current bar using that slope.
+5. Repeat the drawing step for pivot lows, erasing any previously drawn line first.
+6. If 5-Point Channel is enabled and enough bars exist, split the lookback into five segments and find the maximum high and minimum low in each segment.
+7. Collect the (x, y) pairs for the found highs and lows, then compute OLS regression slope and intercept for each set.
+8. Draw the regression line for highs and for lows across the lookback, erasing previous lines.
 
 ## Mathematical model
 
-Pivot Span uses two stored points:
+**Pivot Span slope**
 
 $$
-m=\frac{y_{\text{near}}-y_{\text{far}}}{x_{\text{near}}-x_{\text{far}}}
-$$
-
-$$
-b=y_{\text{far}}-m\,x_{\text{far}}
-$$
-
-The line is evaluated at the left and right edges of the lookback window: $y(x)=b+m\,x$.
-
-5-Point Channel uses ordinary least squares on the collected extremes:
-
-$$
-m=\frac{n\sum xy-\sum x\sum y}{n\sum x^2-(\sum x)^2}
+slope = \frac{price_{newest} - price_{oldest}}{index_{newest} - index_{oldest}}
 $$
 
 $$
-b=\frac{\sum y-m\sum x}{n}
+line\_price(x) = price_{oldest} + slope \cdot (x - index_{oldest})
+$$
+
+**5-Point Channel OLS regression**
+
+For a set of \(n\) points \((x_i, y_i)\):
+
+$$
+slope = \frac{n \sum x_i y_i - \sum x_i \sum y_i}{n \sum x_i^2 - (\sum x_i)^2}
+$$
+
+$$
+intercept = \frac{\sum y_i - slope \cdot \sum x_i}{n}
+$$
+
+$$
+line\_price(x) = intercept + slope \cdot x
 $$
 
 ## Logic flow
 
 ```mermaid
 flowchart TD
-  A["Start calc"] --> B{"Pivot Span enabled?"}
-  B -- "Yes" --> C{"Pivot confirmed?"}
-  C -- "Yes" --> D["Store pivot and trim to count"]
-  D --> E{"At least two pivots?"}
-  E -- "Yes" --> F["Draw or replace pivot line"]
-  C -- "No" --> G
-  E -- "No" --> G
-  B -- "No" --> G
-  F --> G{"5-Point enabled?"}
-  G -- "Yes" --> H{"bar_index >= lookback?"}
-  G -- "No" --> Z["Done"]
-  H -- "No" --> Z
-  H -- "Yes" --> I["Find segment extremes"]
-  I --> J{"At least two points?"}
-  J -- "Yes" --> K["OLS fit and draw lines"]
-  J -- "No" --> Z
-  K --> Z
+  A["Start calc"] --> B{"enable_pivot_span?"}
+  B -->|Yes| C["Detect pivot high/low"]
+  C --> D{"New pivot high?"}
+  D -->|Yes| E["Append to high list, trim to pivot_count"]
+  D -->|No| F{"New pivot low?"}
+  F -->|Yes| G["Append to low list, trim"]
+  F -->|No| H["Check high list length"]
+  E --> H
+  G --> H
+  H --> I{"len >= 2?"}
+  I -->|Yes| J["Compute slope, draw high line"]
+  I -->|No| K["Check low list length"]
+  J --> K
+  K --> L{"len >= 2?"}
+  L -->|Yes| M["Compute slope, draw low line"]
+  L -->|No| N["End pivot span"]
+  M --> N
+  B -->|No| N
+  N --> O{"enable_five_point?"}
+  O -->|Yes| P["Split lookback into 5 segments"]
+  P --> Q["Find max high & min low per segment"]
+  Q --> R["Collect (x,y) pairs"]
+  R --> S{"n_hi >= 2?"}
+  S -->|Yes| T["OLS regression, draw high line"]
+  S -->|No| U{"n_lo >= 2?"}
+  T --> U
+  U -->|Yes| V["OLS regression, draw low line"]
+  U -->|No| W["Done"]
+  V --> W
+  O -->|No| W
 ```
 
 ## Parameters
@@ -103,16 +116,11 @@ flowchart TD
 
 ## Code walkthrough
 
-### Pivot confirmation and collection
+### Collecting pivot points
 
-Lines 71-93 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
+Lines 76-93 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
 
 ```python
-        if enable_pivot_span:
-            ph, _ = PivotHighLow.new(self.high, left_bars=pivot_left, right_bars=pivot_right)
-            _, pl = PivotHighLow.new(self.low, left_bars=pivot_left, right_bars=pivot_right)
-
-            # Collect pivot highs
             if not isnan(ph[0]):
                 piv_hi_idx = self.bar_index - pivot_right
                 piv_hi_price = self.high[pivot_right]
@@ -133,14 +141,13 @@ Lines 71-93 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).
                     self._low_val_points.get().pop(0)
 ```
 
-The PivotHighLow algorithm returns a series where ph[0] and pl[0] are nan until a pivot is confirmed. When ph[0] is not nan, the pivot bar is identified as bar_index - pivot_right and the price is taken from high[pivot_right]. The same logic runs for pivot lows, and both lists are trimmed to the last pivot_count entries.
+When a pivot high is detected (ph[0] is not NaN), the code calculates the bar index where the pivot actually occurred (pivot_right bars ago) and the corresponding high price. These values are appended to rolling lists. The while loop ensures the lists never exceed pivot_count entries by removing the oldest element from the front. The same logic is applied for pivot lows. This maintains a sliding window of the most recent confirmed pivots.
 
-### High pivot slope and extrapolation
+### Drawing the pivot high trend line
 
-Lines 95-113 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
+Lines 96-125 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
 
 ```python
-            # Draw high trend line
             if len(self._high_idx_points.get()) >= 2:
                 far_hi_idx = self._high_idx_points.get()[0]
                 far_hi_val = self._high_val_points.get()[0]
@@ -159,40 +166,25 @@ Lines 95-113 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM)
                 y1_hi = hi_intercept + hi_slope * x1_hi
                 y2_hi = hi_intercept + hi_slope * x2_hi
 
+                if self._high_trend_line.get() is not None:
+                    self.chart.erase(self._high_trend_line.get().value())
+
+                line = LineSegment(
+                    AbsolutePosition(self.time[pivot_lookback - 1], y1_hi),
+                    AbsolutePosition(self.time[0], y2_hi),
+                    color=pivot_high_color,
+                    line_style=p_style,
+                    line_width=pivot_line_width
+                )
+                self._high_trend_line.set(line)
+                self.chart.draw(line)
 ```
 
-The first and last stored pivot highs are used as the two points of the trend line. The slope is the price change divided by the bar-index difference, and the intercept is derived from the farthest pivot. The line is then evaluated at the left edge of the lookback window and at the current bar.
+If at least two pivot highs are stored, the oldest (index 0) and newest (index -1) are used to compute the slope. A zero bar difference is guarded against to avoid division by zero. The line’s y-values are calculated for the left edge (pivot_lookback - 1 bars ago) and the current bar using the linear equation. Any previously drawn high line is erased, then a new LineSegment is created with the chosen color, style, and width, and drawn on the chart.
 
-### Low pivot slope and extrapolation
+### Segment loop for 5-point channel
 
-Lines 127-144 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
-
-```python
-            # Draw low trend line
-            if len(self._low_idx_points.get()) >= 2:
-                far_lo_idx = self._low_idx_points.get()[0]
-                far_lo_val = self._low_val_points.get()[0]
-                near_lo_idx = self._low_idx_points.get()[-1]
-                near_lo_val = self._low_val_points.get()[-1]
-                lo_bar_diff = near_lo_idx - far_lo_idx
-
-                # Declare slope before conditional (Indie scoping)
-                lo_slope = 0.0
-                if lo_bar_diff != 0:
-                    lo_slope = (near_lo_val - far_lo_val) / lo_bar_diff
-                lo_intercept = far_lo_val - lo_slope * far_lo_idx
-
-                x1_lo = self.bar_index - (pivot_lookback - 1)
-                x2_lo = self.bar_index
-                y1_lo = lo_intercept + lo_slope * x1_lo
-                y2_lo = lo_intercept + lo_slope * x2_lo
-```
-
-The low side repeats the same two-point calculation with the stored pivot lows. Using separate variables for the low slope and intercept keeps the high and low lines independent. The resulting y values feed the LineSegment drawn with the pivot line style and width.
-
-### Segment scanning for 5-point channel
-
-Lines 178-202 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
+Lines 178-220 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
 
 ```python
                 for k in range(5):
@@ -220,16 +212,33 @@ Lines 178-202 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM
                         sum_xy_hi += x_hi * y_hi
                         sum_x2_hi += x_hi * x_hi
                         n_hi += 1
+
+                    min_lo = nan
+                    barsAgo_lo = -1
+                    for i in range(seg_len_k):
+                        sl = seg_start + i
+                        v2 = self.low[sl]
+                        if not isnan(v2) and (isnan(min_lo) or v2 < min_lo):
+                            min_lo = v2
+                            barsAgo_lo = sl
+
+                    if barsAgo_lo >= 0:
+                        x_lo = float(self.bar_index - barsAgo_lo)
+                        y_lo = self.low[barsAgo_lo]
+                        sum_x_lo += x_lo
+                        sum_y_lo += y_lo
+                        sum_xy_lo += x_lo * y_lo
+                        sum_x2_lo += x_lo * x_lo
+                        n_lo += 1
 ```
 
-The lookback is divided into five segments with a base segment length of floor(five_lookback / 5). For each segment, the highest high is found by scanning high[sh], and its absolute bar index is recorded. The sums for x, y, x*y and x^2 are accumulated for the later regression. The low side uses the same scan pattern on low[sh].
+The lookback is divided into five segments of roughly equal length. For each segment, the code scans all bars in that segment to find the maximum high and minimum low, ignoring NaN values. The bar index (converted to an x-coordinate (the bar index)) and the price are accumulated into sums for later regression. The loop handles the last segment’s remaining bars and breaks early if no bars are left.
 
-### OLS fit for the high channel line
+### OLS regression for the high line
 
-Lines 222-240 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
+Lines 223-231 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
 
 ```python
-                # Draw five-point high line
                 if n_hi >= 2:
                     nf_hi = float(n_hi)
                     denom_hi = nf_hi * sum_x2_hi - sum_x_hi * sum_x_hi
@@ -239,67 +248,55 @@ Lines 222-240 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM
                     if denom_hi != 0.0:
                         slope_hi = (nf_hi * sum_xy_hi - sum_x_hi * sum_y_hi) / denom_hi
                     intercept_hi = (sum_y_hi - slope_hi * sum_x_hi) / nf_hi
-
-                    x1_5pt = self.bar_index - five_lookback + 1
-                    x2_5pt = self.bar_index
-                    y1_hi_5pt = intercept_hi + slope_hi * float(x1_5pt)
-                    y2_hi_5pt = intercept_hi + slope_hi * float(x2_5pt)
-
-                    if self._five_high_line.get() is not None:
-                        self.chart.erase(self._five_high_line.get().value())
-
 ```
 
-The high-side sums are converted into an OLS slope and intercept. If the denominator is zero, the slope is set to 0.0 to avoid division by zero. The regression line is evaluated at the left and right edges of the lookback window, then drawn as a LineSegment.
+With at least two high points collected, the ordinary least squares formulas are applied. The denominator is checked for zero to avoid division errors. The slope and intercept are computed from the accumulated sums. These coefficients define the best-fit line through the segment highs.
 
-### OLS fit for the low channel line
+### Drawing the 5-point high line
 
-Lines 251-260 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
+Lines 241-249 of [Trend Line Methods (TLM).indie5](Trend%20Line%20Methods%20(TLM).indie5):
 
 ```python
-                # Draw five-point low line
-                if n_lo >= 2:
-                    nf_lo = float(n_lo)
-                    denom_lo = nf_lo * sum_x2_lo - sum_x_lo * sum_x_lo
-
-                    # Declare slope before conditional
-                    slope_lo = 0.0
-                    if denom_lo != 0.0:
-                        slope_lo = (nf_lo * sum_xy_lo - sum_x_lo * sum_y_lo) / denom_lo
-                    intercept_lo = (sum_y_lo - slope_lo * sum_x_lo) / nf_lo
+                    line = LineSegment(
+                        AbsolutePosition(self.time[five_lookback - 1], y1_hi_5pt),
+                        AbsolutePosition(self.time[0], y2_hi_5pt),
+                        color=five_high_color,
+                        line_style=f_style,
+                        line_width=five_line_width
+                    )
+                    self._five_high_line.set(line)
+                    self.chart.draw(line)
 ```
 
-The low side uses the same OLS formula on the low extremes. It only runs when at least two low extremes were found, and it produces y1/y2 values that are drawn with the same five-point color and style settings.
+The regression line is extended across the entire lookback by evaluating the linear equation at the leftmost and rightmost bar indices. The previous high line is erased, and a new LineSegment is drawn using the five_high_color and the selected line style and width. The same pattern is repeated for the low line.
 
 ## Reading the chart
 
-- Pivot high line: colored `pivot_high_color` (default orange), drawn through the oldest and newest confirmed pivot highs and extended over `pivot_lookback` bars.
-- Pivot low line: colored `pivot_low_color` (default orange), drawn through the oldest and newest confirmed pivot lows.
-- Pivot line style and width come from `pivot_line_style` and `pivot_line_width`; style 0 is solid, 1 dashed, 2 dotted.
-- 5-Point high and low lines: colored `five_high_color`/`five_low_color` (default fuchsia), drawn as OLS regressions through the segment extremes of the last `five_lookback` bars.
-- A rising line means later extremes are higher than earlier extremes; a falling line means the opposite. The lines are visual structure only and produce no signals.
-- No pivot markers or extreme markers are drawn; only line segments are visible.
+- **Pivot Span lines** (default dashed orange): Connect the oldest and newest pivot highs/lows within the lookback. They act as dynamic trendlines that may serve as support (low line) or resistance (high line).
+- **5-Point Channel lines** (default solid fuchsia): Represent a linear regression channel through the extreme highs and lows of five segments. The upper line often acts as resistance, the lower as support.
+- Both line types extend from the start of the lookback to the current bar and update on each new bar. Because pivot lines are drawn only after confirmation (pivot_right bars later), they may repaint historically.
+- No markers or labels are drawn; only the line segments appear on the chart.
 
 ## Implementation notes
 
-- Pivot lines repaint by design: they are only stored and drawn after pivot_right bars of confirmation, so the line can appear or change once the pivot is confirmed.
-- The 5-Point lines are recalculated on every bar and therefore move as new bars are added.
-- List state is kept in self.new_var containers; .get() returns the list and mutations persist between bars.
-- The slope denominator can be zero; the code then sets the slope to 0.0 instead of skipping the line.
+- Pivot lines repaint: a pivot is confirmed only after pivot_right bars, so the line may change as new pivots appear within that window.
+- NaN values from PivotHighLow are explicitly checked; pivots are only collected when ph[0] or pl[0] is not NaN.
+- Line style integers 0,1,2 are mapped to SOLID, DASHED, DOTTED via conditional blocks; any other value defaults to SOLID.
+- The 5-point channel requires bar_index >= five_lookback to avoid accessing negative indices; segment length calculation uses floor division and handles the last segment’s remainder.
 
 ## FAQ
 
-**Why do the pivot lines appear only after a delay?**
+**How can I change the number of pivot points used for the Pivot Span line?**
 
-PivotHighLow.new needs pivot_right bars to the right of a pivot before it can confirm that pivot. The code stores the pivot only when ph[0] or pl[0] is not nan, so the line is first drawn pivot_right bars after the pivot bar.
+Adjust the 'Pivot Count' parameter. The indicator keeps only the most recent N pivot highs and lows, then draws a line between the oldest and newest in that set.
 
-**How do I enable only one of the two methods?**
+**Why do the lines sometimes disappear or jump?**
 
-Use the enable_pivot_span and enable_five_point checkboxes in the indicator settings. Each method is wrapped in its own if block, so disabling one prevents its lines from being stored or drawn.
+Pivot lines require at least two confirmed pivots within the lookback. If fewer exist, no line is drawn. Also, because pivots confirm after pivot_right bars, the line may repaint as new pivots appear or old ones fall out of the rolling window.
 
-**What do the style parameters 0/1/2 mean?**
+**Can I use this indicator on a higher timeframe while viewing a lower one?**
 
-The pivot_line_style and five_line_style parameters map to solid, dashed and dotted line styles. The code maps 0 to SOLID, 1 to DASHED, and 2 to DOTTED before any line is drawn.
+The code does not use sec_context or calc_on, so it operates only on the chart’s current timeframe. To apply it to a higher timeframe, you would need to modify the script to request a secondary context.
 
 ## Full source code
 

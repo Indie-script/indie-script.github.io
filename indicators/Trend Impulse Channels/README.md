@@ -1,7 +1,3 @@
----
-category: trend
-description: "A trend-following indicator that discretizes price movement into ATR-based steps with volatility-adaptive channels and retest signals."
----
 # Trend Impulse Channels - Technical Guide
 
 > A trend-following indicator that discretizes price movement into ATR-based steps with volatility-adaptive channels and retest signals.
@@ -39,18 +35,23 @@ The system draws a step line (colored by trend direction), upper and lower ATR-b
 $$
 \text{step\_base} = \text{ATR} \times 2.52
 $$
+
 $$
 \text{max\_step} = \text{ATR} \times \text{max\_step\_atr}
 $$
+
 $$
 \text{trigger} = \text{ATR} \times \text{flip\_mult}
 $$
+
 $$
 \text{step\_size} = \min\left(\text{step\_base} + 0.0093 \times \text{bars\_in\_trend} \times \text{ATR},\; \text{max\_step}\right)
 $$
+
 $$
 \text{upper} = \text{trend} + \text{ATR} \times \text{band\_mult}
 $$
+
 $$
 \text{lower} = \text{trend} - \text{ATR} \times \text{band\_mult}
 $$

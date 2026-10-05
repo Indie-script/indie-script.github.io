@@ -1,7 +1,3 @@
----
-category: demos
-description: "Counts consecutive green and red bars using MutSeries[int] generic type."
----
 # Green/Red Bar Counts - usage example of indie.MutSeries[T] generic class - Technical Guide
 
 > Counts consecutive green and red bars using MutSeries[int] generic type.

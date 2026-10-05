@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Oscillator from volume-weighted average price and volume profile; plots smoothed oscillator, signals, adaptive midline and six zone levels."
----
 # Dynamic Volume Profile Oscillator v2 - Technical Guide
 
 > Oscillator from volume-weighted average price and volume profile; plots smoothed oscillator, signals, adaptive midline and six zone levels.

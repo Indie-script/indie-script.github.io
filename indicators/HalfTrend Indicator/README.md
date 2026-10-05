@@ -1,7 +1,3 @@
----
-category: trend
-description: "Trend-following indicator that plots a dynamic half trend line with ATR-based channels and buy/sell signals."
----
 # HalfTrend Indicator - Technical Guide
 
 > Trend-following indicator that plots a dynamic half trend line with ATR-based channels and buy/sell signals.
@@ -40,9 +36,11 @@ This indicator is designed for traders who prefer clear, unambiguous trend signa
 $$
 \text{ATR} = \text{ATR}(100) \quad \text{dev} = \text{channel\_deviation} \times \frac{\text{ATR}}{2}
 $$
+
 $$
 \text{highma} = \text{SMA}(\text{high}, \text{amplitude}) \quad \text{lowma} = \text{SMA}(\text{low}, \text{amplitude})
 $$
+
 $$
 \text{HT} = \begin{cases} \text{up}[0] & \text{if trend}[0] = 0 \\ \text{down}[0] & \text{if trend}[0] = 1 \end{cases}
 $$

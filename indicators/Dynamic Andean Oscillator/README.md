@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Computes bull/bear volatility components via exponential envelope smoothing and displays a colored histogram."
----
 # Dynamic Andean Oscillator - Technical Guide
 
 > Computes bull/bear volatility components via exponential envelope smoothing and displays a colored histogram.

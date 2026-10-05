@@ -1,7 +1,3 @@
----
-category: support-resistance
-description: "Computes Fibonacci-scaled Bollinger Bands based on VWMA and standard deviation to highlight support and resistance levels."
----
 # Fibonacci Bollinger Bands - Technical Guide
 
 > Computes Fibonacci-scaled Bollinger Bands based on VWMA and standard deviation to highlight support and resistance levels.
@@ -39,15 +35,19 @@ On the chart, the indicator draws a central basis line (fuchsia) representing th
 $$
 \text{basis} = \text{VWMA}(\text{src}, \text{length})
 $$
+
 $$
 \text{dev} = \text{mult} \times \text{StdDev}(\text{src}, \text{length})
 $$
+
 $$
 \text{upper}_i = \text{basis} + \text{dev} \times f_i
 $$
+
 $$
 \text{lower}_i = \text{basis} - \text{dev} \times f_i
 $$
+
 where $f_i \in \{0.236, 0.382, 0.5, 0.618, 0.764, 1.0\}$.
 
 ## Parameters

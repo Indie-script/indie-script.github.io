@@ -1,7 +1,3 @@
----
-category: support-resistance
-description: "Automatically calculates and plots Fibonacci retracement levels based on highest and lowest closing prices over a user-defined period."
----
 # Auto Fibonacci Levels - Technical Guide
 
 > Automatically calculates and plots Fibonacci retracement levels based on highest and lowest closing prices over a user-defined period.

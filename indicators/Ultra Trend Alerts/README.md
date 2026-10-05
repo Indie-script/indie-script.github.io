@@ -1,7 +1,3 @@
----
-category: trend
-description: "Computes a dynamic trailing stop based on ATR and generates buy/sell signals on crossovers."
----
 # Ultra Trend Alerts - Technical Guide
 
 > Computes a dynamic trailing stop based on ATR and generates buy/sell signals on crossovers.

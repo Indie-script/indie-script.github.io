@@ -1,7 +1,3 @@
----
-category: moving-averages
-description: "Computes an SMA whose length switches between two user parameters based on comparing short and long SMAs of high."
----
 # SMA algorithm that accepts 'series' length - Technical Guide
 
 > Computes an SMA whose length switches between two user parameters based on comparing short and long SMAs of high.

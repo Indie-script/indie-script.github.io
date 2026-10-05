@@ -1,7 +1,3 @@
----
-category: oscillators
-description: "Measures the difference between fast and slow RSI to visualize internal momentum shifts."
----
 # RSI Divergence Indicator - Technical Guide
 
 > Measures the difference between fast and slow RSI to visualize internal momentum shifts.

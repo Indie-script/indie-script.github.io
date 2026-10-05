@@ -1,7 +1,3 @@
----
-category: trend
-description: "Overlay showing 21/50/100/200 SMMA lines, EMA(2)-based trend fill, 3 Line Strike and engulfing markers, and optional session background."
----
 # Adaptive Trend Overlay (Enhanced TMA) - Technical Guide
 
 > Overlay showing 21/50/100/200 SMMA lines, EMA(2)-based trend fill, 3 Line Strike and engulfing markers, and optional session background.
@@ -37,12 +33,15 @@ On the chart, the SMMA lines give a layered view of trend direction at different
 ## Mathematical model
 
 The two imported primitives use standard recurrences. For the Rma-based SMMA:
+
 $$
 \text{SMMA}_t = \frac{\text{close}_t + (n - 1)\cdot \text{SMMA}_{t-1}}{n}
 $$
+
 where `n` is one of 21, 50, 100, 200.
 
 For the EMA(2):
+
 $$
 \text{EMA}_t = \frac{2}{3}\text{close}_t + \frac{1}{3}\text{EMA}_{t-1}
 $$

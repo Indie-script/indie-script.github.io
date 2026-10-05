@@ -1,7 +1,3 @@
----
-category: trend
-description: "Plots trendlines based on pivot highs/lows and marks breakout events when price crosses them."
----
 # Trendlines with Breaks - Technical Guide
 
 > Plots trendlines based on pivot highs/lows and marks breakout events when price crosses them.
@@ -39,19 +35,23 @@ On the chart, the indicator draws an upper trendline (teal) and a lower trendlin
 ### Slope Calculation
 
 **ATR method:**
+
 $$
 \text{slope} = \frac{\text{ATR}(\text{length})}{\text{length}} \times \text{mult}
 $$
 
 **Stdev method:**
+
 $$
 \text{slope} = \frac{\sigma(\text{close}, \text{length})}{\text{length}} \times \text{mult}
 $$
 
 **Linreg method:**
+
 $$
 \text{slope} = \frac{|\rho \cdot \frac{\sigma_y}{\sigma_x}|}{2} \times \text{mult}
 $$
+
 where $\rho$ is the correlation between close and bar index, $\sigma_y$ is the standard deviation of close, and $\sigma_x$ is the standard deviation of bar index.
 
 ### Breakout Levels
@@ -59,6 +59,7 @@ where $\rho$ is the correlation between close and bar index, $\sigma_y$ is the s
 $$
 \text{upper\_break} = \text{upper} - \text{slope\_ph} \times \text{length}
 $$
+
 $$
 \text{lower\_break} = \text{lower} + \text{slope\_pl} \times \text{length}
 $$
