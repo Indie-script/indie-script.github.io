@@ -1,0 +1,12 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+from indie.algorithms import Uo
+
+
+@indicator('UO', format=format.PRICE)  # Ultimate Oscillator
+@param.int('fast_len', default=7, min=1, title='Fast Length')
+@param.int('middle_len', default=14, min=1, title='Middle Length')
+@param.int('slow_len', default=28, min=1, title='Slow Length')
+@plot.line(color=color.RED)
+def Main(self, fast_len, middle_len, slow_len):
+    return Uo.new(fast_len, middle_len, slow_len)[0]

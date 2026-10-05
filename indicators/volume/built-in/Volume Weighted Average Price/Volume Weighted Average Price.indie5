@@ -1,0 +1,23 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Vwap
+
+
+@indicator('VWAP', overlay_main_pane=True)  # Volume Weighted Average Price
+@param.source('src', default=source.HLC3, title='Source')
+# TODO: add Earnings, Dividends, Splits
+@param.str('anchor', default='Session', options=['Session', 'Week', 'Month', 'Year'], title='Anchor')
+@param.int('offset', default=0, min=-500, max=500, title='Offset')
+@plot.line('vwap', title='VWAP', color=color.BLUE)
+@plot.line('upper', title='Upper band', color=color.GREEN)
+@plot.line('lower', title='Lower band', color=color.GREEN)
+@plot.fill('upper', 'lower', color=color.GREEN(0.1), title='Background')
+def Main(self, src, anchor, offset):
+    std_dev_mult = 1.0
+    main_line, upper, lower = Vwap.new(src, anchor, std_dev_mult)
+    return (
+        plot.Line(main_line[0], offset=offset),
+        plot.Line(upper[0], offset=offset),
+        plot.Line(lower[0], offset=offset),
+        plot.Fill(offset=offset),
+    )

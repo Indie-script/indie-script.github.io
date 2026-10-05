@@ -1,0 +1,30 @@
+# indie:lang_version = 5
+from indie import indicator, param, level, color, line_style, plot, Color
+from indie.algorithms import Cci
+
+
+@indicator('Woodies CCI')
+@param.int('cci_turbo_len', default=6, min=3, max=14, title='CCI Turbo Length')
+@param.int('cci_14_len', default=14, min=7, max=20, title='CCI 14 Length')
+@level(-100, line_color=color.GRAY, line_style=line_style.DOTTED, title='Minus Line')
+@level(0, line_color=color.GRAY, line_style=line_style.SOLID, title='Zero Line')
+@level(100, line_color=color.GRAY, line_style=line_style.DOTTED, title='Hundred Line')
+@plot.histogram(title='CCI Turbo Histogram')
+@plot.line(color=color.GREEN, title='CCI Turbo')
+@plot.line(color=color.RED, title='CCI 14')
+def Main(self, cci_turbo_len, cci_14_len):
+    cci_turbo = Cci.new(self.close, cci_turbo_len)
+    cci_14 = Cci.new(self.close, cci_14_len)
+    last_5_down = cci_14[5] < 0 and cci_14[4] < 0 and cci_14[3] < 0 and cci_14[2] < 0 and cci_14[1] < 0
+    last_5_up = cci_14[5] > 0 and cci_14[4] > 0 and cci_14[3] > 0 and cci_14[2] > 0 and cci_14[1] > 0
+
+    hist_color = color.BLACK  # default value
+    if last_5_up:
+        hist_color = color.GREEN
+    elif last_5_down:
+        hist_color = color.RED
+    elif cci_14[0] < 0:
+        hist_color = color.GREEN
+    else:
+        hist_color = color.RED
+    return plot.Histogram(cci_14[0], color=hist_color), cci_turbo[0], cci_14[0]

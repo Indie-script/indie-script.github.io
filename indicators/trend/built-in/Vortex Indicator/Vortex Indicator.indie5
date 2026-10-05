@@ -1,0 +1,17 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color, MutSeriesF
+from indie.algorithms import Sum, Atr
+from indie.math import divide
+
+
+@indicator('VI', format=format.PRICE, precision=4)  # Vortex Indicator
+@param.int('length', default=14, min=2)
+@plot.line(color=color.RED, title='VI -')
+@plot.line(color=color.BLUE, title='VI +')
+def Main(self, length):
+    vmm = Sum.new(MutSeriesF.new(abs(self.low[0] - self.high[1])), length)[0]
+    vmp = Sum.new(MutSeriesF.new(abs(self.high[0] - self.low[1])), length)[0]
+    satr = Sum.new(Atr.new(1), length)[0]
+    vim = divide(vmm, satr)
+    vip = divide(vmp, satr)
+    return vim, vip

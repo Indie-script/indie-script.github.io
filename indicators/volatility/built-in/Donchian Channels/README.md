@@ -6,7 +6,7 @@
 | --- | --- |
 | **Language** | Indie Script v5 |
 | **Platform** | [TakeProfit](https://takeprofit.com) |
-| **Category** | Support & resistance |
+| **Category** | Volatility |
 | **Type** | Built-in indicator |
 | **Author** | TakeProfit |
 | **License** | MIT |

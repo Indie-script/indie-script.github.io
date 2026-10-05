@@ -1,0 +1,149 @@
+# indie:lang_version = 5
+from indie import indicator, param, sec_context, Optional, MainContext, MutSeriesF, Var, color, TimeFrame
+from indie.drawings import LineSegment, LabelAbs, AbsolutePosition, callout_position
+from math import isnan
+
+
+@sec_context
+def HigherTfMain(self):
+    return self.high[1], self.low[1], self.close[1]
+
+@indicator('Pivot Points Standard', overlay_main_pane=True)
+@param.str('higher_tf', default='Auto',
+           options=['Auto', '1m', '3m', '5m', '15m', '30m', '45m',
+                    '1h', '2h', '3h', '4h',
+                    '1D', '1W', '1M', '12M'])
+@param.bool('show_labels', default=True, title='Show Labels')
+@param.bool('show_prices', default=True, title='Show Prices')
+@param.bool('lookahead', default=True, title='Lookahead on history bars')
+@param.int('levels_number', default=3, min=1, max=3, title='Levels Number')
+class Main(MainContext):
+    def __init__(self, higher_tf, lookahead, levels_number):
+        chosen_higher_tf = TimeFrame.from_str('12M')  # default value
+        if higher_tf == 'Auto':
+            if self.time_frame <= TimeFrame.from_str('15m'):
+                chosen_higher_tf = TimeFrame.from_str('1D')
+            elif self.time_frame < TimeFrame.from_str('1D'):
+                chosen_higher_tf = TimeFrame.from_str('1W')
+            elif self.time_frame == TimeFrame.from_str('1D'):
+                chosen_higher_tf = TimeFrame.from_str('1M')
+            else:
+                chosen_higher_tf = TimeFrame.from_str('12M')
+        else:
+            chosen_higher_tf = TimeFrame.from_str(higher_tf)
+        self._prev_high, self._prev_low, self._prev_close = self.calc_on(HigherTfMain, time_frame=chosen_higher_tf, lookahead=lookahead)
+        none_line: Optional[LineSegment] = None
+        self._pivot_line = self.new_var(none_line)
+        self._resistance_lines: list[Var[Optional[LineSegment]]] = []
+        self._support_lines: list[Var[Optional[LineSegment]]] = []
+        for _ in range(levels_number):
+            self._resistance_lines.append(self.new_var(none_line))
+            self._support_lines.append(self.new_var(none_line))
+
+    def calc(self, show_labels, show_prices):
+        pivot_level = MutSeriesF.new((self._prev_high[0] + self._prev_low[0] + self._prev_close[0]) / 3)
+        if isnan(pivot_level[0]):
+            return
+        resistance_levels = [
+            pivot_level[0] * 2 - self._prev_low[0],
+            pivot_level[0] + (self._prev_high[0] - self._prev_low[0]),
+            self._prev_high[0] + 2 * (pivot_level[0] - self._prev_low[0]),
+        ]
+        support_levels = [
+            pivot_level[0] * 2 - self._prev_high[0],
+            pivot_level[0] - (self._prev_high[0] - self._prev_low[0]),
+            self._prev_low[0] - 2 * (self._prev_high[0] - pivot_level[0]),
+        ]
+
+        pivot_line = self._pivot_line.get()
+        res_lines = self._resistance_lines
+        sup_lines = self._support_lines
+        if pivot_level[0] != pivot_level[1]:
+            if pivot_line is not None:  # updating the previous lines if exist
+                pivot_line.value().point_b.time = self.time[0]
+                self.chart.draw(pivot_line.value())
+
+                for res_line in res_lines:
+                    res_line.get().value().point_b.time = self.time[0]
+                    self.chart.draw(res_line.get().value())
+
+                for sup_line in sup_lines:
+                    sup_line.get().value().point_b.time = self.time[0]
+                    self.chart.draw(sup_line.get().value())
+
+            # creating new pivot line and label
+            time_to = self.time[0] + (self.time[0] - self.time[1]) * 3
+            new_pivot_line = LineSegment(
+                AbsolutePosition(self.time[0], pivot_level[0]),
+                AbsolutePosition(time_to, pivot_level[0]),
+                line_width=1, color=color.GRAY,
+            )
+            self._pivot_line.set(new_pivot_line)
+            self.chart.draw(self._pivot_line.get().value())
+            if show_labels or show_prices:
+                text = 'P ' if show_labels else ''
+                text += ('(' + str(round(pivot_level[0], self.info.price_precision)) + ')') if show_prices else ''
+                new_pivot_label = LabelAbs(
+                    text,
+                    AbsolutePosition(self.time[0], pivot_level[0]),
+                    bg_color=color.TRANSPARENT,
+                    text_color=color.rgba(187, 187, 187),
+                    font_size=11,
+                    callout_position=callout_position.TOP_LEFT,  # TODO: callout_position.LEFT
+                )
+                self.chart.draw(new_pivot_label)
+
+            for i in range(len(res_lines)):  # creating new support and resistance lines and labels
+                res_line = res_lines[i]
+                sup_line = sup_lines[i]
+                time_to = self.time[0] + (self.time[0] - self.time[1]) * 3
+                new_resistance_line = LineSegment(
+                    AbsolutePosition(self.time[0], resistance_levels[i]),
+                    AbsolutePosition(time_to, resistance_levels[i]),
+                    color=color.GRAY, line_width=1,
+                )
+                res_line.set(new_resistance_line)
+                self.chart.draw(res_line.get().value())
+                time_to = self.time[0] + (self.time[0] - self.time[1]) * 3
+                new_support_line = LineSegment(
+                    AbsolutePosition(self.time[0], support_levels[i]),
+                    AbsolutePosition(time_to, support_levels[i]),
+                    color=color.GRAY, line_width=1,
+                )
+                sup_line.set(new_support_line)
+                self.chart.draw(sup_line.get().value())
+                if show_labels or show_prices:
+                    text = 'R' + str(i + 1) if show_labels else ''
+                    text += ('(' + str(round(resistance_levels[i], self.info.price_precision)) + ')') if show_prices else ''
+                    new_resistance_label = LabelAbs(
+                        text,
+                        AbsolutePosition(self.time[0], resistance_levels[i]),
+                        bg_color=color.TRANSPARENT,
+                        text_color=color.rgba(187, 187, 187),
+                        font_size=11,
+                        callout_position=callout_position.TOP_LEFT,  # TODO: callout_position.LEFT
+                    )
+                    self.chart.draw(new_resistance_label)
+
+                    text = 'S' + str(i + 1) if show_labels else ''
+                    text += ('(' + str(round(support_levels[i], self.info.price_precision)) + ')') if show_prices else ''
+                    new_support_label = LabelAbs(
+                        text,
+                        AbsolutePosition(self.time[0], support_levels[i]),
+                        bg_color=color.TRANSPARENT,
+                        text_color=color.rgba(187, 187, 187),
+                        font_size=11,
+                        callout_position=callout_position.TOP_LEFT,  # TODO: callout_position.LEFT
+                    )
+                    self.chart.draw(new_support_label)
+        else:  # the same levels, just updating the right points of previous lines
+            if (pivot_line is not None) and (pivot_line.value().point_b.time != self.time[0]):
+                pivot_line.value().point_b.time = self.time[0]
+                self.chart.draw(pivot_line.value())
+                for res_line in res_lines:
+                    res_line.get().value().point_b.time = self.time[0]
+                    self.chart.draw(res_line.get().value())
+                for sup_line in sup_lines:
+                    sup_line.get().value().point_b.time = self.time[0]
+                    self.chart.draw(sup_line.get().value())
+        return

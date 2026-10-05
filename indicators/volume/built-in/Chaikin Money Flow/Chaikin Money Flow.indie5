@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot
+from indie.algorithms import Sum, Mfv
+from indie.math import divide
+
+
+@indicator('CMF', format=format.PRICE)  # Chaikin Money Flow
+@param.int('length', default=20, min=1, title='Length')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.GREEN, title='MF')
+def Main(self, length):
+    mfv_sum = Sum.new(Mfv.new(), length)[0]
+    vol_sum = Sum.new(self.volume, length)[0]
+    return divide(mfv_sum, vol_sum)

@@ -1,0 +1,15 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot
+from indie.algorithms import Sma
+
+
+@indicator('DPO', format=format.PRICE)  # Detrended Price Oscillator
+@param.int('length', default=21, min=1)
+@param.bool('centered', default=False, title='Centered')
+@level(0, line_color=color.GRAY, title='Zero')
+@plot.line(color=color.GREEN, title='Detrended Price Oscillator')
+def Main(self, length, centered):
+    bars_back = length // 2 + 1
+    ma = Sma.new(self.close, length)
+    dpo = self.close[bars_back] - ma[0] if centered else self.close[0] - ma[bars_back]
+    return plot.Line(dpo, offset=-bars_back if centered else 0)

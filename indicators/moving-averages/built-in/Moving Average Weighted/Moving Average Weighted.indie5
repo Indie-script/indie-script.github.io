@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Wma
+
+
+@indicator('WMA', overlay_main_pane=True)  # Weighted Moving Average
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('offset', default=0, min=-500, max=500, title='Offset')
+@plot.line(color=color.BLUE)
+def Main(self, length, src, offset):
+    result = Wma.new(src, length)
+    return plot.Line(result[0], offset=offset)

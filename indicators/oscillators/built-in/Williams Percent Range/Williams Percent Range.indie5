@@ -1,0 +1,16 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, source, band, color, level, line_style, plot
+from indie.algorithms import Highest, Lowest
+from indie.math import divide
+
+
+@indicator('Williams %R', format=format.PRICE)  # Williams Percent Range
+@param.int('length', default=14, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@band(-20, -80, line_color=color.GRAY, fill_color=color.PURPLE(0.1), title='Background')
+@level(-50, line_color=color.GRAY, line_style=line_style.DOTTED, title='Middle Level')
+@plot.line(color=color.PURPLE, title='%R')
+def Main(self, length, src):
+    max = Highest.new(self.high, length)[0]
+    min = Lowest.new(self.low, length)[0]
+    return 100 * divide(src[0] - max, max - min)

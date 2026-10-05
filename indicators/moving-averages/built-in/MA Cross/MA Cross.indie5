@@ -1,0 +1,18 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Sma
+from indie.math import cross
+
+
+@indicator('MA Cross', overlay_main_pane=True)  # MA Cross
+@param.int('short_len', default=9, min=1, title='Short MA Length')
+@param.int('long_len', default=21, min=1, title='Long MA Length')
+@plot.line(color=color.MAROON, title='Short')
+@plot.line(color=color.GREEN, title='Long')
+@plot.marker(color=color.BLUE, style=plot.marker_style.CROSS,
+             position=plot.marker_position.CENTER, size=7, title='MA Cross')
+def Main(self, short_len, long_len):
+    short = Sma.new(self.close, short_len)
+    long = Sma.new(self.close, long_len)
+    return short[0], long[0], short[0] if cross(short, long) else nan

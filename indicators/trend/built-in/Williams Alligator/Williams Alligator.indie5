@@ -1,0 +1,25 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Rma
+
+
+@indicator('Alligator', overlay_main_pane=True)  # Williams Alligator
+@param.int('jaw_period', default=13, min=1, title='Jaw Period')
+@param.int('teeth_period', default=8, min=1, title='Teeth Period')
+@param.int('lips_period', default=5, min=1, title='Lips Period')
+@param.int('jaw_offset', default=8, min=1, title='Jaw Offset')
+@param.int('teeth_offset', default=5, min=1, title='Teeth Offset')
+@param.int('lips_offset', default=3, min=1, title='Lips Offset')
+@plot.line(color=color.BLUE, title='Jaw')
+@plot.line(color=color.RED, title='Teeth')
+@plot.line(color=color.GREEN, title='Lips')
+def Main(self, jaw_period, teeth_period, lips_period, jaw_offset, teeth_offset, lips_offset):
+    jaw = Rma.new(self.hl2, jaw_period)
+    teeth = Rma.new(self.hl2, teeth_period)
+    lips = Rma.new(self.hl2, lips_period)
+
+    return (
+        plot.Line(jaw[0], offset=jaw_offset),
+        plot.Line(teeth[0], offset=teeth_offset),
+        plot.Line(lips[0], offset=lips_offset),
+    )

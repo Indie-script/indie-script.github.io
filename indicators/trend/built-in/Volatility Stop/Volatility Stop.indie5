@@ -1,0 +1,49 @@
+# indie:lang_version = 5
+from math import isnan, nan
+from indie import indicator, param, source, plot, color, Var, MutSeries
+from indie.algorithms import Atr, Tr
+
+
+@indicator('VStop', overlay_main_pane=True)  # Volatility Stop
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('length', default=20, min=2, title='ATR Length')
+@param.float('factor', default=2.0, min=0.25, step=0.25, title='Multiplier')
+@plot.marker(title='VStop (Cross)', size=3, style=plot.marker_style.CROSS, position=plot.marker_position.CENTER)
+@plot.line(title='VStop (Line)', display_options=plot.LineDisplayOptions())
+def Main(self, src, length, factor):
+    if isnan(src[0]):
+        return plot.Marker(value=nan), plot.Line(value=nan)
+
+    atr_val = Atr.new(length)[0]
+    atr_mult = (atr_val * factor) if not isnan(atr_val) else Tr.new()[0]
+
+    uptrend = MutSeries[bool].new(init=True)
+    stop = Var[float].new(src[0])
+    mn = Var[float].new(src[0])
+    mx = Var[float].new(src[0])
+
+    not_first = self.bar_index > 0
+    mx.set(max(mx.get(), src[0]))
+    mn.set(min(mn.get(), src[0]))
+    prev_stop = stop.get()
+
+    prev_trend = uptrend[0]
+    vstop = nan
+    if prev_trend:
+        vstop = max(prev_stop, mx.get() - atr_mult)
+    else:
+        vstop = min(prev_stop, mn.get() + atr_mult)
+
+    curr_trend = (src[0] >= vstop)
+    if not_first and curr_trend != prev_trend:
+        mx.set(src[0]); mn.set(src[0])
+        vstop = (mx.get() - atr_mult) if curr_trend else (mn.get() + atr_mult)
+
+    stop.set(vstop)
+    uptrend[0] = curr_trend
+
+    col = color.TEAL if curr_trend else color.RED
+    return (
+        plot.Marker(vstop, color=col),
+        plot.Line(vstop, color=col)
+    )

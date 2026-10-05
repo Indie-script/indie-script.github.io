@@ -1,0 +1,14 @@
+# indie:lang_version = 5
+from math import floor, sqrt
+from indie import indicator, param, source, plot, color, MutSeriesF
+from indie.algorithms import Wma
+
+
+@indicator('HMA', overlay_main_pane=True)  # Hull Moving Average
+@param.int('length', default=9, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(color=color.BLUE)
+def Main(self, length, src):
+    wma_l2 = Wma.new(src, length // 2)[0]
+    wma_l = Wma.new(src, length)[0]
+    return Wma.new(MutSeriesF.new(2 * wma_l2 - wma_l), floor(sqrt(length)))[0]
