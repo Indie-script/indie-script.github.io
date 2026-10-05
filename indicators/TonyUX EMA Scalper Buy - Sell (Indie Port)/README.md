@@ -9,7 +9,7 @@
 | **Category** | Moving averages |
 | **Type** | Indicator |
 | **Author** | @insurgent on TakeProfit |
-| **Original** | Original indicator “TonyUX EMA Scalper – Buy / Sell” |
+| **Original** | Original indicator “TonyUX EMA Scalper – Buy / Sell” Author: tux |
 | **License** | MIT |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/tonyux-ema-scalper-buy-sell-indie-port-72) |
 | **Source file** | [TonyUX EMA Scalper Buy - Sell (Indie Port).indie5](TonyUX%20EMA%20Scalper%20Buy%20-%20Sell%20(Indie%20Port).indie5) |

@@ -9,7 +9,8 @@
 | **Category** | Oscillators |
 | **Type** | Indicator |
 | **Author** | @pavelmedd on TakeProfit |
-| **License** | licensed under the Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) (see the header of the source file) |
+| **Original** | Inspired by the original concept by © alexgrover Indie version rewritten and enhanced by Pavel Medd |
+| **License** | CC BY-NC-SA 4.0, non-commercial (see the header of the source file) |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/dynamic-andean-oscillator-5) |
 | **Source file** | [Dynamic Andean Oscillator.indie5](Dynamic%20Andean%20Oscillator.indie5) |
 

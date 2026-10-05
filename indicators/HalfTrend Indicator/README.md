@@ -9,7 +9,8 @@
 | **Category** | Trend |
 | **Type** | Indicator |
 | **Author** | @insurgent on TakeProfit |
-| **License** | MIT |
+| **Original** | Original: HalfTrend by everget (Pine Script v6) |
+| **License** | GPL-3.0 (see the header of the source file) |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/halftrend-indicator-43) |
 | **Source file** | [HalfTrend Indicator.indie5](HalfTrend%20Indicator.indie5) |
 

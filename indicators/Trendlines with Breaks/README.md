@@ -10,7 +10,7 @@
 | **Type** | Indicator |
 | **Author** | @dr_jones on TakeProfit |
 | **Original** | Ported to Indie from https://www.tradingview.com/script/IYL88A1N-Trendlines-with-Breaks-LuxAlgo/ created by @LuxAlgo |
-| **License** | licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) (see the header of the source file) |
+| **License** | CC BY-NC-SA 4.0, non-commercial (see the header of the source file) |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/trendlines-with-breaks-27) |
 | **Source file** | [Trendlines with Breaks.indie5](Trendlines%20with%20Breaks.indie5) |
 

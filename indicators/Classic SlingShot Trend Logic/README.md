@@ -9,7 +9,7 @@
 | **Category** | Trend |
 | **Type** | Indicator |
 | **Author** | @chartjunkie on TakeProfit |
-| **Original** | Original author: ChrisMoody (10-05-2014) |
+| **Original** | Original author: ChrisMoody (10-05-2014) Ported to Indie language |
 | **License** | MIT |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/classic-slingshot-trend-logic-37) |
 | **Source file** | [Classic SlingShot Trend Logic.indie5](Classic%20SlingShot%20Trend%20Logic.indie5) |

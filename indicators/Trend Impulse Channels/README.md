@@ -10,7 +10,7 @@
 | **Type** | Indicator |
 | **Author** | @dr_jones on TakeProfit |
 | **Original** | Ported to Indie from https://www.tradingview.com/script/d3IaFa7c-Trend-Impulse-Channels-Zeiierman/ created by @Zeiierman |
-| **License** | licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/ (see the header of the source file) |
+| **License** | CC BY-NC-SA 4.0, non-commercial (see the header of the source file) |
 | **Live script** | [Open on TakeProfit](https://takeprofit.com/indicator/trend-impulse-channels-62) |
 | **Source file** | [Trend Impulse Channels.indie5](Trend%20Impulse%20Channels.indie5) |
 
