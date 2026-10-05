@@ -1,0 +1,11 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Atr
+
+
+@indicator('ATR')  # Average True Range
+@param.int('length', default=14, min=1)
+@param.str('smoothing', default='RMA', options=['RMA', 'SMA', 'EMA', 'WMA'], title='Smoothing')
+@plot.line(color=color.RED)
+def Main(self, length, smoothing):
+    return Atr.new(length, smoothing)[0]

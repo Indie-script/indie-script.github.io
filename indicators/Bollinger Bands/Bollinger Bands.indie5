@@ -1,0 +1,22 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Bb
+
+
+@indicator('BB', overlay_main_pane=True)  # Bollinger Bands
+@param.int('length', default=20, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.float('mult', default=2.0, min=0.001, max=50.0, title='StdDev')
+@param.int('offset', default=0, min=-500, max=500)
+@plot.line('lower', color=color.BLUE, title='Lower')
+@plot.line(color=color.RED, title='Basis')
+@plot.line('upper', color=color.BLUE, title='Upper')
+@plot.fill('lower', 'upper', color=color.AQUA(0.05), title='Background')
+def Main(self, length, src, mult, offset):
+    (lower, middle, upper) = Bb.new(src, length, mult)
+    return (
+        plot.Line(lower[0], offset=offset),
+        plot.Line(middle[0], offset=offset),
+        plot.Line(upper[0], offset=offset),
+        plot.Fill(offset=offset),
+    )

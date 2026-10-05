@@ -152,3 +152,15 @@
 "Williams VIX Fix":
   category: volatility
   description: "Computes a volatility indicator similar to VIX for any asset using highest-low ratio and Bollinger Bands."
+"Average True Range":
+  category: volatility
+  builtin: true
+  description: "Computes the Average True Range (ATR) with configurable smoothing (RMA, SMA, EMA, WMA) and lookback length."
+"Bollinger Bands":
+  category: volatility
+  builtin: true
+  description: "Bollinger Bands plot a moving average with upper/lower bands at k standard deviations."
+"Relative Strength Index":
+  category: oscillators
+  builtin: true
+  description: "Computes the Relative Strength Index (RSI) with optional smoothing and Bollinger Bands."
