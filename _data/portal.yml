@@ -33,6 +33,12 @@ docs:
     icon: question
     tab: true
     summary: Worked answers to common Indie questions - fills, colored zones, stacked histograms and more.
+  - file: pine-to-indie-conversion-pitfalls.md
+    label: Conversion pitfalls
+    group: Reference
+    icon: alert
+    tab: true
+    summary: Hidden defaults, engine limits and fixes collected from 18 verified Pine to Indie ports - a checklist and a lookup table.
   - file: Vibe-Coding Indie Indicators AI with MCP.md
     label: AI coding with MCP
     group: Get started
