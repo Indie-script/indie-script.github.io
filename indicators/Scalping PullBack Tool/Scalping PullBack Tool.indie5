@@ -1,0 +1,169 @@
+# indie:lang_version = 5
+# Scalping PullBack Tool R1.1 — Indie port
+# Original Pine Script v4 by JustUncleL (open source)
+# Migration notes:
+#   Logic ported 1:1: PAC channel (EMA of high/low/close), EMA ribbon, trend direction, fractals (BW or regular),
+#   HH/LH/HL/LL finder, pullback-recovery trade state and the Buy/Sell arrow
+#   "Use Heikin Ashi Candles in Algo Calculations" is on by default in the original (security(heikinashi(...)));
+#   here Heikin Ashi is calculated directly from the chart candles
+#   barcolor() / bgcolor() are not ported; plotarrow() is a single marker (below the bar for Buy, above for Sell)
+#   The two hidden barssince() plots of the original are kept as transparent lines
+#   (the second one uses raw close in the original despite its title; the Sell logic uses barssince(haClose>pacC))
+#   alertcondition() — no Indie equivalent
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, MutSeriesF
+from indie.algorithms import Ema
+
+@indicator('Scalping PullBack Tool R1.1', overlay_main_pane=True)
+@param.int('hilo_len', default=34, min=2, title='High Low PAC channel Length')
+@param.int('fast_len', default=89, min=2, title='Fast EMA length')
+@param.int('medium_len', default=200, min=2, title='Medium EMA length')
+@param.int('slow_len', default=600, min=2, title='Slow EMA length')
+@param.bool('show_fast', default=True, title='Show Fast EMA')
+@param.bool('show_medium', default=True, title='Show Medium EMA')
+@param.bool('show_slow', default=False, title='Show Slow EMA')
+@param.bool('show_hhll', default=False, title='Show HH/LH/HL/LL')
+@param.bool('show_fractals', default=True, title='Show Fractals')
+@param.bool('filter_bw', default=False, title='Show Ideal Fractals Only')
+@param.bool('show_buysell', default=True, title='Show Buy/Sell Alert Arrows')
+@param.int('lookback', default=3, min=1, title='Pullback Lookback for PAC Cross Check')
+@param.bool('delay_arrow', default=False, title='Show Alert Arrows Only on Closed Candles')
+@param.bool('use_ha', default=True, title='Use Heikin Ashi Candles in Algo Calculations')
+@plot.line('pac_l', color=color.rgba(128, 128, 128, 0.5), line_width=1, title='High PAC EMA')
+@plot.line('pac_u', color=color.rgba(128, 128, 128, 0.5), line_width=1, title='Low PAC EMA')
+@plot.line('pac_c', color=color.RED, line_width=2, title='Close PAC EMA')
+@plot.fill('pac_l', 'pac_u', id='pac_fill')
+@plot.line('fast_ema', color=color.rgba(76, 175, 80, 0.8), line_width=2, title='fastEMA')
+@plot.line('medium_ema', color=color.rgba(33, 150, 243, 0.8), line_width=3, title='mediumEMA')
+@plot.line('slow_ema', color=color.rgba(0, 0, 0, 0.8), line_width=4, title='slowEMA')
+@plot.marker('top_fractal', color=color.RED, style=plot.marker_style.CIRCLE)
+@plot.marker('bot_fractal', color=color.rgba(0, 230, 118, 1.0), style=plot.marker_style.CIRCLE)
+@plot.marker('hh', color=color.rgba(136, 14, 79, 1.0), style=plot.marker_style.LABEL)
+@plot.marker('lh', color=color.rgba(136, 14, 79, 1.0), style=plot.marker_style.LABEL)
+@plot.marker('hl', color=color.rgba(76, 175, 80, 1.0), style=plot.marker_style.LABEL)
+@plot.marker('ll', color=color.rgba(76, 175, 80, 1.0), style=plot.marker_style.LABEL)
+@plot.line('bars_since_ha', color=color.TRANSPARENT, line_width=1, title='barssince(haClose<pacC)')
+@plot.line('bars_since_close', color=color.TRANSPARENT, line_width=1, title='barssince(close>pacC)')
+@plot.marker('arrow', color=color.rgba(76, 175, 80, 1.0), style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, hilo_len, fast_len, medium_len, slow_len, show_fast, show_medium, show_slow, show_hhll,
+             show_fractals, filter_bw, show_buysell, lookback, delay_arrow, use_ha):
+        o: float = self.open[0]
+        h: float = self.high[0]
+        l: float = self.low[0]
+        c: float = self.close[0]
+
+        # Heikin Ashi (seed: open = (open + close) / 2)
+        hac_raw: float = (o + h + l + c) / 4.0
+        hao_s = MutSeriesF.new(nan)
+        hac_s = MutSeriesF.new(hac_raw)
+        hao_prev: float = hao_s[1]
+        hac_prev: float = hac_s[1]
+        hao_raw: float = (hao_prev + hac_prev) / 2.0 if not isnan(hao_prev) else (o + c) / 2.0
+        hao_s[0] = hao_raw
+        hah_raw: float = max(h, hao_raw, hac_raw)
+        hal_raw: float = min(l, hao_raw, hac_raw)
+        ha_open: float = hao_raw if use_ha else o
+        ha_close: float = hac_raw if use_ha else c
+        ha_high: float = hah_raw if use_ha else h
+        ha_low: float = hal_raw if use_ha else l
+        hc_s = MutSeriesF.new(ha_close)
+        hh_s = MutSeriesF.new(ha_high)
+        hl_s = MutSeriesF.new(ha_low)
+
+        fast_ema: float = Ema.new(hc_s, fast_len)[0]
+        medium_ema: float = Ema.new(hc_s, medium_len)[0]
+        slow_ema: float = Ema.new(hc_s, slow_len)[0]
+        pac_c: float = Ema.new(hc_s, hilo_len)[0]
+        pac_l: float = Ema.new(hl_s, hilo_len)[0]
+        pac_u: float = Ema.new(hh_s, hilo_len)[0]
+
+        trend: float = 0.0
+        if fast_ema > medium_ema and pac_l > medium_ema:
+            trend = 1.0
+        elif fast_ema < medium_ema and pac_u < medium_ema:
+            trend = -1.0
+
+        # Fractals (raw high/low): regular or Bill Williams
+        reg_top: bool = self.high[4] < self.high[3] and self.high[3] < self.high[2] and self.high[2] > self.high[1] and self.high[1] > self.high[0]
+        reg_bot: bool = self.low[4] > self.low[3] and self.low[3] > self.low[2] and self.low[2] < self.low[1] and self.low[1] < self.low[0]
+        bw_top: bool = self.high[4] < self.high[2] and self.high[3] <= self.high[2] and self.high[2] >= self.high[1] and self.high[2] > self.high[0]
+        bw_bot: bool = self.low[4] > self.low[2] and self.low[3] >= self.low[2] and self.low[2] <= self.low[1] and self.low[2] < self.low[0]
+        top_f: bool = reg_top if filter_bw else bw_top
+        bot_f: bool = reg_bot if filter_bw else bw_bot
+
+        # valuewhen(found, x, 0/1/2): the three latest fractal values
+        th0_s = MutSeriesF.new(nan)
+        th1_s = MutSeriesF.new(nan)
+        th2_s = MutSeriesF.new(nan)
+        bl0_s = MutSeriesF.new(nan)
+        bl1_s = MutSeriesF.new(nan)
+        bl2_s = MutSeriesF.new(nan)
+        th0_p: float = th0_s[1]
+        th1_p: float = th1_s[1]
+        bl0_p: float = bl0_s[1]
+        bl1_p: float = bl1_s[1]
+        th0_s[0] = self.high[2] if top_f else th0_p
+        th1_s[0] = th0_p if top_f else th1_p
+        th2_s[0] = th1_p if top_f else th2_s[1]
+        bl0_s[0] = self.low[2] if bot_f else bl0_p
+        bl1_s[0] = bl0_p if bot_f else bl1_p
+        bl2_s[0] = bl1_p if bot_f else bl2_s[1]
+        hh: bool = top_f and th1_s[0] < th0_s[0] and th2_s[0] < th0_s[0]
+        lh: bool = top_f and th1_s[0] > th0_s[0] and th2_s[0] > th0_s[0]
+        hl: bool = bot_f and bl1_s[0] < bl0_s[0] and bl2_s[0] < bl0_s[0]
+        ll: bool = bot_f and bl1_s[0] > bl0_s[0] and bl2_s[0] > bl0_s[0]
+
+        # barssince
+        bs1_s = MutSeriesF.new(nan)
+        bs2_s = MutSeriesF.new(nan)
+        bs3_s = MutSeriesF.new(nan)
+        bs1_s[0] = 0.0 if ha_close < pac_c else bs1_s[1] + 1.0
+        bs2_s[0] = 0.0 if c > pac_c else bs2_s[1] + 1.0
+        bs3_s[0] = 0.0 if ha_close > pac_c else bs3_s[1] + 1.0
+
+        pac_exit_u: bool = ha_open < pac_u and ha_close > pac_u and bs1_s[0] <= lookback
+        pac_exit_l: bool = ha_open > pac_l and ha_close < pac_l and bs3_s[0] <= lookback
+        buy: bool = trend == 1.0 and pac_exit_u
+        sell: bool = trend == -1.0 and pac_exit_l
+
+        td_s = MutSeriesF.new(0.0)
+        td: float = td_s[1] if not isnan(td_s[1]) else 0.0
+        if td == 1.0 and ha_close < pac_c:
+            td = 0.0
+        elif td == -1.0 and ha_close > pac_c:
+            td = 0.0
+        elif td == 0.0 and buy:
+            td = 1.0
+        elif td == 0.0 and sell:
+            td = -1.0
+        td_s[0] = td
+
+        delay: int = 1 if delay_arrow else 0
+        td_d: float = td_s[delay]
+        td_d1: float = td_s[1 + delay]
+        td_d1z: float = 0.0 if isnan(td_d1) else td_d1
+        arrow: bool = show_buysell and td_d1z == 0.0 and td_d != 0.0 and not isnan(td_d)
+        arrow_v: float = nan
+        if arrow:
+            arrow_v = l if td_d == 1.0 else h
+
+        return (
+            plot.Line(pac_l),
+            plot.Line(pac_u),
+            plot.Line(pac_c),
+            plot.Fill(color.rgba(128, 128, 128, 0.1)),
+            plot.Line(fast_ema if show_fast else nan),
+            plot.Line(medium_ema if show_medium else nan),
+            plot.Line(slow_ema if show_slow else nan),
+            plot.Marker(self.high[2] if (show_fractals and top_f) else nan, offset=-2),
+            plot.Marker(self.low[2] if (show_fractals and bot_f) else nan, offset=-2),
+            plot.Marker(self.high[2] if (show_hhll and hh) else nan, text='[HH]', offset=-2),
+            plot.Marker(self.high[2] if (show_hhll and lh) else nan, text='[LH]', offset=-2),
+            plot.Marker(self.low[2] if (show_hhll and hl) else nan, text='[HL]', offset=-2),
+            plot.Marker(self.low[2] if (show_hhll and ll) else nan, text='[LL]', offset=-2),
+            plot.Line(bs1_s[0]),
+            plot.Line(bs2_s[0]),
+            plot.Marker(arrow_v, text='PB', offset=-delay),
+        )

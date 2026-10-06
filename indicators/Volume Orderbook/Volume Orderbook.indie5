@@ -1,0 +1,190 @@
+# indie:lang_version = 5
+# Volume Orderbook (Zeiierman) — Indie port
+# Original Pine Script v6 by Zeiierman (CC BY-NC-SA 4.0)
+# Migration notes:
+#   Logic ported 1:1: price levels with step = first candle size * width, volume accumulated per level over the whole
+#   history, the order book of `rows` levels around the current price drawn on the last bar, box width by volume rank
+#   Engine limit: 100 drawing changes per bar (a rollback of the previous recalculation counts too), so volume labels
+#   are drawn only for the MAX_LABELS biggest rows (the width of every box still shows its volume rank)
+#   Not ported: POC extension, table frame and grid (all off by default in the original)
+#   Colours: red/lime/gray rows with a rank gradient of the alpha (0.2 -> 0.6) as in color.from_gradient
+
+from math import isnan, nan
+from indie import indicator, param, MainContext, color, Color, Optional, source
+from indie.drawings import Rectangle, LabelAbs, AbsolutePosition, callout_position
+
+GRAY = color.rgba(120, 123, 134, 1.0)
+INVIS = color.TRANSPARENT
+MAX_LABELS = 3
+
+
+@indicator('Volume Orderbook (Zeiierman)', overlay_main_pane=True)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('rows', default=10, min=0, max=50, title='Rows')
+@param.float('mult', default=0.5, min=0.1, max=10.0, step=0.05, title='Width')
+@param.int('left', default=5, min=0, max=50, title='Left')
+class Main(MainContext):
+    def __init__(self):
+        empty_f: list[float] = []
+        empty_r: list[Optional[Rectangle]] = []
+        empty_b: list[Optional[LabelAbs]] = []
+        self._levels = self.new_var(empty_f)
+        self._volumes = self.new_var(empty_f)
+        self._step = self.new_var(0.0)
+        self._h_r = self.new_var(empty_r)
+        self._h_b = self.new_var(empty_b)
+
+    def _fmt(self, v: float) -> str:
+        if v >= 1000000.0:
+            return str(round(v / 1000000.0, 2)) + 'M'
+        if v >= 1000.0:
+            return str(round(v / 1000.0, 2)) + 'K'
+        return str(round(v, 2))
+
+    def calc(self, src, rows, mult, left):
+        n: int = self.bar_index
+        s: float = src[0]
+        vol: float = self.volume[0]
+        t0 = self.time[0]
+        t_step = t0 - self.time[1]
+
+        step: float = self._step.get()
+        if n == 0:
+            step = (self.high[0] - self.low[0]) * mult
+        levels: list[float] = []
+        volumes: list[float] = []
+        src_l = self._levels.get()
+        k = 0
+        while k < len(src_l):
+            levels.append(src_l[k])
+            k += 1
+        src_v = self._volumes.get()
+        k = 0
+        while k < len(src_v):
+            volumes.append(src_v[k])
+            k += 1
+
+        # --- accumulate the volume of this candle on its price level
+        if len(levels) <= 0:
+            levels.append(s + step)
+            levels.append(s - step)
+            volumes.append(vol)
+        else:
+            found: bool = False
+            i = 0
+            while i <= len(levels) - 2 and not found:
+                if s < levels[i] and s > levels[i + 1]:
+                    volumes[i] = volumes[i] + vol
+                    found = True
+                i += 1
+            if not found:
+                if s > levels[0]:
+                    lvl: float = levels[0]
+                    while s > lvl:
+                        levels.insert(0, lvl + step)
+                        volumes.insert(0, 0.0)
+                        lvl = lvl + step
+                    levels.insert(0, lvl + step)
+                    volumes.insert(0, vol)
+                elif s < levels[len(levels) - 1]:
+                    lvl2: float = levels[len(levels) - 1]
+                    while s < lvl2:
+                        levels.append(lvl2 - step)
+                        volumes.append(0.0)
+                        lvl2 = lvl2 - step
+                    levels.append(lvl2 - step)
+                    volumes.append(vol)
+        self._levels.set(levels)
+        self._volumes.set(volumes)
+        self._step.set(step)
+
+        # --- erase the previous order book, redraw it on the last bar
+        old_r = self._h_r.get()
+        k = 0
+        while k < len(old_r):
+            ho = old_r[k]
+            if ho is not None:
+                self.chart.erase(ho.value())
+            k += 1
+        old_b = self._h_b.get()
+        k = 0
+        while k < len(old_b):
+            hb = old_b[k]
+            if hb is not None:
+                self.chart.erase(hb.value())
+            k += 1
+        new_r: list[Optional[Rectangle]] = []
+        new_b: list[Optional[LabelAbs]] = []
+        if self.is_last_bar:
+            pos: int = -1
+            i = 0
+            while i <= len(levels) - 2:
+                if s < levels[i] and s > levels[i + 1]:
+                    pos = i
+                i += 1
+            if pos >= 0:
+                width: int = rows * 2 + 1
+                vols: list[float] = []
+                x = 0
+                while x < width:
+                    vols.append(0.0)
+                    x += 1
+                x = 0
+                while x <= min(len(volumes) - 1, rows * 2):
+                    if pos - rows + x < len(volumes) - 1:
+                        vols[x] = volumes[max(0, pos - rows + x)]
+                    else:
+                        vols[x] = 0.0
+                    x += 1
+                srt: list[float] = []
+                x = 0
+                while x < width:
+                    srt.append(vols[x])
+                    x += 1
+                a = 1
+                while a < width:   # insertion sort (Indie lists have no sort())
+                    key_v: float = srt[a]
+                    b2 = a - 1
+                    while b2 >= 0 and srt[b2] > key_v:
+                        srt[b2 + 1] = srt[b2]
+                        b2 -= 1
+                    srt[b2 + 1] = key_v
+                    a += 1
+                # the MAX_LABELS biggest volumes get a text label
+                label_cut: float = srt[width - MAX_LABELS] if width >= MAX_LABELS else 0.0
+                labels_left: int = MAX_LABELS
+                x = 0
+                while x <= rows * 2:
+                    if pos - rows + x < len(levels) - 1:
+                        v: float = vols[x]
+                        rank: int = 0
+                        q = 0
+                        while q < width:
+                            if srt[q] == v:
+                                rank = q
+                                q = width
+                            q += 1
+                        alpha: float = 0.2 + 0.4 * float(rank) / float(width)
+                        col: Color = color.rgba(255, 82, 82, alpha)
+                        if x > rows:
+                            col = color.rgba(0, 230, 118, alpha)
+                        if x == rows:
+                            col = color.rgba(120, 123, 134, alpha)
+                        top: float = levels[max(0, pos - rows + x)]
+                        bot: float = levels[max(1, pos - rows + x + 1)]
+                        t_l = t0 + t_step * float(left + rows * 2 - rank)
+                        t_r = t0 + t_step * float(left + rows * 2 + rank)
+                        box: Rectangle = Rectangle(AbsolutePosition(t_l, top), AbsolutePosition(t_r, bot),
+                                                   line_color=INVIS, line_width=1, bg_color=col)
+                        self.chart.draw(box)
+                        new_r.append(box)
+                        if v >= label_cut and v > 0.0 and labels_left > 0:
+                            labels_left -= 1
+                            lab: LabelAbs = LabelAbs(self._fmt(v), AbsolutePosition(t_r, (top + bot) / 2.0),
+                                                     text_color=GRAY, bg_color=INVIS,
+                                                     callout_position=callout_position.BOTTOM_RIGHT, font_size=9)
+                            self.chart.draw(lab)
+                            new_b.append(lab)
+                    x += 1
+        self._h_r.set(new_r)
+        self._h_b.set(new_b)

@@ -1,0 +1,75 @@
+# indie:lang_version = 5
+# SuperTrend — Indie port
+# Original Pine Script by KivancOzbilgic (open-source script published on TradingView)
+# Migration notes:
+#   alertcondition() — no Indie equivalent; attach platform alerts to Buy/Sell markers instead
+#   changeATR toggle — ported: true = Atr (RMA-based), false = Sma(Tr)
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, MutSeriesF, source, format
+from indie.algorithms import Atr, Sma, Tr
+
+@indicator('SuperTrend', overlay_main_pane=True, format=format.PRICE, precision=2)
+@param.int('periods', default=10, min=1, title='ATR Period')
+@param.source('src', default=source.HL2, title='Source')
+@param.float('multiplier', default=3.0, min=0.1, step=0.1, title='ATR Multiplier')
+@param.bool('change_atr', default=True, title='Change ATR Calculation Method')
+@param.bool('show_signals', default=True, title='Show Buy/Sell Signals')
+@param.bool('highlighting', default=True, title='Highlighting')
+@plot.line('up_trend', color=color.GREEN, line_width=2, title='Up Trend')
+@plot.line('dn_trend', color=color.RED, line_width=2, title='Down Trend')
+@plot.line('mid', color=color.TRANSPARENT, line_width=1, title='OHLC4')
+@plot.fill('up_trend', 'mid', id='up_fill')
+@plot.fill('dn_trend', 'mid', id='dn_fill')
+@plot.marker('buy_signal', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell_signal', color=color.RED, style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, periods, src, multiplier, change_atr, show_signals, highlighting):
+        atr_rma: float = Atr.new(periods)[0]
+        atr_sma: float = Sma.new(Tr.new(), periods)[0]
+        atr_val: float = atr_rma if change_atr else atr_sma
+
+        up_raw = src[0] - multiplier * atr_val
+        up = MutSeriesF.new(nan)
+        up_prev = up[1] if not isnan(up[1]) else up_raw
+        up[0] = max(up_raw, up_prev) if self.close[1] > up_prev else up_raw
+
+        dn_raw = src[0] + multiplier * atr_val
+        dn = MutSeriesF.new(nan)
+        dn_prev = dn[1] if not isnan(dn[1]) else dn_raw
+        dn[0] = min(dn_raw, dn_prev) if self.close[1] < dn_prev else dn_raw
+
+        trend = MutSeriesF.new(1.0)
+        t_prev = trend[1] if not isnan(trend[1]) else 1.0
+        if t_prev == -1.0 and self.close[0] > dn_prev:
+            trend[0] = 1.0
+        elif t_prev == 1.0 and self.close[0] < up_prev:
+            trend[0] = -1.0
+        else:
+            trend[0] = t_prev
+
+        t = trend[0]
+        t1 = trend[1] if not isnan(trend[1]) else 1.0
+
+        buy_signal = t == 1.0 and t1 == -1.0
+        sell_signal = t == -1.0 and t1 == 1.0
+
+        up_val = up[0] if t == 1.0 else nan
+        dn_val = dn[0] if t == -1.0 else nan
+        ohlc4 = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4.0
+
+        up_fill_c = color.rgba(0, 200, 0, 0.25) if (highlighting and t == 1.0) else color.TRANSPARENT
+        dn_fill_c = color.rgba(200, 0, 0, 0.25) if (highlighting and t == -1.0) else color.TRANSPARENT
+
+        buy_val = up[0] if buy_signal and show_signals else nan
+        sell_val = dn[0] if sell_signal and show_signals else nan
+
+        return (
+            plot.Line(up_val),
+            plot.Line(dn_val),
+            plot.Line(ohlc4),
+            plot.Fill(up_fill_c),
+            plot.Fill(dn_fill_c),
+            plot.Marker(buy_val, text='Buy'),
+            plot.Marker(sell_val, text='Sell'),
+        )

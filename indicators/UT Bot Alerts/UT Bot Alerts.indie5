@@ -1,0 +1,49 @@
+# indie:lang_version = 5
+# UT Bot Alerts — Indie port
+# Original Pine Script v4 by QuantNomad (open source)
+# Migration notes:
+#   Logic ported 1:1: ATR trailing stop on close, position flip, Buy/Sell on EMA(1)/stop crossover
+#   "Signals from Heikin Ashi Candles" (security(heikinashi(...))) is not ported — signals are always on the chart candles
+#   barcolor() (green/red bars) is not ported; alertcondition() — no Indie equivalent, use platform alerts on the markers
+#   Buy label sits below the bar, Sell label above (location.belowbar / abovebar)
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, MutSeriesF
+from indie.algorithms import Atr, Ema
+
+@indicator('UT Bot Alerts', overlay_main_pane=True)
+@param.float('key_value', default=1.0, min=0.0, step=0.1, title="Key Vaule. 'This changes the sensitivity'")
+@param.int('atr_period', default=10, min=1, title='ATR Period')
+@plot.marker('buy', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell', color=color.RED, style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, key_value, atr_period):
+        src: float = self.close[0]
+        src_prev: float = self.close[1]
+        nloss: float = key_value * Atr.new(atr_period)[0]
+
+        stop_s = MutSeriesF.new(0.0)
+        stop_raw_prev: float = stop_s[1]
+        prev: float = 0.0 if isnan(stop_raw_prev) else stop_raw_prev
+        stop: float = 0.0
+        if src > prev and src_prev > prev:
+            stop = max(prev, src - nloss)
+        elif src < prev and src_prev < prev:
+            stop = min(prev, src + nloss)
+        elif src > prev:
+            stop = src - nloss
+        else:
+            stop = src + nloss
+        stop_s[0] = stop
+
+        ema: float = Ema.new(self.close, 1)[0]
+        ema_prev: float = Ema.new(self.close, 1)[1]
+        above: bool = ema > stop and ema_prev <= stop_raw_prev
+        below: bool = stop > ema and stop_raw_prev <= ema_prev
+        buy: bool = src > stop and above
+        sell: bool = src < stop and below
+
+        return (
+            plot.Marker(self.low[0] if buy else nan, text='Buy'),
+            plot.Marker(self.high[0] if sell else nan, text='Sell'),
+        )

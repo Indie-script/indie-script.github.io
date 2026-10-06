@@ -1,0 +1,210 @@
+---
+category: trend
+---
+# Profit Maximizer PMax - Indie Port Guide
+
+> A moving average with an ATR-based trailing stop; crossings give Buy/Sell signals.
+
+| | |
+| --- | --- |
+| **Language** | Indie Script v5 |
+| **Platform** | [TakeProfit](https://takeprofit.com) |
+| **Category** | Trend |
+| **Type** | Indicator, port from Pine Script |
+| **Original** | Profit Maximizer (PMax) by KivancOzbilgic (Pine Script v4) |
+| **License** | MPL-2.0 (see the header of the source files) |
+| **Original source** | [Profit Maximizer PMax.pinescript4](Profit%20Maximizer%20PMax.pinescript4) |
+| **Source file** | [Profit Maximizer PMax.indie5](Profit%20Maximizer%20PMax.indie5) |
+
+## Overview
+
+PMax is the ATR sibling of OTT: instead of a percentage band it trails the moving average by ATR times a multiplier. Eight moving-average types are available (SMA, EMA, WMA, TMA, VAR, WWMA, ZLEMA, TSF) and the stop can be normalised by price.
+
+The line turns green/red by trend, and crossings of the moving average (or of the price) with PMax mark entries and exits.
+
+## How it works
+
+1. Pick the moving average (EMA 10 by default) of the source (HL2).
+2. ATR over the chosen period (RMA, or SMA of the true range); optionally divide by the close.
+3. Long stop `MA - mult * atr` ratchets up, short stop `MA + mult * atr` ratchets down.
+4. Direction flips when the MA crosses the opposite stop; PMax is the long stop in an up-trend and the short stop otherwise.
+5. Signals: MA (or price) crossing PMax.
+
+## Parameters
+
+| Parameter | Type | Default | Range | Description |
+| --- | --- | --- | --- | --- |
+| `src` | source | source.HL2 |  | Source |
+| `periods` | int | 10 | ≥ 1 | ATR Length |
+| `multiplier` | float | 3.0 | ≥ 0.1 | ATR Multiplier |
+| `mav` | str | 'EMA' |  | Moving Average Type: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA/TSF |
+| `length` | int | 10 | ≥ 1 | Moving Average Length |
+| `change_atr` | bool | True |  | Change ATR Calculation Method ? |
+| `normalize` | bool | False |  | Normalize ATR ? |
+| `showsupport` | bool | True |  | Show Moving Average? |
+| `showsignalsk` | bool | True |  | Show Crossing Signals? |
+| `showsignalsc` | bool | False |  | Show Price/Pmax Crossing Signals? |
+| `highlighting` | bool | True |  | Highlighter On/Off ? |
+
+## Port notes
+
+Differences and decisions in the Indie port (taken from the header of [Profit Maximizer PMax.indie5](Profit%20Maximizer%20PMax.indie5)):
+
+- Logic ported 1:1: moving average (SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA/TSF) + ATR trailing stop, direction flip, crossing signals
+- The two Pine fills (long/short highlighter) are merged into one dynamic-color fill
+- alertcondition() — no Indie equivalent; use platform alerts on lines
+
+## Verification
+
+Compared with the original script on the same candles: BTC 30-minute candles exported from TradingView (2,473 bars, 15 Aug - 5 Oct 2026). The moving-average line and the PMax line matched to 1e-14 of the price range, and the 19 Buy and 19 Sell labels fell on the same bars.
+
+## Full source code
+
+Indie Script v5. Copy it into the platform's script editor. The original Pine Script is published next to it as [Profit Maximizer PMax.pinescript4](Profit%20Maximizer%20PMax.pinescript4).
+
+```python
+# indie:lang_version = 5
+# Profit Maximizer (PMax) — Indie port
+# Original Pine Script v4 by KivancOzbilgic (Mozilla Public License 2.0)
+# Migration notes:
+#   Logic ported 1:1: moving average (SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA/TSF) + ATR trailing stop, direction flip, crossing signals
+#   The two Pine fills (long/short highlighter) are merged into one dynamic-color fill
+#   alertcondition() — no Indie equivalent; use platform alerts on lines
+
+from math import nan, isnan, ceil, floor
+from indie import indicator, param, plot, MainContext, color, source, format, MutSeriesF
+from indie.algorithms import Sma, Ema, Wma, Atr, Tr, LinReg
+
+@indicator('Profit Maximizer', overlay_main_pane=True, format=format.PRICE, precision=2)
+@param.source('src', default=source.HL2, title='Source')
+@param.int('periods', default=10, min=1, title='ATR Length')
+@param.float('multiplier', default=3.0, min=0.1, step=0.1, title='ATR Multiplier')
+@param.str('mav', default='EMA', title='Moving Average Type: SMA/EMA/WMA/TMA/VAR/WWMA/ZLEMA/TSF')
+@param.int('length', default=10, min=1, title='Moving Average Length')
+@param.bool('change_atr', default=True, title='Change ATR Calculation Method ?')
+@param.bool('normalize', default=False, title='Normalize ATR ?')
+@param.bool('showsupport', default=True, title='Show Moving Average?')
+@param.bool('showsignalsk', default=True, title='Show Crossing Signals?')
+@param.bool('showsignalsc', default=False, title='Show Price/Pmax Crossing Signals?')
+@param.bool('highlighting', default=True, title='Highlighter On/Off ?')
+@plot.line('mavg_line', color=color.rgba(5, 133, 225, 1.0), line_width=2, title='Moving Avg Line')
+@plot.line('pmax', color=color.RED, line_width=2, title='PMax')
+@plot.line('ohlc4_hidden', color=color.TRANSPARENT, line_width=1, title='OHLC4')
+@plot.fill('ohlc4_hidden', 'pmax', id='trend_fill')
+@plot.marker('buy_k', color=color.GREEN, style=plot.marker_style.LABEL)
+@plot.marker('sell_k', color=color.RED, style=plot.marker_style.LABEL)
+@plot.marker('buy_c', color=color.rgba(15, 24, 191, 1.0), style=plot.marker_style.LABEL)
+@plot.marker('sell_c', color=color.rgba(15, 24, 191, 1.0), style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, src, periods, multiplier, mav, length, change_atr, normalize, showsupport,
+             showsignalsk, showsignalsc, highlighting):
+        src_val: float = src[0]
+        src_prev: float = src[1]
+
+        atr_rma: float = Atr.new(periods)[0]
+        atr_sma: float = Sma.new(Tr.new(), periods)[0]
+        atr: float = atr_rma if change_atr else atr_sma
+
+        sma_s = Sma.new(src, length)
+        ema_s = Ema.new(src, length)
+        wma_s = Wma.new(src, length)
+        half: int = max(1, int(ceil(length / 2.0)))
+        half2: int = max(1, int(floor(length / 2.0)) + 1)
+        tma1_s = Sma.new(src, half)
+        tma_s = Sma.new(tma1_s, half2)
+        lrc: float = LinReg.new(src, length=length, offset=0)[0]
+        lrc1: float = LinReg.new(src, length=length, offset=1)[0]
+        tsf: float = lrc + (lrc - lrc1)
+
+        # VAR
+        valpha: float = 2.0 / (length + 1)
+        vud1: float = (src_val - src_prev) if src_val > src_prev else 0.0
+        vdd1: float = (src_prev - src_val) if src_val < src_prev else 0.0
+        vud_s = MutSeriesF.new(vud1)
+        vdd_s = MutSeriesF.new(vdd1)
+        vud_sum: float = Sma.new(vud_s, 9)[0] * 9.0
+        vdd_sum: float = Sma.new(vdd_s, 9)[0] * 9.0
+        vden: float = vud_sum + vdd_sum
+        vcmo: float = (vud_sum - vdd_sum) / vden if (not isnan(vden) and vden != 0.0) else 0.0
+        var_s = MutSeriesF.new(0.0)
+        var_prev: float = var_s[1] if not isnan(var_s[1]) else 0.0
+        var_s[0] = valpha * abs(vcmo) * src_val + (1.0 - valpha * abs(vcmo)) * var_prev
+
+        # WWMA
+        wwalpha: float = 1.0 / length
+        wwma_s = MutSeriesF.new(0.0)
+        wwma_prev: float = wwma_s[1] if not isnan(wwma_s[1]) else 0.0
+        wwma_s[0] = wwalpha * src_val + (1.0 - wwalpha) * wwma_prev
+
+        # ZLEMA
+        zxlag: int = length // 2 if length % 2 == 0 else (length - 1) // 2
+        zx_s = MutSeriesF.new(src_val + (src_val - src[zxlag]))
+        zlema_s = Ema.new(zx_s, length)
+
+        mavg: float = ema_s[0]
+        if mav == 'SMA':
+            mavg = sma_s[0]
+        elif mav == 'WMA':
+            mavg = wma_s[0]
+        elif mav == 'TMA':
+            mavg = tma_s[0]
+        elif mav == 'VAR':
+            mavg = var_s[0]
+        elif mav == 'WWMA':
+            mavg = wwma_s[0]
+        elif mav == 'ZLEMA':
+            mavg = zlema_s[0]
+        elif mav == 'TSF':
+            mavg = tsf
+        mavg_s = MutSeriesF.new(mavg)
+        mavg_prev: float = mavg_s[1]
+
+        # ATR trailing stop
+        off: float = (multiplier * atr / self.close[0]) if normalize else (multiplier * atr)
+        long0: float = mavg - off
+        short0: float = mavg + off
+        ls_s = MutSeriesF.new(long0)
+        ss_s = MutSeriesF.new(short0)
+        long_prev: float = ls_s[1] if not isnan(ls_s[1]) else long0
+        short_prev: float = ss_s[1] if not isnan(ss_s[1]) else short0
+        ls_s[0] = max(long0, long_prev) if mavg > long_prev else long0
+        ss_s[0] = min(short0, short_prev) if mavg < short_prev else short0
+
+        dir_s = MutSeriesF.new(1.0)
+        dir_prev: float = dir_s[1] if not isnan(dir_s[1]) else 1.0
+        if dir_prev == -1.0 and mavg > short_prev:
+            dir_s[0] = 1.0
+        elif dir_prev == 1.0 and mavg < long_prev:
+            dir_s[0] = -1.0
+        else:
+            dir_s[0] = dir_prev
+
+        pmax: float = ls_s[0] if dir_s[0] == 1.0 else ss_s[0]
+        pm_s = MutSeriesF.new(pmax)
+        pm_prev: float = pm_s[1]
+
+        buy_k: bool = mavg > pmax and mavg_prev <= pm_prev
+        sell_k: bool = mavg < pmax and mavg_prev >= pm_prev
+        buy_c: bool = src_val > pmax and src_prev <= pm_prev
+        sell_c: bool = src_val < pmax and src_prev >= pm_prev
+
+        fill_c = color.TRANSPARENT
+        if highlighting:
+            if mavg > pmax:
+                fill_c = color.rgba(0, 128, 0, 0.1)
+            elif mavg < pmax:
+                fill_c = color.rgba(255, 0, 0, 0.1)
+        ohlc4: float = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4.0
+
+        return (
+            plot.Line(mavg if showsupport else nan),
+            plot.Line(pmax),
+            plot.Line(ohlc4),
+            plot.Fill(fill_c),
+            plot.Marker(pmax * 0.995 if (buy_k and showsignalsk) else nan, text='Buy'),
+            plot.Marker(pmax * 1.005 if (sell_k and showsignalsk) else nan, text='Sell'),
+            plot.Marker(pmax * 0.995 if (buy_c and showsignalsc) else nan, text='Buy'),
+            plot.Marker(pmax * 1.005 if (sell_c and showsignalsc) else nan, text='Sell'),
+        )
+```
+

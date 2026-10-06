@@ -1,0 +1,86 @@
+# indie:lang_version = 5
+# Divergence Indicator (any oscillator) — Indie port
+# Original Pine Script v4 by yatrader2 (modification of the TradingView built-in "Divergence Indicator")
+# Migration notes:
+#   Logic ported 1:1: pivots on the chosen source, comparison with the previous pivot (valuewhen ... 1),
+#   range window (barssince), regular and hidden bullish/bearish divergences, plots shifted by -lookback-right
+#   "Delay plot until candle is closed" is not ported (it only matters on the live bar)
+#   Line colour is the divergence colour only where a divergence is found, otherwise transparent (as in the original)
+
+from math import nan, isnan
+from indie import indicator, param, plot, MainContext, color, source, MutSeriesF
+from indie.algorithms import PivotHighLow
+
+@indicator('Divergence Indicator (any oscillator)', overlay_main_pane=True)
+@param.bool('overlay_main', default=False, title='Plot on price (rather than on indicator)')
+@param.source('osc', default=source.OHLC4, title='Indicator')
+@param.int('lb_r', default=5, min=1, title='Pivot Lookback Right')
+@param.int('lb_l', default=5, min=1, title='Pivot Lookback Left')
+@param.int('range_upper', default=60, min=1, title='Max of Lookback Range')
+@param.int('range_lower', default=5, min=0, title='Min of Lookback Range')
+@param.bool('plot_bull', default=True, title='Plot Bullish')
+@param.bool('plot_hidden_bull', default=False, title='Plot Hidden Bullish')
+@param.bool('plot_bear', default=True, title='Plot Bearish')
+@param.bool('plot_hidden_bear', default=False, title='Plot Hidden Bearish')
+@plot.line('reg_bull', color=color.rgba(76, 175, 80, 1.0), line_width=2, title='Regular Bullish')
+@plot.marker('reg_bull_lbl', color=color.rgba(76, 175, 80, 1.0), style=plot.marker_style.LABEL)
+@plot.line('hid_bull', color=color.rgba(76, 175, 80, 0.2), line_width=2, title='Hidden Bullish')
+@plot.marker('hid_bull_lbl', color=color.rgba(76, 175, 80, 1.0), style=plot.marker_style.LABEL)
+@plot.line('reg_bear', color=color.rgba(255, 82, 82, 1.0), line_width=2, title='Regular Bearish')
+@plot.marker('reg_bear_lbl', color=color.rgba(255, 82, 82, 1.0), style=plot.marker_style.LABEL)
+@plot.line('hid_bear', color=color.rgba(255, 82, 82, 0.2), line_width=2, title='Hidden Bearish')
+@plot.marker('hid_bear_lbl', color=color.rgba(255, 82, 82, 1.0), style=plot.marker_style.LABEL)
+class Main(MainContext):
+    def calc(self, overlay_main, osc, lb_r, lb_l, range_upper, range_lower, plot_bull,
+             plot_hidden_bull, plot_bear, plot_hidden_bear):
+        ph, pl = PivotHighLow.new(osc, left_bars=lb_l, right_bars=lb_r)
+        pl_found: bool = not isnan(pl[0])
+        ph_found: bool = not isnan(ph[0])
+
+        osc_r: float = osc[lb_r]
+        low_r: float = self.low[lb_r]
+        high_r: float = self.high[lb_r]
+
+        # valuewhen(found, x, 1) = value at the previous pivot: the state before this bar's update
+        pl_osc_s = MutSeriesF.new(nan)
+        pl_low_s = MutSeriesF.new(nan)
+        ph_osc_s = MutSeriesF.new(nan)
+        ph_high_s = MutSeriesF.new(nan)
+        prev_pl_osc: float = pl_osc_s[1]
+        prev_pl_low: float = pl_low_s[1]
+        prev_ph_osc: float = ph_osc_s[1]
+        prev_ph_high: float = ph_high_s[1]
+        pl_osc_s[0] = osc_r if pl_found else prev_pl_osc
+        pl_low_s[0] = low_r if pl_found else prev_pl_low
+        ph_osc_s[0] = osc_r if ph_found else prev_ph_osc
+        ph_high_s[0] = high_r if ph_found else prev_ph_high
+
+        # _inRange(found[1]): barssince(found[1]) within [range_lower, range_upper]
+        pf_s = MutSeriesF.new(1.0 if pl_found else 0.0)
+        hf_s = MutSeriesF.new(1.0 if ph_found else 0.0)
+        bs_pl_s = MutSeriesF.new(nan)
+        bs_ph_s = MutSeriesF.new(nan)
+        bs_pl_s[0] = 0.0 if pf_s[1] == 1.0 else bs_pl_s[1] + 1.0
+        bs_ph_s[0] = 0.0 if hf_s[1] == 1.0 else bs_ph_s[1] + 1.0
+        in_range_pl: bool = range_lower <= bs_pl_s[0] and bs_pl_s[0] <= range_upper
+        in_range_ph: bool = range_lower <= bs_ph_s[0] and bs_ph_s[0] <= range_upper
+
+        bull: bool = plot_bull and low_r < prev_pl_low and (osc_r > prev_pl_osc and in_range_pl) and pl_found
+        hid_bull: bool = plot_hidden_bull and low_r > prev_pl_low and (osc_r < prev_pl_osc and in_range_pl) and pl_found
+        bear: bool = plot_bear and high_r > prev_ph_high and (osc_r < prev_ph_osc and in_range_ph) and ph_found
+        hid_bear: bool = plot_hidden_bear and high_r < prev_ph_high and (osc_r > prev_ph_osc and in_range_ph) and ph_found
+
+        low_v: float = low_r if overlay_main else osc_r
+        high_v: float = high_r if overlay_main else osc_r
+        none_c = color.TRANSPARENT
+
+        return (
+            plot.Line(low_v if pl_found else nan, offset=-lb_r, color=color.rgba(76, 175, 80, 1.0) if bull else none_c),
+            plot.Marker(low_v if bull else nan, text=' Bull ', offset=-lb_r),
+            plot.Line(low_v if pl_found else nan, offset=-lb_r, color=color.rgba(76, 175, 80, 0.2) if hid_bull else none_c),
+            plot.Marker(low_v if hid_bull else nan, text=' H Bull ', offset=-lb_r),
+            plot.Line(high_v if ph_found else nan, offset=-lb_r, color=color.rgba(255, 82, 82, 1.0) if bear else none_c),
+            plot.Marker(high_v if bear else nan, text=' Bear ', offset=-lb_r),
+            plot.Line(high_v if ph_found else nan, offset=-lb_r, color=color.rgba(255, 82, 82, 0.2) if hid_bear else none_c),
+            plot.Marker(high_v if hid_bear else nan, text=' H Bear ', offset=-lb_r),
+        )

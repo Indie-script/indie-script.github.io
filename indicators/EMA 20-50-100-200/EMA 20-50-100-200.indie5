@@ -1,0 +1,22 @@
+# indie:lang_version = 5
+# EMA 20/50/100/200 — Indie port
+# Original Pine Script by drsweets (open_no_auth)
+# Migration notes:
+#   Four EMAs of close, lengths fixed as in the original (no inputs)
+
+from indie import indicator, plot, MainContext, color
+from indie.algorithms import Ema
+
+@indicator('EMA 20/50/100/200', overlay_main_pane=True)
+@plot.line('ema20',  color=color.rgba(255, 0, 0,   1.0), line_width=1, title='EMA 20')
+@plot.line('ema50',  color=color.rgba(255, 152, 0, 1.0), line_width=1, title='EMA 50')
+@plot.line('ema100', color=color.rgba(0, 188, 212, 1.0), line_width=1, title='EMA 100')
+@plot.line('ema200', color=color.rgba(33, 150, 243, 1.0), line_width=1, title='EMA 200')
+class Main(MainContext):
+    def calc(self):
+        return (
+            plot.Line(Ema.new(self.close, 20)[0]),
+            plot.Line(Ema.new(self.close, 50)[0]),
+            plot.Line(Ema.new(self.close, 100)[0]),
+            plot.Line(Ema.new(self.close, 200)[0]),
+        )
