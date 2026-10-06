@@ -1,0 +1,67 @@
+{%- comment -%}
+  Documentation article (docs/*.md): hero header, lede, reading column.
+  The first <h1> of the markdown moves into the hero, and so does the first paragraph
+  right after it (it becomes the lede). The rest stays in [data-content] so anchors,
+  the table of contents and code blocks work as everywhere else.
+  Expects the variables of doc.html (content, words, mins, doc_meta, ...).
+{%- endcomment -%}
+{%- assign dc = content | strip -%}
+{%- assign dc_head = dc | slice: 0, 3 -%}
+{%- assign hero_title = page_title -%}
+{%- assign hero_h1_id = "" -%}
+{%- assign dc_body = dc -%}
+{%- if dc_head == "<h1" -%}
+  {%- assign h1_parts = dc | split: "</h1>" -%}
+  {%- assign h1_open = h1_parts[0] | split: ">" | first -%}
+  {%- assign hero_title = h1_parts[0] | remove_first: h1_open | remove_first: ">" | strip_html | strip -%}
+  {%- assign dc_body = dc | remove_first: h1_parts[0] | remove_first: "</h1>" | strip -%}
+{%- endif -%}
+{%- assign lede_html = "" -%}
+{%- assign dc_body_head = dc_body | slice: 0, 3 -%}
+{%- if dc_body_head == "<p>" -%}
+  {%- assign p_parts = dc_body | split: "</p>" -%}
+  {%- assign lede_html = p_parts[0] | remove_first: "<p>" -%}
+  {%- assign dc_body = dc_body | remove_first: p_parts[0] | remove_first: "</p>" -%}
+{%- endif -%}
+{%- assign doc_eyebrow = doc_meta.group | default: "Documentation" -%}
+<article class="doc">
+  <header class="doc-hero">
+    <div class="doc-hero-in">
+      <div class="doc-eyebrow">
+        <span class="eyebrow">{% if doc_meta.icon %}{% include icon.html name=doc_meta.icon %}{% endif %}{{ doc_eyebrow | escape }}</span>
+        <span class="doc-chip">{% include icon.html name="verified" px=14 %}Indie v{{ portal.lang_version }}</span>
+      </div>
+      <h1 class="doc-title">{{ hero_title }}</h1>
+      {%- if lede_html != "" %}
+      <p class="doc-lede">{{ lede_html }}</p>
+      {%- elsif doc_meta.summary %}
+      <p class="doc-lede">{{ doc_meta.summary | escape }}</p>
+      {%- endif %}
+      <div class="doc-meta">
+        <span class="doc-meta-item">{% include icon.html name="clock" %}{{ mins }} min read</span>
+        <span class="doc-meta-item">{% include icon.html name="file" %}<span data-num>{{ words }}</span> words</span>
+        <span class="doc-meta-item">{% include icon.html name="check-circle" %}Verified {{ portal.verified }}</span>
+        <div class="doc-actions">
+          <button class="btn btn-sm btn-icon" type="button" data-wide-toggle title="Toggle wide layout (w)" aria-label="Toggle wide layout">{% include icon.html name="screen-full" %}</button>
+          <div class="btn-group">
+            <a class="btn btn-sm" href="{{ repo_url }}/blob/{{ portal.branch }}/{{ src_path }}?plain=1" rel="nofollow noopener" title="View markdown source">{% include icon.html name="code" %}<span>Source</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
+            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <details class="toc-inline" data-toc-inline hidden>
+    <summary>{% include icon.html name="list-unordered" %}<span>On this page</span>{% include icon.html name="chevron-down" class="chev" px=12 %}</summary>
+    <nav class="toc" aria-label="On this page"></nav>
+  </details>
+  <div class="markdown-body doc-body" data-content>
+    {{ dc_body }}
+  </div>
+  <footer class="doc-foot">
+    <a href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener">{% include icon.html name="pencil" %}Edit this page on GitHub</a>
+    <a href="{{ repo_url }}/issues/new?title={{ 'Docs: ' | append: page.path | url_encode }}" rel="nofollow noopener">{% include icon.html name="issue-opened" %}Report a problem</a>
+    <span class="doc-foot-note">Community documentation, checked against the Indie language reference.</span>
+  </footer>
+</article>

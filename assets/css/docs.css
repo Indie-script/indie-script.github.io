@@ -1,0 +1,172 @@
+/* Indie Script developer portal - documentation articles (docs/*.md)
+   Hero header, reading column, callouts, tables and code windows.
+   Built on the tokens of portal.css, so light, dark and dimmed themes all follow. */
+
+/* ---------- hero ---------- */
+.doc { min-width: 0; margin-bottom: 24px; }
+.doc-hero {
+  position: relative; margin: 0 0 12px; padding: 44px 48px 0; overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(760px 320px at -4% -30%, var(--hero-a), transparent 72%),
+    radial-gradient(680px 300px at 104% -10%, var(--hero-b), transparent 70%),
+    var(--bg-subtle);
+  border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm);
+}
+.doc-hero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background-image: radial-gradient(color-mix(in srgb, var(--fg-subtle) 55%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(200deg, #000 0%, transparent 62%);
+  mask-image: linear-gradient(200deg, #000 0%, transparent 62%);
+}
+.doc-hero::after {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--c-indie), transparent); opacity: .9;
+}
+.doc-hero-in { max-width: 860px; }
+.doc-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.doc-eyebrow .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+.doc-eyebrow .eyebrow .octicon { color: var(--c-indie); }
+.doc-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font: 600 11px/18px var(--font-mono); letter-spacing: .02em;
+  color: var(--c-indie); background: color-mix(in srgb, var(--c-indie) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-indie) 32%, transparent); border-radius: 2em;
+}
+.doc-chip .octicon { color: currentColor; }
+.doc-title {
+  margin: 0; max-width: 24ch; font-size: clamp(32px, 3.9vw, 50px); font-weight: 650; line-height: 1.08; letter-spacing: -.03em;
+  text-wrap: balance; border: 0; padding: 0;
+}
+.doc-lede { margin: 18px 0 0; max-width: 64ch; font-size: 19px; line-height: 1.6; color: var(--fg-muted); text-wrap: pretty; }
+.doc-lede a { color: var(--accent); }
+.doc-lede code { font-size: .86em; }
+.doc-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; margin: 32px -48px 0; padding: 14px 48px;
+  font-size: 13px; color: var(--fg-muted); border-top: 1px solid var(--border-muted);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.doc-meta-item { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.doc-meta-item .octicon { color: var(--fg-subtle); }
+.doc-meta-item:nth-child(3) .octicon { color: var(--success); }
+.doc-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* ---------- reading column ---------- */
+.doc-body { padding: 36px 8px 8px; font-size: 16.5px; line-height: 1.75; color: var(--fg); }
+.doc-body > p, .doc-body > ul, .doc-body > ol, .doc-body > blockquote:not(.callout), .doc-body > dl { max-width: 78ch; }
+.doc-body p, .doc-body ul, .doc-body ol { margin-bottom: 20px; }
+.doc-body li + li { margin-top: .4em; }
+.doc-body ul { list-style: none; padding-left: 1.4em; }
+.doc-body ul > li { position: relative; }
+.doc-body ul > li::before {
+  content: ""; position: absolute; left: -1.05em; top: .78em; width: 5px; height: 5px; border-radius: 50%;
+  background: color-mix(in srgb, var(--c-indie) 70%, var(--fg-subtle));
+}
+.doc-body ul > li.task-list-item::before { display: none; }
+.doc-body ol { padding-left: 1.6em; }
+.doc-body ol > li::marker { color: var(--fg-subtle); font-weight: 600; font-variant-numeric: tabular-nums; }
+.doc-body strong { font-weight: 650; }
+.doc-body a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .22em; text-decoration-color: color-mix(in srgb, var(--accent) 38%, transparent); transition: text-decoration-color .12s; }
+.doc-body a:hover { text-decoration-color: currentColor; }
+.doc-body :is(h1, h2, h3, h4) a.anchor { text-decoration: none; }
+
+.doc-body h2, .doc-body h3, .doc-body h4 { letter-spacing: -.018em; text-wrap: balance; }
+.doc-body h2 { margin: 64px 0 20px; padding: 36px 0 0; font-size: 1.85em; font-weight: 650; line-height: 1.2; border: 0; border-top: 1px solid var(--border-muted); }
+.doc-body > h2:first-child, .doc-body > hr + h2 { margin-top: 24px; padding-top: 0; border-top: 0; }
+.doc-body h3 { margin: 40px 0 14px; font-size: 1.3em; font-weight: 650; line-height: 1.3; }
+.doc-body h4 { margin: 28px 0 10px; font-size: 1.02em; font-weight: 650; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .06em; }
+.doc-body h2 + h3 { margin-top: 24px; }
+.doc-body hr { height: 1px; margin: 48px 0; background: linear-gradient(90deg, transparent, var(--border) 18%, var(--border) 82%, transparent); border-radius: 0; }
+.doc-body .anchor { left: -28px; width: 28px; }
+
+/* inline code and keys */
+.doc-body code { padding: .15em .45em; font-size: .86em; color: var(--fg); background: var(--bg-subtle); border: 1px solid var(--border-muted); border-radius: 6px; }
+.doc-body pre code, .doc-body .codeblock code { padding: 0; background: transparent; border: 0; }
+.doc-body kbd { display: inline-block; padding: 1px 7px; font: 600 .82em/1.5 var(--font-mono); color: var(--fg); background: var(--bg-subtle); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; }
+
+/* plain quotes */
+.doc-body blockquote:not(.callout) { padding: 2px 0 2px 20px; color: var(--fg-muted); border-left: 2px solid color-mix(in srgb, var(--c-indie) 55%, var(--border)); }
+.doc-body blockquote:not(.callout) > :last-child { margin-bottom: 0; }
+
+/* images */
+.doc-body img { border-radius: 12px; box-shadow: var(--shadow-md); }
+
+/* ---------- callouts (GitHub alert syntax, built by docs.js) ---------- */
+.callout {
+  --co: var(--accent);
+  position: relative; margin: 28px 0; padding: 16px 20px 16px 22px; max-width: none; color: var(--fg); font-size: .95em; line-height: 1.65;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--co) 9%, var(--bg)), color-mix(in srgb, var(--co) 2%, var(--bg)) 70%);
+  border: 1px solid color-mix(in srgb, var(--co) 26%, var(--border)); border-radius: 12px;
+}
+.callout::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--co); }
+.callout > :last-child { margin-bottom: 0; }
+.callout p { margin-bottom: 10px; }
+.callout-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--co); }
+.callout-title .octicon { color: var(--co); }
+.callout-tip { --co: var(--success); }
+.callout-important { --co: var(--done); }
+.callout-warning { --co: var(--attention); }
+.callout-caution { --co: var(--danger); }
+.callout code { background: color-mix(in srgb, var(--co) 8%, var(--bg-subtle)); }
+
+/* ---------- tables: spec sheets ---------- */
+.table-wrap { margin: 28px 0; overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); box-shadow: var(--shadow-sm); scrollbar-width: thin; }
+.doc-body table { display: table; width: 100%; max-width: none; margin: 0; overflow: visible; border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 1.55; }
+.doc-body th, .doc-body td { padding: 11px 16px; border: 0; border-bottom: 1px solid var(--border-muted); vertical-align: top; }
+.doc-body th { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-muted); background: var(--bg-subtle); white-space: nowrap; border-bottom: 1px solid var(--border); }
+.doc-body tr, .doc-body tr:nth-child(2n) { background: transparent; border: 0; }
+.doc-body tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.doc-body tbody tr:last-child td { border-bottom: 0; }
+.doc-body td:first-child { font-weight: 600; }
+.doc-body td code, .doc-body th code { font-size: .88em; white-space: pre-wrap; }
+.doc-body td p:last-child { margin-bottom: 0; }
+
+/* ---------- code windows ---------- */
+.doc-body .codeblock { margin: 28px 0; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); background: var(--bg-subtle); }
+.doc-body .codeblock-bar { justify-content: flex-start; gap: 12px; padding: 0 8px 0 14px; min-height: 40px; background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
+.doc-body .codeblock-bar::before {
+  content: ""; flex: none; width: 10px; height: 10px; margin-right: 32px; border-radius: 50%; background: var(--border);
+  box-shadow: 16px 0 0 var(--border), 32px 0 0 var(--border);
+}
+.doc-body .codeblock-lang { font-size: 12px; letter-spacing: .01em; }
+.doc-body .codeblock-copy { margin-left: auto; opacity: .75; }
+.doc-body .codeblock:hover .codeblock-copy, .doc-body .codeblock-copy:focus-visible { opacity: 1; }
+.doc-body .codeblock pre { padding: 18px 22px; font-size: 13.5px; line-height: 1.7; background: var(--bg); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-subtle); }
+.dot-indie { background: var(--c-indie); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-indie) 22%, transparent); }
+.dot-pine { background: var(--c-pine); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-pine) 22%, transparent); }
+
+/* ---------- footer + pager ---------- */
+.doc-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 56px; padding: 18px 8px 0; font-size: 13px; border-top: 1px solid var(--border-muted); }
+.doc-foot a { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-muted); }
+.doc-foot a:hover { color: var(--accent); }
+.doc-foot-note { margin-left: auto; color: var(--fg-subtle); }
+.doc ~ .pager { margin-top: 8px; }
+.doc ~ .pager .pager-link { padding: 18px 22px; border-radius: 12px; background: var(--bg-subtle); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.doc ~ .pager .pager-link:hover { border-color: color-mix(in srgb, var(--c-indie) 60%, var(--border)); box-shadow: 0 8px 28px color-mix(in srgb, var(--c-indie) 14%, transparent); transform: translateY(-1px); }
+.doc ~ .pager .pager-title { font-size: 16px; color: var(--fg); }
+
+/* ---------- right rail refinements for docs ---------- */
+.k-doc .rail-box h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-muted); }
+.k-doc .toc a { border-left-width: 1px; font-size: 13px; }
+.k-doc .toc a.active { background: transparent; color: var(--accent); border-left-color: var(--c-indie); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1011px) {
+  .doc-hero { padding: 32px 28px 0; border-radius: 14px; }
+  .doc-meta { margin: 28px -28px 0; padding: 12px 28px; }
+}
+@media (max-width: 767px) {
+  .doc-hero { padding: 24px 18px 0; }
+  .doc-lede { font-size: 17px; }
+  .doc-meta { margin: 22px -18px 0; padding: 12px 18px; gap: 6px 16px; }
+  .doc-actions { margin-left: 0; width: 100%; }
+  .doc-actions .btn span { display: inline; }
+  .doc-body { padding: 24px 2px 0; font-size: 16px; }
+  .doc-body h2 { margin-top: 48px; padding-top: 28px; font-size: 1.55em; }
+  .doc-body .codeblock pre { padding: 14px 16px; font-size: 13px; }
+  .doc-foot-note { margin-left: 0; width: 100%; }
+}
+@media print {
+  .doc-hero { background: none; border: 0; box-shadow: none; }
+  .doc-hero::before, .doc-hero::after, .doc-actions { display: none; }
+}

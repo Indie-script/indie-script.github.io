@@ -28,6 +28,9 @@
       <span class="crumbs-current" aria-current="page">{{ nav_label | strip_html }}</span>
     </nav>
 
+    {%- if section == "docs" %}
+    {% include doc-article.html %}
+    {%- else %}
     <article class="filebox">
       <header class="filebox-head">
         <div class="filebox-path">
@@ -60,6 +63,7 @@
         <a href="{{ repo_url }}/issues/new?title={{ 'Docs: ' | append: page.path | url_encode }}" rel="nofollow noopener">{% include icon.html name="issue-opened" %}Report a problem</a>
       </footer>
     </article>
+    {%- endif %}
 
     {%- if prev_doc or next_doc %}
     <nav class="pager" aria-label="Docs pagination">

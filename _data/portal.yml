@@ -7,6 +7,10 @@ tagline: Developer Portal
 repo: Indie-script/indie-script.github.io
 branch: main
 
+# Language version the docs are checked against, and when (shown in every docs article header).
+lang_version: "5.19"
+verified: "Oct 2026"
+
 # Order here = order in menus, sidebar, cards and prev/next pager.
 #   file    - file name inside docs/
 #   label   - short name for navigation
