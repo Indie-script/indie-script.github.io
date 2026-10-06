@@ -179,7 +179,7 @@ This site keeps a practical, hands-on Indie reference. Pull requests, real indic
 
 ## License
 
-This guide is an **unofficial community project** and is not affiliated with TakeProfit. Licensed under MIT. Content may be freely reused, forked or modified.
+This guide is an **unofficial community project**, licensed under the [MIT License](https://github.com/Indie-script/indie-script.github.io/blob/main/LICENSE). Content may be freely reused, forked or modified.
 
 Happy scripting with Indie Script!
 
