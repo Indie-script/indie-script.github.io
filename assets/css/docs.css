@@ -159,6 +159,7 @@
 .doc-body .md-card code { font-size: .84em; }
 
 .doc-body .md-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 20px 0 8px; max-width: none; }
+.doc-body .md-links-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .doc-body a.md-link {
   display: flex; flex-direction: column; gap: 2px; padding: 14px 40px 14px 18px; position: relative;
   color: var(--fg); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; text-decoration: none;
@@ -195,7 +196,7 @@
 }
 @media (max-width: 767px) {
   .readme .doc-body { padding: 8px 18px 28px; }
-  .doc-body .md-cards, .doc-body .md-cards-2 { grid-template-columns: minmax(0, 1fr); }
+  .doc-body .md-cards, .doc-body .md-cards-2, .doc-body .md-links-2 { grid-template-columns: minmax(0, 1fr); }
   .doc-hero { padding: 24px 18px 0; }
   .doc-lede { font-size: 17px; }
   .doc-meta { margin: 22px -18px 0; padding: 12px 18px; gap: 6px 16px; }

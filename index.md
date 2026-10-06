@@ -138,7 +138,7 @@ If you are coming from **TradingView's Pine Script™**, Indie feels familiar in
 
 ## Indie Script language resources
 
-<div class="md-links">
+<div class="md-links md-links-2">
   <a class="md-link" href="https://takeprofit.com/docs/indie/Overview"><strong>Official Indie docs</strong><span>The reference for the language</span></a>
   <a class="md-link" href="https://takeprofit.com/docs/indie/Library-reference-overview"><strong>Library reference</strong><span>Every package, class and decorator</span></a>
   <a class="md-link" href="https://takeprofit.com/docs/indie/Changelog"><strong>Changelog</strong><span>Language versions and migrations</span></a>
@@ -147,7 +147,7 @@ If you are coming from **TradingView's Pine Script™**, Indie feels familiar in
 
 ## Learn on this site
 
-<div class="md-links">
+<div class="md-links md-links-2">
   <a class="md-link" href="{{ '/docs/complete-guide-to-indie-quickstart.html' | relative_url }}"><strong>Quickstart</strong><span>From a minimal indicator to a strategy</span></a>
   <a class="md-link" href="{{ '/docs/' | relative_url }}"><strong>Pine → Indie cheat sheet</strong><span>Construct-by-construct mapping</span></a>
   <a class="md-link" href="{{ '/docs/indie-FAQ.html' | relative_url }}"><strong>FAQ and solutions</strong><span>Validated answers with working code</span></a>
