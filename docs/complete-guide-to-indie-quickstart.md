@@ -40,7 +40,7 @@ See [What you can build](https://takeprofit.com/docs/indie/What-you-can-build) i
 
 Indie code is written in the **Indicators Code Editor** (IDE) widget. Add the widget to your workspace, open a chart, paste the code and press **Add to Chart**. The editor keeps version history, and a **Publish** button is available once the script is saved under your indicators. Details are in the [IDE guide](https://takeprofit.com/docs/guide/platform/ide-widget/IDE-overview).
 
-You can also describe an indicator in plain language and let an AI assistant write and compile it. See [Vibe-Coding Indie Indicators with AI and MCP](Vibe-Coding%20Indie%20Indicators%20AI%20with%20MCP.md).
+You can also describe an indicator in plain language and let an AI assistant write and compile it. See [Vibe-Coding Indie Indicators with AI and MCP](Vibe-Coding%20Indie%20Indicators%20AI%20with%20MCP.html).
 
 ## A minimal indicator
 
@@ -261,4 +261,4 @@ Scripts that use external CSV or feed data cannot be published. They stay privat
 - [Library reference](https://takeprofit.com/docs/indie/Library-reference-overview): packages, classes and decorators.
 - [Code examples](https://takeprofit.com/docs/indie/Code-examples/educational-indicators): longer indicators and strategies.
 - [Indie changelog](https://takeprofit.com/docs/indie/Changelog): what changed in each version.
-- [Pine Script to Indie cheat sheet](README.md) and [FAQ](indie-FAQ.md) on this site.
+- [Pine Script to Indie cheat sheet](/docs/) and [FAQ](indie-FAQ.html) on this site.

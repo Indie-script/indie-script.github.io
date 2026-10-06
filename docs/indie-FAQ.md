@@ -712,4 +712,4 @@ A few more rules that cause first-try failures:
 - `calc_on` and `request_series` belong in `__init__`.
 - Importing `numpy`, `pandas` or other third-party libraries is not possible; Indie runs in a sandbox with its own small standard library.
 
-The full list of differences from Python is on [Indie vs. Python](https://takeprofit.com/docs/indie/Language-differences-with-Python). If you are coming from Pine Script, start with the [Pine Script to Indie cheat sheet](README.md).
+The full list of differences from Python is on [Indie vs. Python](https://takeprofit.com/docs/indie/Language-differences-with-Python). If you are coming from Pine Script, start with the [Pine Script to Indie cheat sheet](/docs/).

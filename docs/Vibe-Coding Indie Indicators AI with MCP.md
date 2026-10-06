@@ -255,5 +255,5 @@ A few things worth noticing, and worth checking in anything an assistant generat
 - [MCP Server Setup Guide](https://takeprofit.com/docs/guide/platform/ai-assistant/Mcp-server-guide): official, with screenshots and the full tool descriptions.
 - [AI assistant in the IDE](https://takeprofit.com/docs/guide/platform/ai-assistant/AI-assistant-IDE): the built-in assistant, which also converts scripts from Pine Script or MQL5.
 - [Alerts via AI (MCP)](https://takeprofit.com/docs/guide/alerts/Alerts-overview#creating-alerts-via-ai-mcp): alert management details.
-- [Indie Quickstart](complete-guide-to-indie-quickstart.md): the language basics in this guide's style.
-- [Pine Script to Indie cheat sheet](README.md): a syntax comparison for conversions.
+- [Indie Quickstart](complete-guide-to-indie-quickstart.html): the language basics in this guide's style.
+- [Pine Script to Indie cheat sheet](/docs/): a syntax comparison for conversions.
