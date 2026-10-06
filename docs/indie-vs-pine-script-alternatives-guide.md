@@ -1,254 +1,432 @@
-# Indie vs Pine Script: A Developer's Complete Guide to Pine Script Alternatives (2026)
+# Indie vs Pine Script: A Developer's Guide to Pine Script Alternatives (2026)
 
-*Last updated: March 2026*
+Indie is the Python-style scripting language of the TakeProfit platform. Pine Script is the scripting language of TradingView. Both let you write custom indicators and trading strategies that run on the platform's servers. This guide compares them from a developer's point of view: syntax, strategies and backtesting, data access, tooling, AI support, publishing, and what it takes to move code from one to the other.
+
+> [!NOTE]
+> This is a community guide, not official documentation. For the authoritative Indie reference, use the [official Indie docs](https://takeprofit.com/docs/indie/Overview). Facts about TradingView and Pine Script reflect our understanding at the time of writing; check [TradingView's documentation](https://www.tradingview.com/pine-script-docs/) for current details.
 
 ## TL;DR
 
-Indie is the Python-based scripting language used in TakeProfit for building custom indicators and trading strategies. Pine Script is the proprietary scripting language locked to the TradingView platform. Both languages serve the same core purpose — letting traders create custom technical indicators and automated trading logic — but they differ significantly in syntax, development environment, pricing access, and long-term code stability.
+- **Indie** is a subset of Python plus decorators (`@indicator`, `@strategy`, `@param`, `@plot`). It runs sandboxed on TakeProfit's servers and covers indicators, strategies with backtesting, drawings and tables, multi-instrument and multi-timeframe data, and your own CSV or live-feed data.
+- **Pine Script** is TradingView's own language. It also runs on the platform's servers and has a much larger community, more tutorials, and a bigger library of published scripts.
+- **Indie is not indicator-only.** Strategies and backtesting arrived in early 2026 (Indie v5.10 and v5.11), and the language has kept growing since: dictionaries, table drawings, external data, lower-timeframe requests, new plot types, and AI/MCP tooling.
+- **Neither language is portable.** Moving between them means rewriting, though the logic usually translates well. TakeProfit's AI assistant can help convert Pine Script to Indie.
+- **Pricing and limits change.** This guide deliberately does not quote subscription prices. Check each platform's current pricing page.
 
-Indie's Python-dialect syntax is easier to learn for developers already familiar with Python. Pine Script benefits from a larger active community and more third-party resources. TakeProfit uses a single pricing plan ($20/month, $10/month annually) with a full range of features included, while TradingView uses tiered plans ranging from $14.95 to $59.95/month that progressively unlock capabilities. For traders searching for alternatives to Pine Script, Indie represents one of the most technically distinct options available in 2026. This guide breaks down every meaningful difference across platforms and languages that a developer needs to evaluate.
+> [!TIP]
+> If you already know Python and want to read the source of every built-in indicator, Indie is worth a look. If you live in TradingView's ecosystem and rely on its community scripts, Pine Script is the natural choice.
 
-### Key Insight
+## Indie vs Pine Script at a glance
 
-> Indie is a Python-dialect scripting language used in TakeProfit for building trading indicators and strategies. Pine Script is a proprietary language locked to the TradingView platform. Both are server-side executed and designed for traders who need custom analytics, but they differ in syntax foundation, pricing model, and developer tooling.
-> 
+| | Indie (TakeProfit) | Pine Script (TradingView) |
+| --- | --- | --- |
+| Language base | Subset of Python with decorators | Proprietary domain-specific language |
+| Where code runs | TakeProfit servers, sandboxed | TradingView servers |
+| Script types | Indicators and strategies | Indicators, strategies, libraries |
+| Backtesting | Yes, Strategy/Backtesting widget (since Feb 2026) | Yes, Strategy Tester |
+| Live trading from a strategy | Described in the Indie docs; check the platform docs for current venues | Via alerts and webhooks, or supported brokers |
+| Drawings | Lines, labels, rectangles, circles, triangles, channels, tables | Lines, labels, boxes, tables, polylines |
+| Other instruments and timeframes | `@sec_context` + `calc_on()`, including lower timeframes | `request.security()` and related `request.*` functions |
+| Your own data | External CSV and live WebSocket/SSE feeds (private scripts) | Limited to what `request.*` functions and seed data provide |
+| Volume Footprint / TPO data in scripts | Yes, profile requests in Indie | Check TradingView's current documentation |
+| Built-in indicators | Written in Indie, source is open, can be forked | Many are written in Pine; availability of source varies |
+| AI tooling | AI chat, IDE assistant, MCP server for Claude, Codex, Cursor, VS Code | Third-party tools and general-purpose LLMs |
+| Publishing | Marketplace, free or paid, with moderation | Public library and invite-only scripts |
+| Community size | Smaller, growing | Large and established |
 
----
+## What Is Indie?
 
-## What Is Indie? A Python-Based Alternative to Pine Script
+Indie is a technical analysis language and runtime built for TakeProfit. Every built-in indicator on the platform is written in Indie, and the source of open-source indicators can be opened in the platform's IDE as your own editable copy.
 
-Indie is a technical analysis-oriented programming language and runtime developed for the TakeProfit platform. TakeProfit is an analysis platform designed for stock traders, forex traders, crypto traders, and options traders who want a modern tool for traders that consolidates charting, indicator development, and strategy testing in one workspace. All built-in indicators on TakeProfit are implemented in Indie, and the platform includes an integrated IDE widget that allows users to create their own indicators and strategies.
+Indie is a subset of Python with added syntactic sugar: decorators such as `@indicator`, `@strategy`, `@algorithm`, `@param.int`, and `@plot.line` turn ordinary functions into classes that process series data behind the scenes. If you have written Python, you can read Indie quickly. It is still its own language, and code written in plain Python or Pine Script will not compile without changes.
 
-Indie is a dialect of Python. Specifically, Indie is a subset of Python language constructs with added syntactic sugar in the form of decorators such as `@indicator`, `@algorithm`, and `@strategy`. These decorators simplify common patterns in technical analysis code, turning functions into classes that process series data behind the scenes. Developers who already use Python for data processing or analytics can transition to Indie without learning a new proprietary syntax from scratch.
+Indie code runs in a sandbox on TakeProfit's servers. File and socket I/O are not allowed, and execution time and memory are limited. You cannot import numpy, pandas, or TA-Lib. What you can import is the `indie` package and its sub-packages (`indie.algorithms`, `indie.strategies`, `indie.plot`, `indie.drawings`, `indie.math`, `indie.color`, `indie.data`, `indie.schedule`), plus a few modules such as `dataclasses`, `datetime`, `math`, `statistics`, and `sortedcontainers`. See the [library reference](https://takeprofit.com/docs/indie/Library-reference-overview).
 
-Indie code runs in a sandboxed environment on TakeProfit's servers. This means file I/O, socket operations, and unrestricted memory usage are not permitted. Execution time and memory are also limited. Developers cannot currently import external Python libraries like numpy, pandas, or talib — though this is noted as a future growth area for connecting to external data sources. What developers can import today includes the core `indie` package, the `indie.algorithms` library (containing Sma, Ema, Rsi, Adx, Atr, BollingerBands, MACD, Sar, Vwap, and more), and limited functions from Python's `math` and `statistics` modules.
+The workflow is built into the platform: write code in the IDE widget, add the indicator to a chart, put a cloud alert on it, test a strategy in the Strategy/Backtesting widget, and publish the result to the Marketplace.
 
-[Screenshot placeholder: TakeProfit IDE widget open with a simple Indie indicator loaded, showing code editor on the left and chart output on the right]
+## What Is Pine Script?
 
-## What Is Pine Script? TradingView's Proprietary Scripting Language
+Pine Script is TradingView's proprietary scripting language for indicators, strategies, and libraries. Scripts run on TradingView's servers and cannot be exported to other platforms. The language is versioned (v5 and v6 are the recent ones), and each script declares its version on the first line, for example `//@version=6`. Older scripts keep their declared version; moving to a newer version usually requires code changes.
 
-Pine Script is TradingView's proprietary scripting language designed for creating custom indicators, strategies, and alerts within the TradingView ecosystem. Pine Script code can only be written, executed, and deployed inside TradingView — it cannot run on any other platform or be exported for use elsewhere. This platform lock-in is one of the primary reasons experienced traders and developers explore pine script alternatives.
+Pine's main strengths are its community and its ecosystem: years of tutorials, forum answers, open-source scripts, and third-party tooling. If you want to learn from a large body of existing examples, that matters.
 
-Pine Script is interpreted rather than compiled, which has been associated with performance bottlenecks when running multiple indicators with complex calculations. The language uses its own syntax that does not map directly to any general-purpose programming language, meaning skills learned using Pine Script have limited transferability outside TradingView. Tools like Pineify attempt to bridge this gap by converting or simplifying pine script code, but the fundamental platform limitations remain — code written for TradingView stays on TradingView.
+## Write Your First Indie Indicator
 
-Pine Script has gone through multiple version iterations (currently v5), and users have reported backward compatibility issues where scripts that previously worked began throwing runtime errors after platform updates. TradingView's built-in script editor has also been criticized by developers for lacking features such as word wrapping and modern debugging tools, pushing many toward exploring alternatives to Pine Script altogether.
+This section walks through four small scripts. All Indie samples in this guide were checked with the TakeProfit MCP `ValidateScript` tool (compile check, plus a quick runtime run on market data for most of them).
 
-### Key Insight
+### Step 1: Open the IDE widget
 
-> Indie uses Python-based syntax with decorators like `@indicator` and `@algorithm`, allowing developers with Python experience to write trading indicators without learning a new proprietary language from scratch. Pine Script uses its own proprietary syntax that is exclusive to TradingView.
-> 
+TakeProfit's workspace is built from widgets. Open the Widget Hub, add the IDE widget, and create a new indicator. See the [IDE overview](https://takeprofit.com/docs/guide/platform/ide-widget/IDE-overview) for details.
 
----
-
-## Why Your Choice of Trading Platforms and Languages Matters in 2026
-
-The scripting language a trader chooses determines far more than just syntax preferences. It defines which platform ecosystem they operate within, what trading tools they can access, how much they pay, and whether their skills transfer to other contexts. Across different platforms — TradingView, TakeProfit, NinjaTrader, thinkorswim, and MetaTrader — each scripting language carries its own tradeoffs for trading and backtesting workflows.
-
-Custom indicators and strategies are the backbone of systematic trading. Built-in indicators cover common use cases, but traders who need to combine signals, test strategies on novel ideas, or build complex automated trading logic need a scripting language. In a market projected to reach $42.99 billion by 2030, the ability to write and backtest custom logic is increasingly a baseline expectation across all experience levels rather than an advanced feature.
-
-The choice between Indie and Pine Script also affects monetization opportunities. Both platforms allow users to publish custom indicators, but access differs: TakeProfit allows all users — including those on the free plan — to publish indicators to its marketplace. TradingView restricts indicator publishing to paid plan subscribers. For developers who plan to build and sell trading tools, this distinction matters from day one. Some traders use platforms like Pineify to adapt existing pine script code for different workflows, but the core monetization rules are set by each platform.
-
-Finally, skill portability is a practical concern. Pine Script skills apply only within TradingView. Indie's Python-based syntax means that concepts learned while writing Indie code — control flow, function definitions, type annotations, class structures — overlap with the broader Python ecosystem used across data science, machine learning, and general software development. Traders who use Python in their day jobs can apply the same patterns to indicator development on TakeProfit.
-
-### Summary Insight
-
-> The choice between Indie and Pine Script affects not only what indicators a trader can build, but also skill portability, platform lock-in, monetization access, and long-term subscription costs. Evaluating pine script alternatives requires comparing language design, pricing, and ecosystem depth.
-> 
-
----
-
-## How to Write Your First Indie Indicator: Step-by-Step Setup for All Experience Levels
-
-This section walks through creating a working Indie indicator from scratch. No prior experience with TakeProfit is assumed — the process is beginner-friendly and designed for traders at all experience levels.
-
-### Step 1: Access the IDE Widget
-
-TakeProfit's workspace is built around draggable widgets. To start coding, open the Widget Hub (click "Add widgets" in the top-right corner of your workspace) and drag the IDE widget into your workspace. The IDE widget is TakeProfit's built-in development environment for writing and editing Indie indicators and strategies — one of the visual tools that differentiates TakeProfit from platforms where strategy development happens in a detached code editor.
-
-[Screenshot placeholder: Widget Hub panel open with the IDE widget highlighted, showing it being dragged into a workspace alongside a chart]
-
-### Step 2: Write a Minimal Indicator
-
-Every Indie indicator starts with a `Main` entry point. Here is the simplest possible indicator, which plots the closing price as a line on the chart:
+### Step 2: A minimal indicator
 
 ```python
 # indie:lang_version = 5
 from indie import indicator
 
-@indicator('My First Indicator')
+@indicator('My First Indicator', overlay_main_pane=True)
 def Main(self):
     return self.close[0]
 ```
 
-The `Main` function is called for every candle on the chart, from left to right, and then continues to be called on every real-time update of the most recent candle. The `self` parameter is an object of type `MainContext` — it provides data access to OHLCV values for the chart instrument. The `@indicator` decorator is syntactic sugar that transforms the `def Main` function into a `class Main` behind the scenes.
+`Main` is called for every candle from left to right, and then on every real-time update of the latest candle. `self` gives you the chart instrument's OHLCV series: `self.close[0]` is the current bar's close, `self.close[1]` is the previous bar's close. Whatever `Main` returns is plotted. The `# indie:lang_version = 5` comment on the first line selects the language version.
 
-The `[0]` index accesses the current bar's value. In Indie, `self.close[0]` is the current bar's close price, `self.close[1]` is the previous bar's close, and so on.
-
-[Screenshot placeholder: IDE editor showing the minimal indicator code above, with the chart displaying a simple line overlay tracking the close price]
-
-### Step 3: Add a Built-in Algorithm (SMA)
-
-Indie includes a standard library of trading algorithms for technical analysis in the `indie.algorithms` package. Here is an indicator that calculates and plots a 20-period Simple Moving Average:
+### Step 3: Add a built-in algorithm and a parameter
 
 ```python
 # indie:lang_version = 5
-from indie import indicator
+from indie import indicator, param, plot, color
 from indie.algorithms import Sma
 
-@indicator('SMA Indicator')
-def Main(self):
-    sma = Sma.new(self.close, length=20)
-    return sma[0]
+@indicator('SMA Indicator', overlay_main_pane=True)
+@param.int('length', default=20, min=1, title='SMA length')
+@plot.line(color=color.AQUA)
+def Main(self, length):
+    return Sma.new(self.close, length)[0]
 ```
 
-The `Sma.new()` static method is a pattern used throughout Indie's algorithm library. Other available algorithms include `Ema`, `Rsi`, `Adx`, `Atr`, `Macd`, `BollingerBands`, `Sar`, `Vwap`, `StdDev`, `Tr`, and more. Each follows the same `.new()` invocation pattern, making it straightforward to build complex indicators by combining multiple algorithms.
+Algorithms in `indie.algorithms` are created with `.new()`. The package includes `Sma`, `Ema`, `Wma`, `Rma`, `Vwma`, `Rsi`, `Macd`, `Bb` (Bollinger Bands), `Stoch`, `Adx`, `Atr`, `Cci`, `Mfi`, `Roc`, `Sar`, `Supertrend`, `Donchian`, `Vwap`, `Highest`, `Lowest`, `PivotHighLow`, `ZigZag`, and more. `@param.int` creates an input the user can change from the settings panel. Other parameter types include `float`, `bool`, `str`, `source`, `time_frame`, and `color`.
 
-[Screenshot placeholder: Chart showing a 20-period SMA line overlaid on price candles, with the Indie code visible in the IDE widget]
+### Step 4: A class-based indicator
 
-### Step 4: Advanced Usage — Strategy Development with Parameters and Backtesting
-
-For more complex indicators, Indie supports a class-based syntax with an explicit `__init__` constructor and `calc` method, including partial support for object-oriented programming patterns:
+When you need one-time setup in `__init__` (for example to request another instrument), use the class form:
 
 ```python
 # indie:lang_version = 5
 from indie import indicator, MainContext, param
 from indie.algorithms import Rsi
 
-@indicator('RSI with Parameter')
-@param.int('length', default=14, min=1, title='RSI Period')
-def Main(self, length):
-    rsi = Rsi.new(self.close, length=length)
-    return rsi[0]
+@indicator('RSI with class-based Main')
+@param.int('length', default=14, min=1, title='RSI length')
+class Main(MainContext):
+    def __init__(self):
+        # one-time setup goes here; algorithms such as Rsi.new() are created in calc()
+        pass
+
+    def calc(self, length):
+        rsi = Rsi.new(self.close, length)
+        return rsi[0]
 ```
 
-The `@param.int` decorator creates a configurable input that users can adjust through the UI without modifying the code. Indie supports parameter types including `int`, `float`, `bool`, `str`, `source` (for selecting price data), and `time_frame`.
+> [!IMPORTANT]
+> `Rsi.new()` and other algorithm constructors can only be called from `calc()`, from `Main` in function form, or from `@algorithm` / `@sec_context` functions. Calling them in `__init__` is a compile error. The compiler message says so explicitly.
 
-For backtestable strategies using the `@strategy` decorator, Indie provides configurable commission, initial capital, leverage, intrabar order filtering, and market order price settings — including stop losses and take profit logic through its order management system:
+## Strategies and Backtesting in Indie
+
+Indie became a strategy language in early 2026: the `@strategy` decorator and the `indie.strategies` package arrived with v5.10, and the backtesting widget with v5.11. A strategy is a script with an extra `self.trading` interface for placing, amending, and cancelling orders and reading the current position. The same code runs in two modes according to the docs: backtesting (and forward-testing on live bars) against a built-in exchange emulator, and live trading against a real exchange. A backtest approximates live results; fills, fees, and latency will differ.
+
+A crossover strategy that reverses its position on each signal:
 
 ```python
 # indie:lang_version = 5
-from indie import strategy, MainStrategyContext
-from indie.strategies import Commission, commission_type
+from indie import strategy, MainStrategyContext, param
+from indie.algorithms import Sma
+from indie.strategies import Commission, commission_type, order_side
+from indie.math import cross_over, cross_under
 
-@strategy('MA Cross Strategy',
+@strategy('MA Crossover',
           overlay_main_pane=True,
-          commission=Commission(0.002, commission_type.FIXED),
-          initial_capital=100000.0)
+          commission=Commission(0.001, commission_type.PERCENT),
+          initial_capital=50000.0)
+@param.int('fast', default=10, min=1, title='Fast SMA')
+@param.int('slow', default=30, min=1, title='Slow SMA')
 class Main(MainStrategyContext):
     def __init__(self):
         pass
 
-    def calc(self):
-        pass  # Strategy logic goes here
+    def calc(self, fast, slow):
+        fast_sma = Sma.new(self.close, length=fast)
+        slow_sma = Sma.new(self.close, length=slow)
+        pos_size = self.trading.position.size
+
+        if cross_over(fast_sma, slow_sma) and pos_size <= 0:
+            # reverse a short position if there is one, otherwise open a long
+            self.trading.place_order(order_side.BUY, size=1.0 + abs(pos_size)).submit()
+
+        if cross_under(fast_sma, slow_sma) and pos_size >= 0:
+            self.trading.place_order(order_side.SELL, size=1.0 + abs(pos_size)).submit()
 ```
 
-Indie strategies integrate directly with TakeProfit's Backtest Widget, which provides powerful backtesting analytics: equity curves, drawdown charts, Sharpe ratio, Sortino ratio, Calmar ratio, detailed trade logs, and order-level audit trails. This makes TakeProfit a strong option for strategy testing across stocks, crypto, and forex instruments.
+Strategy settings include initial capital, commission (fixed or percent), leverage, risk-free rate, `intrabar_order_filter` (controls on which ticks of a bar orders may be placed), and `market_order_price` (which simulated price market orders fill at in backtests). Order types are market, limit, stop, and stop-limit. A note on units: a `PERCENT` commission is a fraction, so `0.001` means 0.1%.
 
-For multi-instrument analysis, the `@sec_context` decorator combined with `self.calc_on()` allows an indicator to request data feeds from additional instruments beyond the main chart symbol.
+Take-profit and stop-loss are attached to the entry order and form an OCO bracket that protects the whole position:
 
-[Screenshot placeholder: Split view showing strategy code in the IDE widget on the left and the Backtest Widget on the right displaying equity curve, drawdown chart, and performance metrics]
+```python
+# indie:lang_version = 5
+from indie import strategy, MainStrategyContext, param
+from indie.algorithms import Sma
+from indie.math import cross_over
+from indie.strategies import Commission, commission_type, order_side
 
-### Key Insight
+@strategy('SMA cross with bracket',
+          overlay_main_pane=True,
+          initial_capital=10000.0,
+          commission=Commission(0.001, commission_type.PERCENT))
+@param.int('length', default=50, min=1, title='SMA length')
+@param.float('tp_pct', default=4.0, min=0.1, title='Take profit, %')
+@param.float('sl_pct', default=2.0, min=0.1, title='Stop loss, %')
+class Main(MainStrategyContext):
+    def calc(self, length, tp_pct, sl_pct):
+        sma = Sma.new(self.close, length)
+        if self.trading.position.size == 0 and cross_over(self.close, sma):
+            entry = self.close[0]
+            take = entry * (1 + tp_pct / 100)
+            stop = entry * (1 - sl_pct / 100)
+            (
+                self.trading.place_order(order_side.BUY, size=1.0).
+                limit(price=entry).
+                take_profit(stop=take, limit=take).
+                stop_loss(stop=stop).
+                submit()
+            )
+```
 
-> Indie indicators use the `@indicator` decorator and a `Main` entry point that runs on every candle. Built-in algorithms like `Sma`, `Ema`, and `Rsi` are available in the `indie.algorithms` package via the `.new()` static method. Strategies use the `@strategy` decorator and integrate with TakeProfit's Backtest Widget for performance analytics.
-> 
+> [!NOTE]
+> Per the current docs, take-profit and stop-loss can be attached only to limit and stop-limit entry orders, not to market orders. Strategies can trade only one instrument at a time (they can still read other instruments through `calc_on`). Order changes take effect on the next `calc()` call, not immediately. See [Strategies overview](https://takeprofit.com/docs/indie/Strategies/Strategies-overview) and [Orders](https://takeprofit.com/docs/indie/Strategies/Orders).
 
----
+The Strategy/Backtesting widget reports, among others, total P&L, win rate, profit factor, expectancy, max drawdown, Sharpe, Sortino and Calmar ratios, daily Value at Risk, and a trade-by-trade log. The amount of history available to a backtest depends on your plan (the docs give 5,000 candles on the free plan and 20,000 on the paid All-In plan at the time of writing). See [Strategy tester and backtesting](https://takeprofit.com/docs/guide/platform/backtesting-widget/backtest-widget).
 
-## Indie vs Pine Script: Key Capabilities Compared for Automated Trading
+TradingView's Strategy Tester is the established counterpart for Pine Script strategies, and it is a mature, widely used tool. If deep backtesting history and a large pool of shared strategies matter to you, compare both for your own instruments.
 
-### Syntax, Language Foundation, and Learning Curve Across Experience Levels
+## Key Capabilities Compared
 
-Indie is based on Python syntax. It supports function definitions (at top level only), basic control statements (`if`, `for`, `while`), standard arithmetic, and basic data types (`int`, `float`, `bool`, `str`). Indie requires explicit type declarations in cases where the compiler cannot infer types from context. Indie uses block-level variable scoping (similar to C/C++ or Java), which differs from Python's function-level scoping. Integers in Indie are 32-bit signed, not arbitrary precision like in standard Python.
+### Syntax and learning curve
 
-Pine Script uses its own proprietary syntax that does not directly correspond to any general-purpose programming language. Pine Script does not require explicit type declarations and handles typing internally. While Pine Script's syntax is relatively approachable for beginners, the skills learned do not transfer outside TradingView's ecosystem. Traders evaluating pine script alternatives often cite this lock-in as a primary concern.
+Indie supports top-level function definitions, `if`/`for`/`while`, `int` (32-bit signed), `float` (64-bit), `bool`, `str`, typed `list[T]` and `dict[K, V]` containers, tuple pairs, basic f-strings (`{x}` and `{x:.2f}`), simple classes, and `raise`. Variables use block-level scoping, like C or Java, rather than Python's function-level scoping. The compiler infers types where it can and asks for explicit annotations elsewhere. Not supported yet: nested functions, lambdas, generator expressions and comprehensions, `try`/`except`, `with`, and `set`, `queue` and `deque` containers. See [Indie vs. Python](https://takeprofit.com/docs/indie/Language-differences-with-Python).
 
-Features not yet supported in Indie v3 include nested function definitions, lambdas, generator expressions, `try`/`except` blocks, `with`/`as` constructs, `dict` and `set` data types, and f-strings. These are noted as items under active development.
+Pine Script has its own syntax that resembles no mainstream language exactly; it is compact and designed around series data, so a simple indicator is only a few lines. Pine v5 and later also support user-defined types, methods, and libraries.
 
-### Built-in Algorithm Library and Technical Indicators
+### Algorithms and open-source built-ins
 
-Indie provides the `indie.algorithms` package containing pre-built implementations of common technical indicators used across stocks, forex, and crypto markets. Available algorithms include Sma, Ema, Wma, Rma, Rsi, Adx, Atr, BollingerBands (via StdDev), MACD, Sar (Parabolic Stop and Reverse), Vwap, Mfi, Tr (True Range), Tsi, PercentRank, Percentile, PivotHighLow, and others. Each algorithm's source code is accessible in the documentation, allowing developers to study the implementation or create custom variations using the `@algorithm` decorator.
+Indie's `indie.algorithms` package exposes the building blocks used by TakeProfit's own indicators, and the source of open-source built-ins is available to read and fork. Pine has a large built-in `ta.*` namespace and a big library of community scripts.
 
-Pine Script includes its own set of built-in functions for technical analysis. Pine Script's library is broader in certain areas due to its longer history and larger contributor base, but individual function implementations are not exposed as open source code. Other platforms like NinjaTrader (using NinjaScript) and thinkorswim (using ThinkScript) also provide built-in algorithm sets, though each with different language foundations and platform constraints.
+### Drawings, tables, and plot types
 
-### Powerful Backtesting and Strategy Testing Across Asset Classes
+Indie indicators can plot lines, histograms, columns, steps, candles (`@plot.candles`, since v5.19), markers, fills, background colors, and bar colors (`@plot.bar_color`, which recolors the chart's own candles). They can also draw labels, line segments, rectangles, circles, triangles, channels, and tables (since v5.13 and v5.17). Tables are useful for on-chart summaries:
 
-TakeProfit's Indie provides a `@strategy` decorator for defining backtestable trading strategies. Strategy parameters include initial capital, commission (fixed or percentage), leverage, intrabar order filtering (controlling whether orders execute at bar close or on every tick), and market order price configuration. Backtesting requires selecting an asset and timeframe, and the Backtest Widget then displays core metrics such as total P&L, win rate, profit factor, expectancy, risk-reward ratio, max drawdown, Sharpe ratio, Sortino ratio, Calmar ratio, daily Value at Risk, and annualized volatility. The backtesting engine simulates real-world order execution delays to produce more realistic results — a critical feature for traders developing trading bots or automated strategies.
+```python
+# indie:lang_version = 5
+from indie import MainContext, color, indicator
+from indie.drawings import Table, TableCell, TableRow, RelativePosition, vertical_anchor as va, horizontal_anchor as ha
 
-TradingView's Pine Script offers its own strategy tester with similar core backtesting capabilities. Users have reported hidden execution limits and throttling that can affect strategy behavior during testing. MetaTrader (using MQL4/5) and NinjaTrader (using NinjaScript) also offer backtesting, each with their own broker integration models and data processing pipelines.
+@indicator('Market summary', overlay_main_pane=True)
+class Main(MainContext):
+    def __init__(self):
+        self._table = Table(
+            position=RelativePosition(va.TOP, ha.RIGHT, 0.05, 0.95),
+        )
 
-### IDE, Development Environment, and Visual Tools for Indicator Development
+    def calc(self):
+        if not self.is_last_bar:
+            return self.close[0]
 
-TakeProfit includes an integrated IDE widget within its workspace system. The IDE provides a code editor with autocomplete, syntax highlighting, and error underlining. Indicators can be developed, tested, and deployed without leaving the TakeProfit interface. The IDE integrates directly with the chart — saving an indicator immediately updates its visual output. This tight integration between coding and visual tools makes TakeProfit a cohesive platform designed for traders who want to iterate quickly on trade ideas.
+        self._table.clear()
+        self._table.append(TableRow([
+            TableCell('Metric', bg_color=color.GRAY(0.5)),
+            TableCell('Value', bg_color=color.GRAY(0.5)),
+        ]))
+        self._table.add_row(['Close', str(self.close[0])])
+        self._table.add_row(['Bar', str(self.bar_index)])
 
-TradingView's Pine Script editor has been criticized by users for lacking modern developer features. Reported issues include the absence of word wrapping, limited debugging capabilities, and a generally lower priority placed on developer experience compared to charting features. By contrast, NinjaTrader's NinjaScript development environment uses Visual Studio integration, which is more powerful but carries a steeper learning curve. Thinkorswim's ThinkScript editor is functional but limited in scope compared to full IDE environments.
+        self.chart.draw(self._table)
+        return self.close[0]
+```
 
-### Indicator Publishing, Monetization, and Community Platform Access
+Pine Script has comparable drawing objects (`line`, `label`, `box`, `table`, `polyline`).
 
-TakeProfit allows all users — including those on the free plan — to create and publish indicators to its marketplace. Published indicators can be offered for free or as paid products. Earnings are paid through Stripe when the creator's balance reaches $100. Indicator descriptions must be at least 100 characters, and moderation typically takes 1-2 business days. This open approach helps TakeProfit function as a community platform where any trader can contribute.
+### Dictionaries
 
-TradingView restricts indicator publishing to paid plan subscribers. Free users cannot publish indicators for the community, which limits ecosystem growth at the entry level. TradingView does, however, have a much larger existing library of community-contributed scripts.
+Since v5.18, Indie has `dict[K, V]` containers (keys can be `str`, `int`, `bool`, or finite `float`). A small example that counts how many bars closed in each 100-point price band and shows the counts in a table:
 
-### Alert System Integration for Automated Trading Workflows
+```python
+# indie:lang_version = 5
+from indie import indicator, MainContext
+from indie.drawings import Table, RelativePosition, vertical_anchor as va, horizontal_anchor as ha
 
-TakeProfit's alert system supports multiconditional alerts — a single alert can include multiple conditions that must all be met before triggering. Free users can create 1 alert with up to 3 months expiration. Premium users can create up to 50 alerts with extended expiration. Notification delivery methods include real-time platform updates (limited to 10 per second), email (once per minute per address), Telegram notifications, and webhooks for Discord or other integrations. Webhook support is particularly relevant for traders building automated trading pipelines or connecting to a broker's API.
+@indicator('Price level touches', overlay_main_pane=True)
+class Main(MainContext):
+    def __init__(self):
+        self._touches: dict[int, int] = {}
+        self._table = Table(position=RelativePosition(va.TOP, ha.RIGHT, 0.05, 0.95))
 
-TradingView offers alert functionality across its plans, but users have reported a hidden throttle of 15 alerts firing per 3 minutes applied to all plans — including premium users who pay for up to 400 alerts. This undocumented limit has been a source of frustration for developers running alert-based automated strategies. Platform limitations like this are a common reason traders use tools like Pineify to explore workarounds or seek alternatives entirely.
+    def calc(self):
+        level = int(self.close[0] / 100.0) * 100
+        if level in self._touches:
+            self._touches[level] = self._touches[level] + 1
+        else:
+            self._touches[level] = 1
 
-### Backward Compatibility, Code Stability, and Broker Integration
+        if self.is_last_bar:
+            self._table.clear()
+            self._table.add_row(['Level', 'Bars closed there'])
+            for key in self._touches.keys():
+                self._table.add_row([f'{key}', f'{self._touches[key]}'])
+            self.chart.draw(self._table)
+        return self.close[0]
+```
 
-TakeProfit automatically upgrades Indie scripts to the latest language version unless a feature was explicitly removed. Built-in indicators are static (unless a bug is fixed), and users can fork any indicator to keep their own version that will not change. This approach directly addresses developer concerns about code stability — experienced traders building long-term trading systems want confidence that their code will still run next year.
+### Other instruments and timeframes
 
-Pine Script users have reported that scripts which previously worked began throwing runtime errors after platform updates. TradingView has also modified built-in indicators without notice, breaking strategies that depended on their behavior. On the broker side, TakeProfit currently integrates with Lime Trading for order execution, with additional broker integrations in development. TradingView supports a wider range of broker connections, though users have reported integration issues including frequent disconnections.
+Indie requests additional instruments or timeframes with `@sec_context` and `Context.calc_on()`, which must be called from `__init__`. Since v5.14, `calc_on` also supports timeframes lower than the chart's. Pine uses `request.security()` for the same purpose, with different syntax and scoping rules.
 
-### Summary Insight
+```python
+# indie:lang_version = 5
+from indie import indicator, MainContext, sec_context, param
 
-> TakeProfit's Indie offers a `@strategy` decorator with configurable backtesting parameters including commission, leverage, and intrabar order filtering. The backtesting engine simulates order execution delays to approximate real-world conditions. TradingView's Pine Script provides its own strategy tester, though users have reported hidden execution limits.
-> 
+@sec_context
+def FastBars(self):
+    return self.high[0], self.low[0]
 
----
+@indicator('Lower timeframe range', overlay_main_pane=True)
+@param.time_frame('fast_tf', default='1m')
+class Main(MainContext):
+    def __init__(self, fast_tf):
+        self._fast_high, self._fast_low = self.calc_on(FastBars, time_frame=fast_tf)
 
-## Indie vs Pine Script: Side-by-Side Comparison with Other Pine Script Alternatives (2026)
+    def calc(self):
+        return self._fast_high[0], self._fast_low[0]
+```
 
-### Table 1: Quick Comparison — Best Alternatives to Pine Script
+> [!WARNING]
+> Requesting data with `lookahead=True`, or mixing higher-timeframe data into history, can make an indicator repaint or leak future information into backtests. This is true on any platform. TakeProfit's Marketplace rules ask authors to disclose such behavior.
 
-| Feature | Indie (TakeProfit) | Pine Script (TradingView) | NinjaScript (NinjaTrader) | ThinkScript (thinkorswim) | MQL4/5 (MetaTrader) |
+### Your own data: CSV and live feeds
+
+Since v5.18, an Indie indicator can read a public HTTPS CSV file as candles (through `@sec_context`), as typed rows (`@data_context`), or directly with `request_series`. Since v5.19, `sources.DataFeed` can stream records from your own WebSocket or SSE server into an indicator. This makes it possible to chart macro figures, on-chain metrics, or a trading journal next to price.
+
+```python
+# indie:lang_version = 5
+from indie import indicator, sec_context, MainContext, TimeFrame
+from indie.data import sources
+
+@sec_context
+def ExternalCandles(self):
+    return self.close[0]
+
+@indicator('External candle close')
+class Main(MainContext):
+    def __init__(self):
+        self._ext_close = self.calc_on(
+            ExternalCandles,
+            time_frame=TimeFrame.from_str('1D'),
+            source=sources.Csv('https://example.com/candles.csv'))
+
+    def calc(self):
+        return self._ext_close[0]
+```
+
+The URL above is a placeholder; point it at your own file. Scripts that use external data cannot be published to the Marketplace and stay private to your account. File format, size limits, and the feed protocol are described in the [External data docs](https://takeprofit.com/docs/indie/External-data/External-data-overview).
+
+### Volume Footprint and TPO data
+
+Indie can request Volume Footprint and TPO (Market Profile) profiles for the chart instrument, for example to plot the point of control or calculate buy-sell delta. On the platform side, the chart supports Volume Footprint and TPO chart types and a Liquidity Heatmap overlay. See [Volume Footprint profiles](https://takeprofit.com/docs/indie/Profile-data/Volume-Footprint-profiles) and [TPO profiles](https://takeprofit.com/docs/indie/Profile-data/TPO-profiles).
+
+### Schedules and sessions
+
+Indie has an `indie.schedule` package and documentation for trading sessions and schedules. See [Schedules and Trading Sessions](https://takeprofit.com/docs/indie/Schedules-and-Trading-Sessions).
+
+### AI and MCP tooling
+
+TakeProfit ships three AI entry points for Indie development:
+
+- **AI chat and the assistant in the IDE** write, explain, debug, and convert scripts, including from Pine Script or MQL5.
+- **The MCP server** (`https://mcp.takeprofit.com/mcp`) connects clients such as Claude, Codex, Cursor, and VS Code to the Indie compiler, the docs, the built-in and Marketplace indicator search, your private scripts, your alerts, and your watchlists. The assistant can compile and run a script on real market data before handing it over.
+- **Alerts through AI:** since v5.16 the AI can create, edit, pause, and delete alerts, including alerts on a private indicator that was never published.
+
+According to the docs, writing Indie code with the platform's AI requires a paid plan or your own API key, and the MCP server runs on your AI application's own subscription. See [TakeProfit AI](https://takeprofit.com/docs/guide/platform/ai-assistant/AI-assistant-overview) and the [MCP setup guide](https://takeprofit.com/docs/guide/platform/ai-assistant/Mcp-server-guide).
+
+Pine Script developers use general-purpose LLMs and third-party tools. Whether those can validate code against TradingView's own compiler depends on the tool; we have not evaluated them here.
+
+### Alerts and automation
+
+Cloud alerts can fire on price and on indicator values, including your own scripts, and can notify through the platform, email, Telegram, and webhooks. Limits depend on the plan: the docs list 1 alert (up to 3 months) for free users and up to 400 non-expiring alerts on All-In, and say webhook notifications are rate limited. See [Alert limitations and delivery](https://takeprofit.com/docs/guide/alerts/Alert-limitations-delivery-history). TradingView also has alerts and webhooks; check its documentation for current limits.
+
+### Trading, brokers, and data
+
+TakeProfit's trading integrations are listed on its [Brokers and exchanges](https://takeprofit.com/docs/guide/trading/brokers) page: at the time of writing, Bybit (crypto spot and derivatives) and Lime Trading (US stocks and ETFs) are live, while Binance and Exness are listed as coming soon. Market data comes from direct exchange feeds for some venues and from an aggregator for others; see [Markets We Cover](https://takeprofit.com/docs/guide/market-data/Market-data-overview). TradingView supports a wider range of brokers; compare the lists for your own markets.
+
+### Marketplace and monetization
+
+Indicators can be published to the TakeProfit Marketplace after moderation, free or at a price chosen by the author, with open or closed source. The docs state an 80% author share on sales to platform users (100% on referred users or for Maxx Rewards members), and a payout threshold of $200 on the cash rewards balance. Rules, review times, and eligibility are in [Sell Your Indicators](https://takeprofit.com/docs/guide/monetization-tools/Sell-your-indicators). TradingView has its own publishing and moderation rules, which differ; check them before deciding.
+
+### Stability and versioning
+
+Indie scripts declare their language version (`# indie:lang_version = 5`). TakeProfit's docs say scripts are upgraded to the latest language version unless a feature was explicitly removed. Built-in indicators change only when a bug is fixed, and you can fork any open-source indicator to keep your own copy. Pine Script versions are also explicit; older versions keep running, and migrating a script to a newer version is a manual job. Neither approach removes the need to test your scripts after platform updates.
+
+## Other Scripting Languages Worth Comparing
+
+If you are evaluating alternatives to Pine Script more broadly, these are the other well-known options. Check each vendor's site for current features and pricing.
+
+| | Indie | Pine Script | NinjaScript | ThinkScript | MQL4 / MQL5 |
 | --- | --- | --- | --- | --- | --- |
-| Language base | Python dialect | Proprietary | C#-based | Proprietary | C++-like |
-| Platform type | Analysis platform | Community platform | Futures-focused | Broker-integrated | Forex/CFD-focused |
-| Learning curve | Low for Python devs | Medium | Steep | Medium | Medium-steep |
-| Market focus | Stocks, crypto, forex | All markets | Primarily futures | Stocks, options | Forex, CFDs |
-| Backtesting | `@strategy` + Backtest Widget | Built-in tester | Advanced strategy analyzer | Strategy testing built-in | Built-in strategy tester |
-| IDE quality | Integrated widget, autocomplete | Basic editor | Visual Studio integration | Basic editor | MetaEditor |
-| Alert limits (free) | 1 alert | Varies by plan | Platform-dependent | Broker account required | Platform-dependent |
-| Indicator publishing (free) | Yes | No | Marketplace available | No marketplace | MQL5 marketplace |
-| Pricing (paid) | $20/mo or $10/mo annual | $14.95–$59.95/mo (tiered) | Free–$150+/mo | Free with brokerage | Free–$100+ |
-| Automated trading | Via alerts + webhooks | Via alerts + webhooks | Native support | Native via broker | Native EA support |
-| Community size | Growing | Large, established | Medium | Medium | Large (forex-focused) |
+| Platform | TakeProfit | TradingView | NinjaTrader | thinkorswim (Charles Schwab) | MetaTrader |
+| Language base | Python subset | Proprietary | C# | Proprietary | C++-like |
+| Typical focus | Multi-asset charting, crypto, US stocks | Multi-asset charting | Futures and forex | Stocks, options, futures | Forex and CFDs |
+| Runs where | Platform servers | Platform servers | Local desktop | Platform | Local terminal |
+| Needs a broker account | Only for trading | Only for trading | Data and broker setup | Yes | Yes (broker-supplied) |
 
-This comparison helps traders evaluating the best alternative to Pine Script understand where each platform fits. NinjaTrader and NinjaScript are commonly preferred by futures traders, while thinkorswim and ThinkScript appeal to options traders and stock traders who already use TD Ameritrade. MetaTrader with MQL remains dominant in forex. Indie on TakeProfit is positioned as a modern alternative that can appeal across asset classes.
+## Pine Script to Indie: Migration Notes
 
-### Table 2: Language Capabilities Matrix — Trading Options Across Platforms
+There is no automatic converter built into the language, and the two do not map line by line. The TakeProfit AI assistant can convert a script for you; the official FAQ recommends converting one indicator at a time and describing what it should do, because a conversion that keeps the intent beats one that keeps the syntax. If you port by hand, this table helps:
 
-| Capability | Indie | Pine Script | NinjaScript | ThinkScript | MQL4/5 |
-| --- | --- | --- | --- | --- | --- |
-| Function definitions | Yes (top-level) | Yes | Yes | Yes | Yes |
-| Object-oriented programming | Partial support | No | Full (C#) | No | Partial |
-| Loops (for, while) | Yes | Yes (limits) | Yes | Limited | Yes |
-| Multi-instrument data | `calc_on()` | `request.security()` | Multi-series | Limited | Multi-symbol |
-| Custom algorithms | `@algorithm` decorator | User functions | Full C# classes | User studies | Custom classes |
-| Series data type | `Series[T]`, `MutSeriesF` | Built-in series | Data series | Built-in | Time series |
-| Sandbox execution | Server-side | Server-side | Local | Server-side | Local/server |
-| External data sources | Not yet (planned) | No | Supported | Limited | Supported |
-| Visualization styles | 7 plot types | Lines, shapes, fills | Chart rendering | Chart studies | Custom graphics |
+| Pine Script | Indie |
+| --- | --- |
+| `//@version=6` | `# indie:lang_version = 5` |
+| `indicator("Title", overlay=true)` | `@indicator('Title', overlay_main_pane=True)` |
+| `input.int(14, "Length")` | `@param.int('length', default=14, title='Length')` |
+| `ta.sma(close, 20)` | `Sma.new(self.close, 20)[0]` |
+| `ta.rsi(close, 14)` | `Rsi.new(self.close, 14)[0]` |
+| `close[1]` | `self.close[1]` |
+| `ta.crossover(a, b)` | `cross_over(a, b)` from `indie.math` |
+| `plot(x)` | return `x` from `Main`, styled with `@plot.line(...)` |
+| `plotshape(...)` | `@plot.marker(...)` and `plot.Marker(value)` |
+| `request.security(...)` | `@sec_context` function plus `self.calc_on(...)` in `__init__` |
+| `strategy.entry("Long", strategy.long)` | `self.trading.place_order(order_side.BUY, size=...).submit()` |
+| `strategy.exit(...)` with stop and limit | `take_profit(...)` and `stop_loss(...)` on a limit entry order |
+| `var x = 0` | `Var[int].new(init=0)` |
+| `array.*` / `map.*` | `list[T]` / `dict[K, V]` |
+| `table.new(...)` | `Table`, `TableRow`, `TableCell` from `indie.drawings` |
+| `na` | `float('nan')` |
 
----
+Things to watch for when porting:
 
-## Practical Examples: Indie and Pine Script in Real Forex, Crypto, and Stock Trading Scenarios
+- **Series vs. calls.** In Indie you create an algorithm with `.new()` on every bar from `calc()` or `Main`. Do not cache it behind an `if`; it must run each bar to keep its state.
+- **Scoping.** Variables declared inside an `if` or loop are not visible after the block. Declare them first with a type annotation.
+- **No `None` for plain types.** Use `Optional[T]` and call `.value()` to read it.
+- **Alerts.** Pine's `alert()` and `alertcondition()` have no one-to-one form. In TakeProfit, you create alerts in the platform on the indicator's values.
+- **Strategy semantics.** Order fills, `calc_on_every_tick`-style behavior, and position sizing differ between platforms. Re-test the ported strategy rather than assuming identical results.
+- **Libraries.** Pine libraries do not map directly. Indie has no numpy/pandas; use the standard library packages or `@algorithm` functions.
 
-### Scenario 1: Building an RSI Indicator with Visual Markers for Stock Traders
+## Practical Examples: Indie and Pine Side by Side
 
-This example creates an RSI indicator in Indie that plots the RSI line and adds visual markers when the instrument enters oversold territory with a volume spike. Traders use this pattern across stocks, forex pairs, and crypto to identify potential entry points:
+The Pine Script samples below are written for Pine v6 syntax. We could not compile them in this guide, so treat them as illustrative and test them in TradingView's editor.
+
+### Example 1: Minimal indicator
+
+**Pine Script**
+
+```pinescript
+//@version=6
+indicator("Simple Close Plot", overlay=true)
+plot(close)
+```
+
+**Indie**
+
+```python
+# indie:lang_version = 5
+from indie import indicator
+
+@indicator('Simple Close Plot', overlay_main_pane=True)
+def Main(self):
+    return self.close[0]
+```
+
+### Example 2: RSI with a volume-confirmed marker
+
+The Indie version returns values from `Main` and uses decorators to define how they are shown; Pine calls `plot()` and `plotshape()` inline.
+
+**Indie**
 
 ```python
 # indie:lang_version = 5
@@ -270,49 +448,45 @@ def Main(self, rsi_len, vol_mult):
     return rsi[0], plot.Marker(rsi[0] if show_marker else float('nan'))
 ```
 
-In Pine Script, the equivalent logic would use `ta.rsi()`, `ta.sma()`, and `plotshape()` with Pine's own syntax. The key structural difference is that Indie returns values from `Main` and uses decorators to define how those values display, while Pine Script uses imperative `plot()` and `plotshape()` calls inline. This pattern distinction is important for developers transitioning between the two — or evaluating platforms like TradingView, NinjaTrader, or thinkorswim.
+**Pine Script**
 
-[Screenshot placeholder: Chart with RSI plotted in a separate pane below the price chart, green circle markers appearing at oversold conditions with high volume]
+```pinescript
+//@version=6
+indicator("RSI Volume Signal")
+rsiLen  = input.int(14, "RSI Length", minval=1)
+volMult = input.float(1.5, "Volume Multiplier", minval=1.0)
 
-### Scenario 2: Backtesting a Moving Average Crossover Strategy on Forex Pairs
+rsi    = ta.rsi(close, rsiLen)
+volAvg = ta.sma(volume, 20)
+signal = rsi < 30 and volume > volAvg * volMult
 
-This Indie strategy buys when a fast SMA crosses above a slow SMA and sells on the reverse. It demonstrates how to make trading decisions automated through code — applicable to forex, stocks, and crypto alike:
-
-```python
-# indie:lang_version = 5
-from indie import strategy, MainStrategyContext, param
-from indie.algorithms import Sma
-from indie.strategies import Commission, commission_type, order_side
-from indie.math import cross_over, cross_under
-
-@strategy('MA Crossover',
-          overlay_main_pane=True,
-          commission=Commission(0.001, commission_type.FIXED),
-          initial_capital=50000.0)
-@param.int('fast', default=10, min=1, title='Fast SMA')
-@param.int('slow', default=30, min=1, title='Slow SMA')
-class Main(MainStrategyContext):
-    def __init__(self):
-        pass
-
-    def calc(self, fast, slow):
-        fast_sma = Sma.new(self.close, length=fast)
-        slow_sma = Sma.new(self.close, length=slow)
-
-        if cross_over(fast_sma, slow_sma):
-            self.trading.place_order(order_side.BUY, size=1).submit()
-
-        if cross_under(fast_sma, slow_sma):
-            self.trading.place_order(order_side.SELL, size=1).submit()
+plot(rsi, "RSI", color=color.purple)
+plotshape(signal ? rsi : na, "Signal", shape.circle, location.absolute, color.green, size=size.tiny)
 ```
 
-The Backtest Widget would display this strategy's equity curve, drawdown, win rate, Sharpe ratio, and individual trade entries and exits. Indie's backtesting engine simulates order execution delays — when `submit()` is called, the order is not filled immediately but on the next price tick, mimicking real exchange behavior. This realism is what separates powerful backtesting from naive simulation.
+### Example 3: Moving average crossover strategy
 
-[Screenshot placeholder: Backtest Widget showing equity curve trending upward with moderate drawdown, trade table listing individual entries and exits with P&L per trade]
+The Indie version is the strategy shown in the strategies section above. The Pine equivalent:
 
-### Scenario 3: Multi-Instrument Correlation Analysis for Crypto and Forex
+```pinescript
+//@version=6
+strategy("MA Crossover", overlay=true, initial_capital=50000,
+         commission_type=strategy.commission.percent, commission_value=0.1)
+fastLen = input.int(10, "Fast SMA", minval=1)
+slowLen = input.int(30, "Slow SMA", minval=1)
 
-Indie supports requesting data from additional instruments using `@sec_context` and `self.calc_on()`. This allows an indicator to compare data across assets — for example, plotting BTC's RSI alongside the current chart instrument to generate cross-market trade ideas:
+fast = ta.sma(close, fastLen)
+slow = ta.sma(close, slowLen)
+
+if ta.crossover(fast, slow)
+    strategy.entry("Long", strategy.long)
+if ta.crossunder(fast, slow)
+    strategy.entry("Short", strategy.short)
+```
+
+### Example 4: Another instrument's RSI on the same chart
+
+**Indie**
 
 ```python
 # indie:lang_version = 5
@@ -334,173 +508,91 @@ class Main(MainContext):
         return local_rsi[0], self._btc[0]
 ```
 
-Pine Script handles multi-instrument data through `request.security()`, which serves a similar purpose but uses different syntax and scoping rules. NinjaScript on NinjaTrader supports multi-series data natively, while ThinkScript on thinkorswim offers more limited cross-instrument capabilities. Each approach has tradeoffs in complexity and data access patterns.
+The exchange code and ticker format depend on how the instrument is listed on TakeProfit; pick them from the platform's symbol search.
 
-⚠️ **Note:** External Python library imports (numpy, pandas, etc.) are not yet supported in Indie. This is listed as a future development item. The Indie team has noted that integration with external libraries is a complex task due to runtime design constraints and sandbox policies.
+**Pine Script**
 
-### Key Insight
+```pinescript
+//@version=6
+indicator("BTC RSI Comparison")
+btcRsi = request.security("BINANCE:BTCUSDT", timeframe.period, ta.rsi(close, 14))
+plot(ta.rsi(close, 14), "Local RSI")
+plot(btcRsi, "BTC RSI", color=color.orange)
+```
 
-> Indie strategies use `self.trading.place_order()` for order submission, with built-in delay simulation that mimics real exchange latency. Orders placed with `submit()` are not filled immediately — results become visible on the next price tick. This helps traders identify strategies that may perform differently in live trading versus backtesting.
-> 
+## Current Limitations of Indie
 
----
+- **Smaller community.** Fewer public tutorials, forum threads, and shared scripts than Pine Script.
+- **Python subset.** No external libraries (numpy, pandas, TA-Lib), no lambdas, nested functions, comprehensions, `try`/`except`, or `set`.
+- **Strategies trade one instrument at a time**, and take-profit/stop-loss currently attach only to limit and stop-limit entries.
+- **External-data scripts are private.** They cannot be published to the Marketplace.
+- **Sandboxed runtime.** No file or network access from code; execution time and memory are limited.
+- **Venue coverage.** Trading and data coverage are narrower than a long-established platform's. Check the current lists.
 
-## 5 Tips for Choosing the Best Alternative to Pine Script in 2026
+## How to Choose: Five Questions
 
-**1. Evaluate your Python experience and trading options.** Indie's syntax will feel immediately familiar to developers who already use Python. If your team already uses Python for data analysis, analytics, or automation, Indie reduces onboarding time compared to learning Pine Script's proprietary syntax. NinjaScript requires C# knowledge, MQL requires C++-like syntax, and ThinkScript has its own domain-specific approach. Choose the language that offers more flexibility for your existing skill set — or pick one and stick with it long enough to build real proficiency.
+1. **What do you already know?** Python developers will read Indie quickly. If you know Pine, the concepts transfer, but syntax and some semantics do not.
+2. **Where do your markets and brokers live?** Compare data coverage and trading integrations on each platform for the instruments you trade.
+3. **Do you need a big community or open built-ins?** Pine has the larger pool of shared scripts. Indie lets you read and fork every open-source built-in.
+4. **How much do you want AI in the loop?** If you plan to prototype with an LLM, TakeProfit's MCP server and IDE assistant validate scripts against the real compiler, which cuts down on broken code.
+5. **What will it cost for your usage?** Compare plan limits (alerts, indicators per chart, history depth, AI access) on the current pricing pages of each platform, not on third-party summaries.
 
-**2. Consider platform lock-in across multiple platforms.** Pine Script is locked to TradingView. Indie is used in TakeProfit. NinjaScript works only in NinjaTrader. ThinkScript runs only in thinkorswim. No trading scripting language works across multiple platforms, so assess which platform's charting, screening, data, and overall feature set fits your trading workflow before committing. For traders who work across different platforms, the underlying logic concepts transfer even if the exact code does not.
+Neither language locks in your *ideas*. The logic of an indicator usually survives a port; the code does not.
 
-**3. Compare total subscription costs and broker integration.** TakeProfit uses a single pricing plan: $20/month or $10/month when paid annually, with all features included. TradingView uses tiered plans from $14.95 to $59.95/month, where features like additional indicators per chart, more alert capacity, and real-time data feeds progressively unlock at higher tiers. Thinkorswim is free with a TD Ameritrade brokerage account. NinjaTrader offers a free version with paid upgrades. Calculate what you actually need — including broker access and data subscriptions — before comparing sticker prices.
+## Frequently Asked Questions
 
-**4. Start with built-in trading algorithms before writing custom code.** Both TakeProfit and TradingView offer extensive libraries of pre-built indicators. In Indie, the `indie.algorithms` package includes Sma, Ema, Rsi, Adx, Atr, MACD, BollingerBands, Vwap, and many more. Using these saves development time and avoids implementation errors. This approach applies equally across NinjaTrader, thinkorswim, and MetaTrader — leverage what exists before building from scratch.
+### Is Indie only for indicators?
 
-**5. Factor in code stability and community size for long-term projects.** TakeProfit auto-upgrades Indie scripts and preserves backward compatibility. Users can fork built-in indicators to lock them to a specific version. Pine Script version changes have historically broken existing code. If you are building tools meant to run for months or years, backward compatibility policies matter. At the same time, TradingView's larger active community means more shared scripts, tutorials, and forum answers — a significant advantage for troubleshooting.
-
-### Summary Insight
-
-> Pine Script is locked to TradingView. Indie is used in TakeProfit. NinjaScript is exclusive to NinjaTrader. ThinkScript runs only in thinkorswim. Developers choosing among these pine script alternatives should evaluate language familiarity, total subscription cost, monetization access, broker connectivity, and each platform's approach to backward compatibility.
-> 
-
----
-
-## Frequently Asked Questions: Indie, Pine Script, and Alternatives to Pine Script
-
-### What is Indie in TakeProfit?
-
-Indie is a technical analysis-oriented programming language used in the TakeProfit platform. Indie is a dialect of Python — a subset of Python language constructs with added decorators like `@indicator` and `@algorithm`. All built-in indicators on TakeProfit are implemented in Indie, and the platform allows users to create custom indicators using the integrated IDE widget.
-
-### What is Pine Script in TradingView?
-
-Pine Script is TradingView's proprietary scripting language for creating custom indicators, strategies, and alerts. Pine Script code runs exclusively within the TradingView ecosystem and cannot be exported or used on other platforms. The current version is Pine Script v5.
-
-### What are the best pine script alternatives in 2026?
-
-The best alternative depends on your asset focus and experience level. Indie (TakeProfit) is commonly chosen by Python-familiar developers trading stocks, crypto, and forex. NinjaScript (NinjaTrader) suits futures traders who want deep analytics. ThinkScript (thinkorswim) appeals to options traders with a brokerage account. MQL (MetaTrader) remains dominant for forex automated trading.
+No. Indie supports strategies (`@strategy`) and backtesting since early 2026, plus tables, dictionaries, external data, and more. See the [changelog](https://takeprofit.com/docs/indie/Changelog).
 
 ### Is Indie the same as Python?
 
-Indie is not standard Python. Indie is a subset of Python syntax with specific differences: 32-bit integer precision, block-level variable scoping, required explicit typing in some cases, and no support for features like lambdas, nested functions, or f-strings. External Python libraries cannot be imported.
+No. It is a subset of Python syntax with differences: 32-bit integers, block-level scoping, required type annotations in some cases, no lambdas or nested functions, and no external libraries. Code written in plain Python or Pine will not compile without changes.
 
-### Can I use Python libraries like numpy in Indie?
+### Can I use numpy or pandas in Indie?
 
-Not currently. Indie's sandboxed runtime and internal data types are not compatible with standard Python libraries. Available imports are limited to the `indie` core package, `indie.algorithms`, and a small set of functions from `math` and `statistics`. Library expansion is planned for future development.
+No. The runtime is sandboxed and its data types are not compatible with those libraries. Available imports are the `indie` packages and a few standard modules such as `math`, `statistics`, `datetime`, `dataclasses`, and `sortedcontainers`.
 
-### Is Pine Script a real programming language?
+### Can I convert Pine Script to Indie?
 
-Pine Script is a domain-specific language designed exclusively for technical analysis within TradingView. It is a real language with its own syntax, type system, and built-in functions, but it is not a general-purpose programming language and does not run outside TradingView.
-
-### Which is easier to learn, Indie or Pine Script?
-
-For developers with Python experience, Indie is easier to learn because its syntax, decorators, and control flow structures mirror Python. For traders with no programming background, both languages present a comparable learning curve, though Pine Script benefits from a larger library of community tutorials.
-
-### Can I convert Pine Script code to Indie?
-
-There is no automated conversion tool. Tools like Pineify exist for working with pine script code in various ways, but direct cross-platform conversion is not supported. The languages use different syntax, different function names, and different architectural patterns. Manual rewriting is required, though the logic translates conceptually.
+Yes, with help from TakeProfit's AI assistant (in the AI chat or the IDE) or by rewriting by hand using the table above. Check the result and re-test strategies.
 
 ### Does Indie support backtesting?
 
-Yes. Indie provides the `@strategy` decorator for creating backtestable strategies. The TakeProfit Backtest Widget displays performance metrics including equity curves, drawdown, Sharpe ratio, Sortino ratio, win rate, profit factor, trade logs, and order-level details.
-
-### Does Pine Script support backtesting?
-
-Yes. TradingView includes a built-in strategy tester for Pine Script strategies. Users can configure commission, initial capital, and order sizing. However, some users have reported undocumented execution throttling that affects strategy results.
-
-### What algorithms are built into Indie?
-
-The `indie.algorithms` package includes Sma, Ema, Wma, Rma, Rsi, Adx, Atr, BollingerBands (via StdDev), MACD, Sar, Vwap, Mfi, Tr, Tsi, PercentRank, Percentile, PivotHighLow, NetVolume, Change, Highest, Lowest, SinceHighest, SinceLowest, SinceTrue, and others.
-
-### Can I create custom alerts with Indie indicators?
-
-Yes. TakeProfit supports alerts triggered by indicator values, including multiconditional alerts where multiple criteria must all be met. Alerts can deliver notifications via the platform, email, Telegram, or webhooks.
-
-### How many alerts can I set on TakeProfit vs TradingView?
-
-TakeProfit free users get 1 alert with 3-month expiration; premium users get up to 50 alerts. TradingView offers up to 400 alerts on top plans, but enforces a reported hidden throttle of 15 alerts firing per 3 minutes across all tiers.
-
-### Is Indie free to use?
-
-TakeProfit offers a free plan that includes the IDE, basic charting, and 1 alert. The paid plan is $20/month ($10/month annually) and unlocks all features including up to 50 alerts and premium data. There is no multi-tier pricing.
-
-### What does TakeProfit cost compared to TradingView?
-
-TakeProfit: Free or $20/month ($10/month annually), all features included. TradingView: Free, Essential ($14.95/mo), Plus ($29.95/mo), Premium ($59.95/mo), with features gated behind each tier. The total cost depends on which TradingView features a trader actually needs.
-
-### Can free users publish indicators on TakeProfit?
-
-Yes. TakeProfit allows all users, including free-plan users, to create and publish indicators to the marketplace. This open-access model allows users to monetize their work regardless of subscription status.
-
-### Can free users publish indicators on TradingView?
-
-No. TradingView restricts indicator publishing to paid plan subscribers. Free users cannot share custom indicators with the community.
-
-### Does Indie support multi-timeframe analysis?
-
-Yes. The `@sec_context` decorator combined with `self.calc_on()` allows indicators to request data from additional instruments or timeframes. This enables cross-asset and multi-timeframe analysis within a single indicator.
-
-### Does Indie support classes and object-oriented programming?
-
-Partially. Indie supports the `class` keyword for defining classes, including the class-based form of `Main` indicators with `__init__` constructors and `calc` methods. Full OOP support (inheritance hierarchies, advanced polymorphism) is still being expanded.
-
-### What are the limitations of Indie compared to Python?
-
-Key limitations include: no nested functions, no lambdas, no generator expressions, no `try`/`except`, no `with`/`as`, no `dict` or `set` types, no f-strings, 32-bit integer precision, block-level scoping, and no external library imports. These are documented as items under ongoing development.
-
-### Does Pine Script have backward compatibility issues?
-
-Yes. Users have reported that Pine Script updates have caused previously working scripts to throw runtime errors. TradingView has also modified built-in indicators without notice, breaking strategies that depended on specific behavior.
-
-### Can I monetize Indie indicators?
-
-Yes. TakeProfit allows creators to sell indicators through the marketplace. Earnings are paid via Stripe once the creator's balance reaches $100. Both free and paid users can publish monetizable indicators.
-
-### What IDE does TakeProfit provide for Indie?
-
-TakeProfit includes an integrated IDE widget with a code editor, syntax highlighting, autocomplete, and error underlining. The IDE is a draggable widget that fits into the workspace alongside charts, watchlists, and other tools.
-
-### Does Indie run in a sandbox?
-
-Yes. Indie code executes on TakeProfit's servers in a sandboxed environment. File and socket I/O are not permitted. Execution time and memory usage are limited. This is a security measure to protect the hosting infrastructure.
-
-### What data types does Indie support?
-
-Indie supports `int` (32-bit signed), `float` (64-bit double precision), `bool`, `str`, `list` (partial), `tuple` (partial), `Series[T]` (for time-series data), `MutSeriesF` (mutable float series), `Var[T]` (for persistent variables), and `Optional[T]`. These types handle the data processing requirements of most indicator and strategy logic.
-
-### Can I use Indie for crypto and forex trading?
-
-Yes. TakeProfit supports cryptocurrency and forex instruments. Indie indicators and strategies can be applied to any supported pair. The platform integrates with Lime Trading as a broker for order execution, and additional broker integrations are in development.
-
-### How does NinjaTrader compare as a pine script alternative?
-
-NinjaTrader uses NinjaScript, a C#-based language that provides full access to the .NET framework. NinjaTrader is a platform designed primarily for futures trading, though it supports stocks and forex as well. NinjaScript can offer more flexibility for complex calculations and integration with external data sources, but has a steeper learning curve than both Indie and Pine Script.
-
-### How does thinkorswim compare as a pine script alternative?
-
-Thinkorswim uses ThinkScript, a proprietary scripting language for creating studies and strategies. Thinkorswim is free with a TD Ameritrade brokerage account, making it attractive for stock traders and options traders who already use that broker. ThinkScript is more limited in capability than Indie, Pine Script, or NinjaScript, but is adequate for standard technical analysis and strategy testing workflows.
+Yes. The Strategy/Backtesting widget shows P&L, win rate, profit factor, drawdown, Sharpe, Sortino, and Calmar ratios, and a full trade log. Available history depends on your plan.
 
 ### Can I build trading bots with Indie?
 
-Indie itself is an indicator and strategy language, not a bot framework. However, TakeProfit's webhook-based alert system allows users to connect indicator signals to external automation tools, effectively creating automated trading pipelines. Direct API-based bot execution is not built into the platform as of March 2026.
+The Indie docs describe strategies that can run in a live-trading mode against a connected exchange, and cloud alerts can notify through webhooks to external tools. Venue support is limited to what the platform integrates (see the Brokers page). Test carefully; backtests are approximations of live trading, and nothing here is financial advice.
 
-### Is TakeProfit like TradingView?
+### Can I use my own data in an indicator?
 
-TakeProfit and TradingView share similarities as web-based charting and analysis platforms, but they differ in pricing model, scripting language, and feature set philosophy. TakeProfit uses a single flat-rate plan and Python-based Indie, while TradingView uses tiered pricing and proprietary Pine Script. TakeProfit allow users to publish indicators for free; TradingView requires a paid plan.
+Yes: public HTTPS CSV files and live WebSocket/SSE feeds, with limits described in the docs. Such scripts stay private and cannot be published to the Marketplace.
 
----
+### Does Indie have an AI assistant?
 
-## Indie vs Pine Script in 2026: Which Trading Scripting Language Should You Choose?
+Yes. There is an AI chat, an assistant inside the IDE, and an MCP server for external AI clients. See the [MCP setup guide](https://takeprofit.com/docs/guide/platform/ai-assistant/Mcp-server-guide).
 
-Indie and Pine Script both serve the purpose of extending a trading platform's built-in capabilities. The right choice depends on a trader's existing skills, workflow preferences, and priorities.
+### Is Indie free to use?
 
-TakeProfit's Indie is commonly preferred by developers who already work with Python and want that familiarity in their trading tools. Its single pricing model, free-tier publishing access, backward compatibility guarantees, and integrated IDE make it a practical choice for developers planning to build and monetize indicators. Indie's Python foundation also means that coding patterns learned on the platform transfer to other professional contexts — a meaningful advantage for traders who also work in data science or software engineering.
+TakeProfit has a free plan, and some features (such as larger limits and Indie AI assistance) depend on the plan. We do not quote prices here because they change; see the platform's current plan information.
 
-TradingView's Pine Script benefits from a large, established community with years of accumulated tutorials, forum posts, and shared scripts. For traders already embedded in TradingView's ecosystem — using its charting, screening, and social features daily — Pine Script is the natural choice. The breadth of existing Pine Script resources reduces the time required to find solutions to common problems.
+### Can I publish and sell indicators?
 
-Beyond these two, traders should also evaluate NinjaTrader (for futures-focused automated trading with NinjaScript), thinkorswim (for options traders who want a broker-integrated analysis platform), and MetaTrader (for forex traders who need MQL's established ecosystem). No single platform is the best alternative for every trader — the right choice depends on asset focus, experience levels, budget, and whether you prioritize community size or language familiarity.
+Yes, through the Marketplace after moderation. Revenue share, payout rules, and eligibility are in the [Sell Your Indicators](https://takeprofit.com/docs/guide/monetization-tools/Sell-your-indicators) guide.
 
-Both TakeProfit and TradingView continue to evolve. Indie's language is under active development with new algorithms, drawing tools, and language features being added regularly. Pine Script continues to iterate with new versions. In 2026, the decision often comes down to which platform a trader wants to call home — and which language's tradeoffs they are most comfortable accepting.
+### Can Pine Script run outside TradingView?
 
-### Key Insight
+No. Pine Script runs only on TradingView; moving to another platform means rewriting the script in that platform's language.
 
-> In 2026, Indie and Pine Script serve different trader profiles. Indie on TakeProfit is commonly chosen by developers who prefer Python syntax, transparent flat-rate pricing, and free-tier indicator publishing. Pine Script on TradingView is often preferred by traders who value its large community, extensive educational resources, and established marketplace. NinjaTrader, thinkorswim, and MetaTrader offer additional alternatives to Pine Script for traders with specialized needs.
->
+### Which language is easier to learn?
+
+For Python programmers, Indie. For readers without programming experience, both have a learning curve, and Pine has more beginner tutorials from its community.
+
+### What about NinjaScript, ThinkScript, and MQL?
+
+They are the main alternatives on other platforms: NinjaScript (C#) on NinjaTrader, ThinkScript on thinkorswim, and MQL4/5 on MetaTrader. Each is tied to its platform, like Pine and Indie.
+
+## Summary
+
+Indie and Pine Script solve the same problem on different platforms. Indie offers Python-style syntax, open-source built-ins, strategies with backtesting, tables, dictionaries, external data, and AI/MCP tooling on TakeProfit. Pine Script offers a large community, a big library of public scripts, and the established TradingView ecosystem. The right choice depends on the skills you have, the markets and brokers you need, and how much you value community size versus language familiarity. Try both on a small script before committing.

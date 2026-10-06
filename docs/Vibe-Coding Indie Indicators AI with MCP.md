@@ -2,7 +2,8 @@
 
 The TakeProfit MCP server connects AI assistants such as Claude, Codex, Cursor and VS Code to the Indie® compiler, the documentation, your private scripts, alerts, watchlists and backtests. You describe the indicator or strategy in plain words, and the assistant writes the code, compiles it on the real runtime and fixes its own errors before handing it over.
 
-*Last verified against Indie v5.19 (October 2026). This is an unofficial community guide. The official setup guide is the [MCP Server Setup Guide](https://takeprofit.com/docs/guide/platform/ai-assistant/Mcp-server-guide).*
+> [!NOTE]
+> This is an unofficial community guide. The official setup guide is the [MCP Server Setup Guide](https://takeprofit.com/docs/guide/platform/ai-assistant/Mcp-server-guide).
 
 ---
 

@@ -2,7 +2,8 @@
 
 Indie is the scripting language of the TakeProfit platform. It is a Python-style language for writing indicators and trading strategies that run on TakeProfit servers and draw on your charts. This guide takes you from a three-line indicator to a backtestable strategy, with every example checked against the current language.
 
-*Last verified against Indie v5.19 (October 2026). This is an unofficial community guide. The official documentation lives at [takeprofit.com/docs/indie](https://takeprofit.com/docs/indie/What-is-Indie).*
+> [!NOTE]
+> This is an unofficial community guide. The official documentation lives at [takeprofit.com/docs/indie](https://takeprofit.com/docs/indie/What-is-Indie).
 
 ---
 

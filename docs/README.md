@@ -1,1547 +1,973 @@
 # Pine Script to Indie Language Conversion Cheat Sheet
 
-This guide helps PineScript users migrate to TakeProfit's Indie™ language. It covers language structures, built-in indicators, plotting, and context handling. Examples are taken from official sources and the Indie code examples GitHub repo.
+This is a migration reference for Pine Script™ users who want to port indicators and strategies to TakeProfit's Indie™ language. Each section maps a Pine construct to its Indie counterpart, shows a short working example, and says plainly where Indie has no equivalent. It is written for **Indie v5.19** (language directive `# indie:lang_version = 5`).
 
-
----
-
-## 1. Script Declaration & Context
-
-This section outlines how to declare scripts and set their context in both Pine Script™ and Indie, highlighting key structural differences and usage patterns.
-
-| **Feature**               | **Pine Script™**                                          | **Indie**                                                                                 | **Notes**                                                                                                                                                                                                                     |
-|---------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Version Declaration**   | `//@version=5`                                            | `# indie:lang_version = 5`                                                               | Pine uses a version directive comment. Indie uses a language directive header that must appear at the top of the file.                                                                                                       |
-| **Indicator Declaration** | `indicator("My Indicator", overlay=true)`                 | `@indicator("My Indicator", overlay_main_pane=True)`<br>`class Main(MainContext):`        | Indie uses Python-style class structure and decorators. The overlay flag becomes `overlay_main_pane=True`.                                                                                                                   |
-| **Strategy Declaration**  | `strategy("My Strategy", overlay=true)`                   | ❌ Not supported                                                                           | Indie is indicator-only. There is no built-in concept of trading strategies (e.g. `strategy.entry`, `strategy.exit`).                                                                                                        |
-| **Accessing OHLC Data**   | `open`, `high`, `low`, `close`, `volume`                  | `self.open`, `self.high`, `self.low`, `self.close`, `self.volume`                         | All price/volume series in Indie are accessed via `self.` inside the class body.                                                                                                       |
-| **Historical Referencing**| `close[1]`                                                | `self.close[1]`                                                                          | Indexing for historical bars is the same, but Indie requires the `self.` prefix.                                                                                                       |
-| **Time and Bar Index**    | `time`, `bar_index`                                       | `self.time`, `self.bar_index`                                                            | `self.time` is a `datetime.datetime` object in Indie, while `time` in Pine is a UNIX timestamp in milliseconds. `bar_index` is the current bar number.                                |
+> [!NOTE]
+> Code samples were compiled and, where the sample does not need an external URL, run against the TakeProfit runtime. This is a community page, not official TakeProfit documentation; the official reference is at [takeprofit.com/docs/indie](https://takeprofit.com/docs/indie/Overview).
 
 ---
 
-### ✅ Detailed Notes
+## 1. Script structure and context
 
-#### 1. Version Declaration
+Indie source is Python syntax with a stricter compiler and its own runtime. Every name you use must be imported, the entry point is a function or class called `Main`, and the values you `return` from it become the plots.
 
-- **Pine:**
-  ```pinescript
-  //@version=5
-  ```
-- **Indie:**
-  ```python
-  # indie:lang_version = 5
-  ```
-  Must be the first line in the file — sets the language version used by the Indie compiler.
+| **Feature** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Version | `//@version=5` | `# indie:lang_version = 5` | A comment directive on the first line. It is the only directive. |
+| Imports | None; built-ins are global | `from indie import indicator, MainContext, plot, color` | Every Indie name must be imported. Only the packages listed in [section 15](#15-standard-library-available-in-indie) exist. |
+| Indicator declaration | `indicator("My Indicator", overlay=true)` | `@indicator('My Indicator', overlay_main_pane=True)` on `Main` | The title is required. Optional: `format=format.PRICE`, `precision=2`. |
+| Entry point | The script body runs once per bar | `def Main(self)` or `class Main(MainContext)` with `calc(self)` | Runs for every historical bar and every realtime update. The function form is shorthand for the class form. |
+| Strategy declaration | `strategy("My Strategy", overlay=true)` | `@strategy('My Strategy', overlay_main_pane=True)` | Supported since v5.10. See [section 10](#10-strategies). |
+| Price series | `open`, `high`, `low`, `close`, `volume` | `self.open`, `self.high`, `self.low`, `self.close`, `self.volume` | Also `self.hl2`, `self.hlc3`, `self.ohlc4`. All are read-only `Series[float]`. |
+| History reference | `close[1]` | `self.close[1]` | Index `0` is the current bar. Missing history returns `nan`. |
+| Bar index | `bar_index` | `self.bar_index` | `0` is the oldest bar. `self.bar_count` equals `bar_index + 1`. |
+| Time | `time` (milliseconds) | `self.time[0]` (UNIX seconds, UTC, `float`) | Not milliseconds and not a `datetime` object. See [section 14](#14-time-sessions-and-symbol-info). |
+| Plot output | `plot(x)` | `return x` from `Main` | Returning a tuple draws several plots. See [section 5](#5-plotting). |
+| Inputs | `input.int(...)` | `@param.int(...)` plus an argument on `Main` | See [section 3](#3-inputs-parameters). |
 
----
-
-#### 2. Indicator Declaration
-
-- **Pine:**
-  ```pinescript
-  indicator("My Indicator", overlay=true)
-  ```
-- **Indie:**
-  ```python
-  @indicator("My Indicator", overlay_main_pane=True)
-  class Main(MainContext):
-      ...
-  ```
-  The class `Main` must inherit from `MainContext`. All calculation and plot methods go inside this class.
-
----
-
-#### 3. Strategy Declaration
-
-- **Pine:** Supports strategy-based backtesting and trading automation.
-  ```pinescript
-  strategy("My Strategy", overlay=true)
-  strategy.entry("Long", strategy.long)
-  ```
-- **Indie:** ❌ **Not supported**. Indie currently focuses **only on indicators and chart visualization**, not backtesting or order execution.
-
----
-
-#### 4. Accessing OHLCV Data
-
-- **Pine:** Variables like `close`, `volume` are globally accessible.
-- **Indie:** Must be accessed with `self.` inside the `Main` class.
-  ```python
-  self.close[0]   # current close
-  self.volume[1]  # previous volume
-  ```
-
----
-
-#### 5. Historical Referencing
-
-- Same bracketed indexing syntax (`[1]`, `[2]`, etc.)
-- In Indie, indexing applies to series accessed through `self.<series>`:
-  ```python
-  self.close[3]
-  ```
-
----
-
-#### 6. Time and Bar Index
-
-- **Pine:**
-  ```pinescript
-  time        // milliseconds since epoch
-  bar_index   // current bar number
-  ```
-- **Indie:**
-  ```python
-  self.time.year      # datetime object, not a number
-  self.bar_index      # current bar index
-  ```
-
-  Indie uses Python’s `datetime.datetime` format for time. So you can access components like:
-  ```python
-  self.time.year, self.time.month, self.time.day
-  ```
-
----
-
-***
-
-Great! Here's the **fully corrected and verified Section 2: Data Types & Variables**, based strictly on official Indie and Pine Script documentation.
-
----
-
-## 2. Data Types & Variables
-
-| **Concept**                  | **Pine Script™**                                | **Indie**                                                                 | **Notes**                                                                                                                                                                         |
-|------------------------------|--------------------------------------------------|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Variable Declaration**     | `var float x = na`                              | `x = MutSeriesF.new(math.nan)`                                            | Pine uses `var` for persistent variables. Indie uses mutable series types like `MutSeriesF`, `MutSeriesI`.                                                                       |
-| **Mutable Series (float)**   | `var float x = 0.0`                             | `x = MutSeriesF.new(0.0)`                                                  | Indie explicitly uses mutable containers for persistent values that update bar by bar.                                                                                            |
-| **Mutable Series (int)**     | `var int counter = 0`                           | `counter = MutSeriesI.new(0)`                                              | Indie uses `MutSeriesI` for mutable integer series.                                                                                                                               |
-| **Constant Series (float)**  | `x = close`                                     | `x = self.close`                                                           | Pine automatically treats all variables as series. Indie uses `SeriesF` (implicit from `self.close`).                                                                             |
-| **Primitive Types**          | `int`, `float`, `bool`, `string`, `color`       | `int`, `float`, `bool`, `str`, `color`                                    | Indie is Python-based in typing, with `str` instead of `string`.                                                                                                                  |
-| **Series Types**             | Implicit (all variables are series)             | `SeriesF`, `SeriesI`, `MutSeriesF`, `MutSeriesI`, etc.                    | In Indie, series vs scalar must be handled explicitly.                                                                                                                            |
-| **Default Value**            | `na`                                            | `math.nan`                                                                 | Indie uses Python’s `math.nan` instead of Pine's `na`.                                                                                                                            |
-| **Undefined Access**         | Allowed (returns `na`)                          | ❌ Error (must initialize first)                                            | Indie will raise a runtime error if you use an uninitialized variable.                                                                                                            |
-| **Replace NaN / fallback**   | `nz(x, 0)`                                      | `x if not math.isnan(x) else 0`                                            | No `nz()` in Indie — must check and assign manually.                                                                                                                              |
-| **Boolean Assignment**       | `var bool b = false`                            | `b = MutSeriesB.new(False)`                                               | Indie supports `MutSeriesB` for bar-by-bar boolean state.                                                                                                                         |
-| **String Handling**          | `var string s = ""`                             | `s = "Hello"`                                                              | Indie allows standard Python string usage, but not bar-indexed series of strings.                                                                                                 |
-| **NaN Detection**            | `na(x)`                                         | `math.isnan(x)`                                                            | Indie uses `math.isnan()` from Python standard library.                                                                                                                           |
-
----
-
-
-#### 1. All Variables Are Series (Pine) vs. Explicit Series (Indie)
-- **Pine Script™:**
-  ```pinescript
-  x = close          // Series of floats (implicit)
-  var float x = na   // Persistent series
-  ```
-- **Indie:**
-  ```python
-  x = self.close     # SeriesF (read-only)
-  y = MutSeriesF.new(math.nan)  # Mutable persistent series
-  ```
-
-#### 2. Mutable Series in Indie
-To store and update values across bars (like with `var` in Pine), Indie uses mutable series classes:
+The same script in class form, with formatting options and three plots (`plot(close)`, `plot(close[1])`, `plot(bar_index)` in Pine):
 
 ```python
-counter = MutSeriesI.new(0)
-price_level = MutSeriesF.new(math.nan)
+# indie:lang_version = 5
+from indie import indicator, MainContext, format
+
+
+@indicator('My Indicator', overlay_main_pane=True, format=format.PRICE, precision=2)
+class Main(MainContext):
+    def calc(self):
+        # Pine: plot(close), plot(close[1]), plot(bar_index)
+        return self.close[0], self.close[1], float(self.bar_index)
 ```
 
-- To read the current value:
-  ```python
-  counter[0]
-  ```
-- To update the value:
-  ```python
-  counter[0] += 1
-  ```
-
-#### 3. Type Safety and Initialization
-- **Pine Script:** allows uninitialized variables (`na` used automatically).
-- **Indie:** All variables must be **explicitly initialized** before use. If not, it raises a runtime error.
-
-#### 4. Series Type Summary (Indie)
-
-| **Type**           | **Description**                                |
-|--------------------|------------------------------------------------|
-| `SeriesF`          | Immutable float series (e.g., `self.close`)    |
-| `MutSeriesF`       | Mutable float series (can update per bar)      |
-| `SeriesI`          | Immutable int series                           |
-| `MutSeriesI`       | Mutable int series                             |
-| `MutSeriesB`       | Mutable bool series                            |
-| `Series[float]`    | Shorthand for typed series                     |
-
-#### 5. NaN Handling Example
-
-- **Pine Script:**
-  ```pinescript
-  x = nz(mySeries, 0)
-  ```
-- **Indie:**
-  ```python
-  x = mySeries[0] if not math.isnan(mySeries[0]) else 0
-  ```
-
----
-
-
-***
-
-Here is the **fully verified and corrected Section 3: Inputs (Parameters)** — based only on official Indie and Pine Script™ documentation.
-
----
-
-## 3. Inputs (Parameters)
-
-| **Feature**             | **Pine Script™**                                              | **Indie**                                                                   | **Notes**                                                                                                                                                   |
-|-------------------------|---------------------------------------------------------------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Integer Input**       | `input.int(14, title="Length")`                              | `@param.int("length", default=14)`                                          | Indie uses decorators to define parameters; Pine uses `input.*()` functions.                                                                               |
-| **Float Input**         | `input.float(1.5, title="Factor")`                           | `@param.float("factor", default=1.5)`                                       | Both accept default float values.                                                                                                                           |
-| **Boolean Input**       | `input.bool(true, title="Enable Filter")`                   | `@param.bool("enable_filter", default=True)`                                | Pine default is lowercase `true`, Indie uses Python `True`.                                                                                                |
-| **String Input**        | `input.string("SMA", options=["SMA", "EMA"])`               | `@param.string("ma_type", options=["SMA", "EMA"], default="SMA")`           | Indie requires `options` + `default` explicitly.                                                                                                            |
-| **Color Input**         | `input.color(color.red)`                                    | `@param.color("my_color", default=color.RED)`                               | Indie uses predefined color constants like `color.RED`.                                                                                                    |
-| **Source Input**        | `input.source(close)`                                       | `@param.source("src", default="close")`                                     | Indie inputs are string-referenced sources (like `"close"`).                                                                                               |
-| **Default Value**       | `input.int(14)` → default = 14                              | `@param.int("length", default=14)`                                          | Default values are required in Indie.                                                                                                                       |
-| **Dropdown Options**    | `input.string(options=["X", "Y"])`                          | `@param.string("mode", options=["X", "Y"], default="X")`                    | Both allow option lists. Indie uses the same syntax as Python’s `list`.                                                                                    |
-| **Tooltip**             | `input.int(14, tooltip="Number of periods")`                | ❌ Not supported                                                             | Indie has no tooltip or UI metadata for inputs.                                                                                                            |
-| **Grouping Inputs**     | `group="Settings"`                                           | ❌ Not supported                                                             | Indie doesn't support grouping/organizing inputs visually.                                                                                                 |
-| **Inline Inputs**       | `inline="MyGroup"`                                           | ❌ Not supported                                                             | Pine supports grouping inputs inline; Indie doesn't.                                                                                                       |
-| **Input Visibility**    | `input.int(14, inline="x", tooltip="...")` → GUI config only | ❌ Not applicable                                                            | Indie has no GUI editor — all parameters are fixed in the script.                                                                                          |
-
----
-
-### ✅ Indie Syntax Pattern
-
-In Indie, parameters are defined using decorators **before the main function**, and then passed as arguments to `def Main(...)`.
-
-#### 📌 Example:
+The function form is the shortest valid indicator; it draws one line with default settings:
 
 ```python
-@param.int("length", default=14)
-@param.bool("use_smoothing", default=True)
-@param.string("ma_type", options=["SMA", "EMA"], default="SMA")
-def Main(self, length, use_smoothing, ma_type):
-    ...
-```
+# indie:lang_version = 5
+from indie import indicator
 
-- `@param.int(...)` defines the parameter type and UI label.
-- Parameter names in decorators and function args **must match**.
-- Inputs are passed automatically when the indicator runs.
-
----
-
-### ✅ Source Input Notes
-
-- **Pine:**
-  ```pinescript
-  src = input.source(close, "Source")
-  ```
-- **Indie:**
-  ```python
-  @param.source("src", default="close")
-  def Main(self, src):
-      series = getattr(self, src)
-  ```
-
-Use `getattr(self, src)` to convert the selected source string (e.g., `"close"`) into the actual series.
-
----
-
-### ✅ Color Input Notes
-
-- **Pine:**
-  ```pinescript
-  myColor = input.color(color.red)
-  ```
-- **Indie:**
-  ```python
-  @param.color("my_color", default=color.RED)
-  ```
-
-Indie uses named colors (`color.RED`, `color.BLUE`, etc.), not hex codes in inputs.
-
----
-
-Here is the **fully corrected and verified Section 4: Series & State Handling**, based on real behavior in Pine Script™ and Indie language.
-
----
-
-## 4. Series & State Handling
-
-This section compares how Pine Script™ and Indie handle series data, persistent values, and state updates across bars.
-
-| **Concept**                 | **Pine Script™**                                     | **Indie**                                                           | **Notes**                                                                                                                                                      |
-|-----------------------------|------------------------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Series are default**      | All variables are implicitly series                 | Only `self.<name>` are series                                       | Indie requires explicit use of `self.` to access OHLC and user-defined series.                                           |
-| **Persistent variables**    | `var float x = 0`                                   | `x = MutSeriesF.new(0.0)`                                           | Indie uses mutable series (`MutSeriesF`, `MutSeriesI`, etc.) to persist values bar-by-bar.                              |
-| **Accessing OHLC series**   | `close`, `high`, etc.                               | `self.close`, `self.high`, etc.                                     | All standard price and volume series are accessed via `self.` inside the class.                                          |
-| **Historical access**       | `x[1]`                                               | `x[1]`                                                               | Same syntax in both, but Indie requires the variable to be a series (`self.x`, or `MutSeriesF`, etc.).                  |
-| **State update syntax**     | `x := x + 1`                                        | `x[0] = x[0] + 1`                                                   | In Indie, assignment to mutable series requires using index `[0]`.                                                      |
-| **Bar state detection**     | `bar_index == 0`, `barstate.isfirst`               | `self.bar_index == 0`                                               | Indie doesn’t have `barstate`, so first-bar checks must be done manually.                                                |
-| **Init-once logic**         | `if barstate.isfirst`                               | Use `__init__()` constructor                                        | Indie encourages moving one-time initialization into the `__init__()` method of the class.                              |
-| **Access current value**    | `x` or `x[0]`                                       | `x[0]`                                                              | In Indie, use `[0]` to get the current bar’s value from any series.                                                     |
-| **Declare in function scope**| Global only                                         | Can declare inside any method or class scope                        | Indie follows standard Python scoping rules.                                                                             |
-
----
-
-### ✅ Examples
-
-#### 1. Persistent Counter
-
-**Pine Script™:**
-```pinescript
-var int counter = 0
-counter := counter + 1
-```
-
-**Indie:**
-```python
-counter = MutSeriesI.new(0)
-
+@indicator('Hello', overlay_main_pane=True)
 def Main(self):
+    return self.close[0]
+```
+
+> [!NOTE]
+> Use the class form when you need a constructor. `__init__` runs once, and `Context.calc_on` (multi-timeframe and external data, [section 9](#9-multi-timeframe-other-symbols-and-external-data)) must be called from it. Parameters from `@param.*` are passed to `Main` (function form) or to `__init__` and `calc` (class form) by name.
+
+---
+
+## 2. Types, series and state
+
+Pine treats every variable as a series. Indie keeps plain values (`float`, `int`, `bool`, `str`) and series (`Series[T]`, `MutSeries[T]`) apart, and persistent state is explicit.
+
+| **Concept** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Basic types | `int`, `float`, `bool`, `string` | `int`, `float`, `bool`, `str` | `float` is 64-bit. `int` is a **32-bit signed** integer (about ±2.1 billion). |
+| Color type | `color` | `Color` (`from indie import Color`) | See [section 12](#12-colors). |
+| Read-only series | Every variable | `Series[T]`, alias `SeriesF` for `Series[float]` | `self.close` is a `SeriesF`. `T` can be `float`, `int`, `bool` or `str`. |
+| Persistent series with history | `var float x = 0.0`, then `x[1]` | `x = MutSeriesF.new(init=0.0)`, then `x[0]`, `x[1]` | `init=` is written once, on the first bar. Use `MutSeries[int]` or `MutSeries[bool]` for other types. |
+| Persistent scalar | `var int n = 0` | `n = Var[int].new(0)`, then `n.get()` and `n.set(v)` | Holds the current value only, no history. |
+| Reassignment | `x := x + 1` | `x[0] += 1` or `x.set(x.get() + 1)` | Writing goes to index `0` of a `MutSeries`. |
+| Derived value with history | `y = close - open`, then `y[1]` | `y = MutSeriesF.new(self.close[0] - self.open[0])`, then `y[1]` | A plain `float` has no history. Wrap it to read previous bars or to feed an algorithm such as `Sma.new(y, 10)`. |
+| Missing value | `na` | `math.nan` for numbers, `Optional[T]` for "no value" | See [section 13](#13-nan-optional-and-errors). |
+| Arrays and maps | `array.*`, `map.*` | `list[T]`, `dict[K, V]` | See [section 8](#8-functions-classes-and-containers). |
+| First-bar logic | `if barstate.isfirst` | `if self.bar_index == 0`, or `MutSeriesF.new(init=...)`, or `__init__` | See [section 14](#14-time-sessions-and-symbol-info) for the other `barstate` flags. |
+
+```python
+# indie:lang_version = 5
+from indie import indicator, MutSeriesF, Var
+
+@indicator('State demo')
+def Main(self):
+    counter = MutSeriesF.new(init=0.0)
     counter[0] += 1
+    highest_seen = Var[float].new(0.0)
+    if self.high[0] > highest_seen.get():
+        highest_seen.set(self.high[0])
+    return counter[0], highest_seen.get(), counter[1]
 ```
+
+> [!WARNING]
+> `MutSeriesF.new(0.0)` is **not** Pine's `var x = 0.0`. The first positional argument (`reset`) is written into `x[0]` on every bar, so the series restarts from that value each time. For "initialise once, then carry forward" use `MutSeriesF.new(init=0.0)`.
+
+Rules that differ from Python and from Pine:
+
+- **Block scope.** A variable first assigned inside `if`, `for` or `while` does not exist after the block. Declare and initialise it before the block (`res = 0`, or `res: int`).
+- **Explicit types on helper functions.** Parameters and return values of your own functions need type hints. `Main` and `@sec_context` functions are exempt.
+- **No `None` on plain types.** `a: int = None` does not compile; use `Optional[int]`.
+- **Where `.new()` is allowed.** `Sma.new(...)`, `MutSeriesF.new(...)` and `Var[T].new(...)` can only be called from `Main`/`calc`, an `@algorithm` or an `@sec_context` function, not from `__init__`, plain helper functions or module level. Call them on every bar; hiding a call behind an `if` freezes the algorithm.
+- **Realtime.** On a realtime bar every update triggers a recalculation, and `MutSeries` and `Var` values are rolled back to the previous bar before each one, the same idea as Pine's `var`. The docs describe no equivalent of `varip`.
 
 ---
 
-#### 2. Detect First Bar
+## 3. Inputs (parameters)
 
-**Pine Script™:**
-```pinescript
-if barstate.isfirst
-    label.new(bar_index, high, text="Start")
-```
+Inputs are decorators on `Main`. Each decorator needs a unique `id` (a valid Python identifier) and a `default`, and `Main` must take an argument with the same name.
 
-**Indie:**
+| **Input** | **Pine Script™** | **Indie** |
+|---|---|---|
+| Integer | `input.int(14, "Length", minval=1)` | `@param.int('length', default=14, min=1, max=500, step=1, title='Length')` |
+| Float | `input.float(1.5, "Factor")` | `@param.float('factor', default=1.5, min=0.1, max=10.0, step=0.1, title='Factor')` |
+| Boolean | `input.bool(true, "Filter")` | `@param.bool('use_filter', default=True, title='Filter')` |
+| String with options | `input.string("SMA", options=["SMA", "EMA"])` | `@param.str('ma_type', default='SMA', options=['SMA', 'EMA'], title='MA type')` |
+| Source | `input.source(close, "Source")` | `@param.source('src', default=source.CLOSE, options=[source.CLOSE, source.HL2], title='Source')` |
+| Color | `input.color(color.red)` | `@param.color('line_color', default=color.RED, title='Line color')` |
+| Timeframe | `input.timeframe("D")` | `@param.time_frame('tf', default='1D', options=['1h', '4h', '1D'], title='Timeframe')` |
+
 ```python
-@plot("First Marker", style=marker_style.LABEL, marker_position=marker_position.ABOVE)
-def start_marker(self):
-    return plot.Marker(text="Start") if self.bar_index == 0 else plot.Marker(math.nan)
+# indie:lang_version = 5
+from indie import indicator, param, source, color, plot
+from indie.algorithms import Ma
+
+
+@indicator('Inputs demo', overlay_main_pane=True)
+@param.int('length', default=14, min=1, max=500, title='Length')
+@param.float('factor', default=1.0, min=0.1, max=10.0, step=0.1, title='Factor')
+@param.bool('use_factor', default=True, title='Apply factor')
+@param.str('ma_type', default='SMA', options=['SMA', 'EMA', 'WMA'], title='MA type')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.color('line_color', default=color.BLUE, title='Line color')
+@plot.line(title='MA')
+def Main(self, length, factor, use_factor, ma_type, src, line_color):
+    ma = Ma.new(src, length, ma_type)
+    value = ma[0] * factor if use_factor else ma[0]
+    return plot.Line(value, color=line_color)
 ```
+
+Differences to expect when porting:
+
+- **A source input is already a series.** `src` arrives in `Main` as a `SeriesF`. Pass it straight to algorithms (`Ma.new(src, length, ma_type)`); there is no string lookup and `getattr` is not available. `source.*` values are `OPEN`, `HIGH`, `LOW`, `CLOSE`, `VOLUME`, `HL2`, `HLC3`, `OHLC4`.
+- **`title=` is the only UI text.** `@param.*` has no `tooltip`, `group`, `inline` or `confirm` arguments. Fold hints and group names into `title`.
+- **`min`, `max` and `step`** exist for `int` and `float` only.
+- **No `input.time`, `input.symbol` or `input.price`.** For a date use `@param.str` and parse it with `datetime.strptime`.
+- **A timeframe input is already a `TimeFrame`.** Pass it directly to `calc_on(time_frame=tf)`. Its `default` must appear in `options`.
 
 ---
 
-#### 3. Initializing State Once in Indie
+## 4. Built-in functions and indicators
 
-In Pine, we write:
-```pinescript
-var float lastHigh = na
-if bar_index == 0
-    lastHigh := high
-```
-
-In Indie, use the `__init__()` constructor:
+Pine's `ta.*` functions are classes in `indie.algorithms`, created with `.new(...)`. Each returns a series (or a tuple of series), and you read the current value with `[0]`.
 
 ```python
-def __init__(self):
-    self.last_high = MutSeriesF.new(math.nan)
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, plot, color
+from indie.algorithms import Sma, Ema, Bb, Macd, Highest, Atr, Rsi
+from indie.math import cross_over, cross_under
 
+
+@indicator('Built-ins demo', overlay_main_pane=True)
+@plot.line(title='SMA 20')
+@plot.line(title='EMA 50')
+@plot.line(title='BB lower')
+@plot.line(title='BB middle')
+@plot.line(title='BB upper')
+@plot.marker(title='Cross up', color=color.GREEN, position=plot.marker_position.BELOW)
+@plot.marker(title='Cross down', color=color.RED, position=plot.marker_position.ABOVE)
 def Main(self):
-    if self.bar_index == 0:
-        self.last_high[0] = self.high[0]
+    sma = Sma.new(self.close, 20)
+    ema = Ema.new(self.close, 50)
+    lower, middle, upper = Bb.new(self.close, 20, 2.0)
+    macd_line, signal_line, hist = Macd.new(self.close, 12, 26, 9)
+    highest = Highest.new(self.high, 10)
+    atr = Atr.new(14)
+    rsi = Rsi.new(self.close, 14)
+
+    up = cross_over(sma, ema)
+    down = cross_under(sma, ema)
+    up_marker = self.low[0] if up else nan
+    down_marker = self.high[0] if down else nan
+    return sma[0], ema[0], lower[0], middle[0], upper[0], plot.Marker(up_marker), plot.Marker(down_marker)
 ```
 
----
+| **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|
+| `ta.sma(close, 20)` | `Sma.new(self.close, 20)` | Same for `Ema`, `Rma`, `Wma`. |
+| `ta.vwma(close, 20)` | `Vwma.new(self.close, 20)` | Takes `(src, length)`. Volume comes from the chart, so there is no volume argument. |
+| `ta.rsi(close, 14)` | `Rsi.new(self.close, 14)` | |
+| `ta.macd(close, 12, 26, 9)` | `macd_line, signal_line, hist = Macd.new(self.close, 12, 26, 9)` | Returns a tuple. Optional `ma_source`, `ma_signal` accept `'EMA'` or `'SMA'`. |
+| `ta.bb(close, 20, 2)` | `lower, middle, upper = Bb.new(self.close, 20, 2.0)` | **Order is lower, middle, upper**, not Pine's basis, upper, lower. |
+| `ta.stdev(close, 20)` | `StdDev.new(self.close, 20)` | There is no `Variance` class. |
+| `ta.dev(close, 20)` | `Dev.new(self.close, 20)` | Mean absolute deviation. |
+| `ta.tr`, `ta.atr(14)` | `Tr.new()`, `Atr.new(14)` | `Atr` takes `length` and an optional `ma_algorithm` (default `'RMA'`); there is no `src`. |
+| `ta.highest(high, 10)`, `ta.lowest(low, 10)` | `Highest.new(self.high, 10)`, `Lowest.new(self.low, 10)` | |
+| `ta.highestbars`, `ta.lowestbars` | `SinceHighest.new(src, length)`, `SinceLowest.new(src, length)` | Return `Series[int]`, the number of bars since the extreme. |
+| `ta.crossover(a, b)` | `cross_over(a, b)` | `from indie.math import cross_over, cross_under, cross`. Takes two series or a series and a constant level. |
+| `ta.crossunder(a, b)` | `cross_under(a, b)` | |
+| `ta.cross(a, b)` | `cross(a, b)` | |
+| `ta.change(src, n)`, `ta.mom` | `Change.new(src, n)` | Difference from `n` bars ago. |
+| `ta.roc(src, n)` | `Roc.new(src, n)` | |
+| `ta.cum(src)` | `CumSum.new(src)` | |
+| `ta.sum(src, n)` | `Sum.new(src, n)` | |
+| `ta.median(src, n)` | `Median.new(src, n)` | |
+| `ta.correlation(a, b, n)` | `Corr.new(a, b, n)` | |
+| `ta.linreg(src, n, off)` | `LinReg.new(src, n, off)` | |
+| `ta.percentrank(src, n)` | `PercentRank.new(src, n)` | |
+| `ta.percentile_*` | `Percentile.new(src, n, pct, interpolate)` | `pct` is 0 to 100. `interpolate=True` is linear interpolation, `False` is nearest rank. |
+| `ta.pivothigh`, `ta.pivotlow` | `ph, pl = PivotHighLow.new(src, left, right)` | One source for both pivots. Non-pivot bars are `nan`. |
+| `ta.barssince(cond)` | `SinceTrue.new(cond_series)` | Needs a `Series[bool]`; wrap a plain `bool` with `MutSeries[bool].new(...)`. |
+| `ta.stoch(src, high, low, n)` | `Stoch.new(src, low, high, n)` | **Argument order is `low`, then `high`.** |
+| `ta.supertrend(f, n)` | `value, direction = Supertrend.new(f, n, 'RMA')` | `ma_algorithm` is required. |
+| `ta.vwap` | `main, upper, lower = Vwap.new(src, 'day', mult)` | `anchor` is `'day'`, `'week'`, `'month'` or `'year'`. |
+| `ta.dmi` | `minus_di, adx, plus_di = Adx.new(adx_len, di_len)` | Note the order. |
+| `ta.sar` | `Sar.new(start, increment, maximum)` | |
+| `ta.cci`, `ta.mfi`, `ta.tsi`, `ta.uo` | `Cci`, `Mfi`, `Tsi`, `Uo` | See the [appendix](#17-appendix-indiealgorithms-reference) for signatures. |
+| `ta.ema`/`ta.sma` selected by a string | `Ma.new(src, n, 'WMA')` | `algorithm` is one of `'EMA'`, `'SMA'`, `'RMA'`, `'WMA'`, `'VWMA'`, `'SMMA (RMA)'`. |
+| `nz(x)` on a series | `NanToZero.new(src)` | See [section 13](#13-nan-optional-and-errors). |
+| `fixnan(x)` | `FixNan.new(src)` | |
+| `ta.hma`, `ta.alma`, `ta.swma`, `ta.kc`, `ta.wpr`, `ta.rising`, `ta.falling`, `ta.valuewhen` | No built-in class | Compose from the algorithms above, or from `Var` and loops. |
 
-#### 4. Accessing Historical Values
+> [!IMPORTANT]
+> Several tuple results are easy to mix up because a wrong order compiles and silently gives wrong data: `Bb` is (lower, middle, upper), `Macd` is (macd, signal, histogram), `Adx` is (minus DI, ADX, plus DI), `Vwap` is (main, upper, lower). The prose in the library reference for `Bb` lists the bands in a different order than the code returns; the order above is what the runtime produces.
 
-**Pine:**
-```pinescript
-x = close[5]
-```
-
-**Indie:**
-```python
-x = self.close[5]
-```
-
-Or for a custom series:
-
-```python
-ema = Ema.new(self.close, 20)
-prev = ema[1]
-```
-
----
-
-✅ Indie separates **mutable** and **immutable** series, requiring explicit management of memory and state. This gives you more control, but also demands more care than Pine Script's automatic handling.
-
-
-Here is the **fully corrected and verified Section 5: Built-in Functions & Indicators**, based on real usage from both the [official Indie documentation](https://takeprofit.com/docs/indie/) and Pine Script™ docs.
-
----
-
-## 5. Built-in Functions & Indicators
-
-This section compares technical indicators and utility functions available in both Pine Script™ and Indie. It shows syntax differences, naming conventions, and key implementation notes.
-
-| **Function / Indicator**       | **Pine Script™**                                      | **Indie**                                               | **Notes**                                                                                                         |
-|-------------------------------|--------------------------------------------------------|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| **Simple MA (SMA)**           | `ta.sma(close, 20)`                                   | `Sma.new(self.close, 20)`                               | Indie uses object-style instantiation for indicators.                                                            |
-| **Exponential MA (EMA)**      | `ta.ema(close, 20)`                                   | `Ema.new(self.close, 20)`                               | Same logic, different syntax.                                                                                    |
-| **Weighted MA (WMA)**         | `ta.wma(close, 20)`                                   | `Wma.new(self.close, 20)`                               | Direct equivalent in Indie.                                                                                      |
-| **Volume-weighted MA (VWMA)** | `ta.vwma(close, 20)`                                  | `Vwma.new(self.close, self.volume, 20)`                 | Requires both price and volume input in Indie.                                                                   |
-| **Relative Strength Index**   | `ta.rsi(close, 14)`                                   | `Rsi.new(self.close, 14)`                               | Identical behavior.                                                                                              |
-| **MACD**                      | `ta.macd(close, 12, 26, 9)`                           | `Macd.new(self.close, 12, 26, 9)`                        | Returns an object. Access lines via indexing.                                                                    |
-| **Bollinger Bands**           | `ta.bb(close, 20, 2)`                                 | `Bb.new(self.close, 20, 2)`                             | Returns upper, lower, basis — usually accessed via `[0]`, `[1]`, `[2]`.                                          |
-| **Standard Deviation**        | `ta.stdev(close, 20)`                                 | `Stdev.new(self.close, 20)`                             | Matches `ta.stdev`.                                                                                              |
-| **Variance**                  | `ta.variance(close, 20)`                              | `Variance.new(self.close, 20)`                          | Also a direct equivalent.                                                                                        |
-| **True Range (TR)**           | `ta.tr()`                                             | `Tr.new()`                                               | Available globally in Indie.                                                                                     |
-| **Average True Range (ATR)**  | `ta.atr(14)`                                          | `Atr.new(14)`                                            | Works similarly in both.                                                                                         |
-| **Crossover Detection**       | `ta.crossover(x, y)`                                  | `x[1] < y[1] and x[0] > y[0]`                            | Indie has no `crossover()` function — must implement manually.                                                   |
-| **Crossunder Detection**      | `ta.crossunder(x, y)`                                 | `x[1] > y[1] and x[0] < y[0]`                            | Manual logic required in Indie.                                                                                   |
-| **Highest / Lowest**          | `ta.highest(high, 10)`<br>`ta.lowest(low, 10)`        | `Highest.new(self.high, 10)`<br>`Lowest.new(self.low, 10)` | Built-in equivalents, object-style usage.                                                                        |
-
----
-
-### ✅ Indicator Class Pattern in Indie
-
-All built-in indicators in Indie are **object-style**, created via `.new(...)`, and **return series-like objects**.
-
-#### Example: Simple Moving Average
-
-**Pine Script™:**
-```pinescript
-sma = ta.sma(close, 20)
-```
-
-**Indie:**
-```python
-sma = Sma.new(self.close, 20)
-```
-
-To access the current value:
-```python
-sma_value = sma[0]
-```
-
----
-
-### ✅ Example: MACD
-
-**Pine Script™:**
-```pinescript
-[macdLine, signalLine, hist] = ta.macd(close, 12, 26, 9)
-```
-
-**Indie:**
-```python
-macd = Macd.new(self.close, 12, 26, 9)
-macd_line = macd[0]
-signal_line = macd[1]
-hist = macd[2]
-```
-
----
-
-### ✅ Example: Bollinger Bands
-
-**Pine Script™:**
-```pinescript
-[basis, upper, lower] = ta.bb(close, 20, 2)
-```
-
-**Indie:**
-```python
-bb = Bb.new(self.close, 20, 2)
-basis = bb[0]
-upper = bb[1]
-lower = bb[2]
-```
-
----
-
-### ✅ Example: Crossover Detection
-
-**Pine Script™:**
-```pinescript
-bullish = ta.crossover(close, sma)
-```
-
-**Indie:**
-```python
-bullish = self.close[1] < sma[1] and self.close[0] > sma[0]
-```
-
-You can also make a helper function:
+A Pine function that calls `ta.*` inside has to become an `@algorithm` in Indie, because `.new()` cannot be called from a plain helper. The next sample shows a custom algorithm and a typical `ta.pivothigh` plus `ta.barssince` pair.
 
 ```python
-def crossover(x, y):
-    return x[1] < y[1] and x[0] > y[0]
+# indie:lang_version = 5
+from indie import indicator, algorithm, MainContext, SeriesF, MutSeriesF
+from indie.algorithms import Sma
+
+
+# Pine: smoothed(src, len) => (src + ta.sma(src, len)) / 2
+@algorithm
+def Smoothed(self, src: SeriesF, length: int) -> SeriesF:
+    avg = Sma.new(src, length)
+    return MutSeriesF.new((src[0] + avg[0]) / 2)
+
+
+@indicator('Custom algorithm', overlay_main_pane=True)
+class Main(MainContext):
+    def calc(self):
+        s = Smoothed.new(self.close, 10)
+        return s[0], s[1]
 ```
 
----
-
-Here is the **fully corrected and verified Section 6: Plotting & Visualization**, based on the official Indie documentation and confirmed Indie indicator examples from GitHub.
-
----
-
-## 6. Plotting & Visualization
-| **Feature**               | **Pine Script™**                                            | **Indie**                                                                                              | **Notes**                                                                                                                                         |
-|---------------------------|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Line Plot**             | `plot(series)`                                              | `@plot("Label")`<br>`def label(self): return series`                                                   | Indie requires decorators and return-based plot functions.                                                                                       |
-| **Multiple Plots**        | `plot(x)` and `plot(y)`                                     | Separate `@plot(...)` functions                                                                         | Each visual output must have its own decorated function.                                                                                         |
-| **Line Width**            | `plot(x, linewidth=2)`                                      | `@plot(..., width=2)`                                                                                   | Width is defined in the decorator.                                                                                                               |
-| **Color Setting**         | `plot(x, color=color.red)`                                  | `@plot(..., color="red")`<br>or<br>`color="green" if cond else "red"`                                  | Static or dynamic color strings, or `color.rgba(...)`.                                                                                           |
-| **Conditional Color**     | `plot(x, color=x > 0 ? color.green : color.red)`            | `@plot(..., color=when(x > 0, "green", "red"))`                                                         | Indie uses `when(condition, if_true, if_false)` for inline conditions.                                                                          |
-| **Area Fill**             | `fill(plot1, plot2, color=color.blue)`                      | `@fill("Name", plot1, plot2, color="blue")`                                                             | Indie uses `@fill(...)` decorator with names of `@plot` functions.                                                                               |
-| **Bar Color**             | `barcolor(color.red)`                                       | `@bar_color("red")`                                                                                     | Indie uses a decorator to color candles.                                                                                                         |
-| **Background Color**      | `bgcolor(color.gray)`                                       | `@background_color("gray")`                                                                             | Same logic, different structure.                                                                                                                 |
-| **Plotshape (markers)**   | `plotshape(cond, style=shape.triangleup)`                   | `@plot(..., style=marker_style.LABEL)`<br>`return plot.Marker(...) if cond else plot.Marker(nan)`       | Indie requires explicit marker return from function.                                                                                             |
-| **Label Positioning**     | `location.abovebar`                                         | `marker_position.ABOVE`                                                                                 | Position must be defined in decorator or as an argument in `plot.Marker(...)`.                                                                  |
-| **Transparency / Opacity**| `plot(..., transp=90)`                                      | `color.rgba(..., alpha)`                                                                                | Indie uses RGBA float alpha (0.0–1.0) instead of integer `transp`.                                                                               |
-
----
-
-### ✅ Basic Line Plot
-
-**Pine Script™:**
-```pinescript
-plot(close)
-```
-
-**Indie:**
 ```python
-@plot("Close")
-def plot_close(self):
-    return self.close[0]
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, plot, MutSeries
+from indie.algorithms import PivotHighLow, SinceTrue
+
+
+@indicator('Bars since pivot high', overlay_main_pane=False)
+@plot.histogram(title='Bars since pivot high')
+def Main(self):
+    # Pine: ta.pivothigh(close, 5, 5)
+    pivot_high, pivot_low = PivotHighLow.new(self.close, 5, 5)
+
+    # Pine: ta.barssince(not na(pivot_high))
+    has_pivot_high = MutSeries[bool].new(not isnan(pivot_high[0]))
+    bars_since = SinceTrue.new(has_pivot_high)
+    return float(bars_since[0])
 ```
+
+The platform also ships dozens of built-in indicators written in Indie; their source is in the [built-in indicators examples](https://takeprofit.com/docs/indie/Code-examples/built-in-indicators).
 
 ---
 
-### ✅ Dynamic Color Example
+## 5. Plotting
 
-**Pine Script™:**
-```pinescript
-plot(close, color=close > open ? color.green : color.red)
-```
+Plots in Indie are values returned from `Main`. A `@plot.*` decorator describes each one (color, width, title), and the decorators and the returned values are matched **in order**.
 
-**Indie:**
-```python
-@plot("Close", color=when(self.close > self.open, "green", "red"))
-def plot_close(self):
-    return self.close[0]
-```
-
----
-
-### ✅ Bar and Background Coloring
-
-**Pine Script™:**
-```pinescript
-barcolor(color.red)
-bgcolor(color.new(color.green, 90))
-```
-
-**Indie:**
-```python
-@bar_color("red")
-@background_color(color.rgba(0, 255, 0, 0.1))
-```
-
----
-
-### ✅ Area Fill Between Lines
-
-**Pine Script™:**
-```pinescript
-plot1 = plot(close + 2)
-plot2 = plot(close - 2)
-fill(plot1, plot2, color=color.blue)
-```
-
-**Indie:**
-```python
-@plot("Upper")
-def upper(self): return self.close[0] + 2
-
-@plot("Lower")
-def lower(self): return self.close[0] - 2
-
-@fill("Range Fill", "Upper", "Lower", color="blue")
-```
-
----
-
-### ✅ Marker / Shape Plot (Equivalent of `plotshape()`)
-
-**Pine Script™:**
-```pinescript
-plotshape(crossover, style=shape.triangleup, color=color.green)
-```
-
-**Indie:**
-```python
-@plot("Buy Marker", style=marker_style.LABEL, marker_position=marker_position.ABOVE, color="green")
-def buy_marker(self):
-    return plot.Marker(text="▲") if crossover(self.close, ema) else plot.Marker(math.nan)
-```
-
----
-
-### ✅ Notes on Indie Plotting System
-
-- Every visual element in Indie **must be returned from a `@plot` function.**
-- Plot functions are not called automatically — they are rendered by the engine when decorated.
-- If you return `math.nan`, nothing will be drawn.
-- Marker text, color, and position are set using the `plot.Marker(...)` object.
-- You can simulate `plotchar()` using `plot.Marker(text=...)`.
-
----
-
-
-Here is the corrected and validated **Section 7: Control Flow & Logic**, with strict syntax comparison and actual support levels from both Pine Script™ and Indie.
-
----
-
-## 7. Control Flow & Logic
-
-This section compares flow-control structures such as `if`, loops, and conditional expressions between Pine Script™ and Indie.
 | **Feature** | **Pine Script™** | **Indie** | **Notes** |
-| ------- | ------------ | ----- | ----- |
-| **If statement** | `if condition`<br>`    statement` | `if condition:`<br>`    statement` | Same logic, but Indie requires `:` and indentation (Python style). |
-| **Else/Else If** | `else if cond`<br>`else` | `elif cond:`<br>`else:` | Indie uses `elif` (like Python), not `else if`. |
-| **Ternary (inline if)** | `x = cond ? a : b` | `x = a if cond else b` | Indie uses Python-style inline if-else. |
-| **For loop** | `for i = 0 to 9`<br>`    ...` | `for i in range(10):`<br>`    ...` | Indie uses standard Python `range()`; Pine uses `to`. |
-| **While loop** | ❌ Not supported | ❌ Not supported | Indie **does not** currently support `while`; matches Pine limitations. |
-| **Break** | ✅ Supported (in `for`) | ✅ Supported (in `for`) | Both support `break` in loops. |
-| **Continue** | ❌ Not supported | ❌ Not supported | Indie also lacks `continue`. |
-| **Switch / Match** | `switch x`<br>`  => ...` | ❌ Not supported | Indie does not have any match/switch syntax. Use `if`/`elif`. |
-| **Boolean operators** | `and`, `or`, `not` | `and`, `or`, `not` | Identical logical operators. |
-| **Comparison operators** | `<`, `<=`, `>`, `>=`, `==`, `!=` | Same | Fully shared syntax. |
-| **Function scope** | Top-level only | Top-level only | Indie does not support defining functions inside other functions or conditionals. |
-| **Inline logic (guards)** | `plot(cond ? val : na)` | `return val if cond else math.nan` | Indie doesn’t use `na`, so you must return `math.nan`. |
-
----
-
-### Examples
-
-#### 1. If / Else
-
-**Pine Script™:**
-```pinescript
-if close > open
-    bgcolor(color.green)
-else
-    bgcolor(color.red)
-```
-
-**Indie:**
-```python
-if self.close[0] > self.open[0]:
-    self.bgcolor("green")
-else:
-    self.bgcolor("red")
-```
-
----
-
-#### 2. If / Else If / Else
-
-**Pine Script™:**
-```pinescript
-if x > 0
-    label.new(..., text="Up")
-else if x < 0
-    label.new(..., text="Down")
-else
-    label.new(..., text="Flat")
-```
-
-**Indie:**
-```python
-if x[0] > 0:
-    return plot.Marker(text="Up")
-elif x[0] < 0:
-    return plot.Marker(text="Down")
-else:
-    return plot.Marker(text="Flat")
-```
-
----
-
-#### 3. Ternary Operator
-
-**Pine Script™:**
-```pinescript
-color = close > open ? color.green : color.red
-```
-
-**Indie:**
-```python
-color = "green" if self.close[0] > self.open[0] else "red"
-```
-
----
-
-#### 4. For Loop
-
-**Pine Script™:**
-```pinescript
-sum = 0.0
-for i = 0 to 9
-    sum := sum + close[i]
-```
-
-**Indie:**
-```python
-total = 0.0
-for i in range(10):
-    total += self.close[i]
-```
-
----
-
-#### 5. Break
-
-**Pine Script™:**
-```pinescript
-for i = 0 to 10
-    if close[i] > 100
-        break
-```
-
-**Indie:**
-```python
-for i in range(11):
-    if self.close[i] > 100:
-        break
-```
-
----
-
-#### 6. Conditional Return with Fallback
-
-**Pine Script™:**
-```pinescript
-plot(x > 0 ? x : na)
-```
-
-**Indie:**
-```python
-return x[0] if x[0] > 0 else math.nan
-```
-
----
-
-Pine Script and Indie share many control structures, but Indie strictly follows Python syntax and omits features like `while`, `continue`, and `switch`. Logic must be explicit and scoped clearly.
-
-Here is the corrected and verified **Section 8: Functions & Methods**, focusing on function definitions, argument handling, and method usage differences between Pine Script™ and Indie.
-
----
-
-## 8. Functions & Methods
-
-| **Feature**               | **Pine Script™**                                     | **Indie**                                                               | **Notes**                                                                                                 |
-|---------------------------|------------------------------------------------------|--------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| **Function Definition**   | `myFunc(x) => x + 1`                                 | `def my_func(x): return x + 1`                                          | Pine uses arrow (`=>`) functions; Indie uses Python-style `def`.                                         |
-| **Multiline Function**    | ❌ Not allowed                                       | ✅ Fully supported                                                       | Indie supports full Python block functions.                                                              |
-| **Named Parameters**      | `myFunc(x = 5)`                                      | `def my_func(x=5):`                                                     | Both support default argument values.                                                                    |
-| **Return Statement**      | `=> result` (implicit)                               | `return result`                                                         | Indie uses explicit `return`.                                                                            |
-| **Multiple Returns**      | `[a, b] = myFunc(x)`                                 | `a, b = my_func(x)`                                                     | Both languages support tuple-style unpacking.                                                            |
-| **Function Scope**        | Top-level only                                       | Top-level only                                                          | Indie functions must be declared outside of classes — nested defs not allowed.                           |
-| **Calling Built-ins**     | `ta.ema(close, 14)`                                  | `Ema.new(self.close, 14)`                                               | Indie indicators are classes with `.new(...)`.                                                           |
-| **Calling Object Method** | ❌ Not applicable                                    | `rsi[0]`, `macd[2]`, etc.                                               | Indie indicator outputs are accessed as series-like objects.                                             |
-| **Anonymous Functions**   | ❌ Not supported                                     | ❌ Not supported                                                         | No support for `lambda` in either language.                                                              |
-| **Class-based Usage**     | ❌ Not used                                          | ✅ Required for main logic (`class Main(MainContext):`)                 | Indie requires OOP structure for indicators.                                                             |
-
----
-
-### Examples
-
-#### 1. Simple Function
-
-**Pine Script™:**
-```pinescript
-square(x) => x * x
-plot(square(close))
-```
-
-**Indie:**
-```python
-def square(x):
-    return x * x
-
-@plot("Square")
-def square_plot(self):
-    return square(self.close[0])
-```
-
----
-
-#### 2. Function With Default Value
-
-**Pine Script™:**
-```pinescript
-mult(x, factor = 2) => x * factor
-```
-
-**Indie:**
-```python
-def mult(x, factor=2):
-    return x * factor
-```
-
----
-
-#### 3. Multiple Return Values
-
-**Pine Script™:**
-```pinescript
-f(x, y) => x + y, x - y
-[a, b] = f(10, 5)
-```
-
-**Indie:**
-```python
-def f(x, y):
-    return x + y, x - y
-
-a, b = f(10, 5)
-```
-
----
-
-#### 4. Calling Built-in Indicator
-
-**Pine Script™:**
-```pinescript
-ema = ta.ema(close, 20)
-```
-
-**Indie:**
-```python
-ema = Ema.new(self.close, 20)
-```
-
-To access the current EMA:
-```python
-value = ema[0]
-```
-
----
-
-#### 5. Using Result of Method with Plot
+|---|---|---|---|
+| Line | `plot(x)` | `@plot.line(...)` and `return x` | The decorator is optional for lines with default settings. |
+| Several plots | `plot(x)`, `plot(y)` | `return x, y` | One returned value per `@plot.*` decorator, in the same order. |
+| Width, style, color | `linewidth`, `style`, `color` | `line_width=`, `line_style=`, `color=` | `line_style` is `line_style.SOLID`, `DASHED` or `DOTTED`. |
+| Gaps at `na` | `plot(..., style=plot.style_linebr)` | `@plot.line(continuous=True)` | `continuous=True` connects across `nan` values. |
+| Per-bar color | `color = cond ? a : b` | `return plot.Line(x, color=a if cond else b)` | Colors are `Color` objects, not strings ([section 12](#12-colors)). |
+| Histogram, columns, steps | `style_histogram`, `style_columns`, `style_stepline` | `@plot.histogram`, `@plot.columns`, `@plot.steps` | Return `plot.Histogram(v)`, `plot.Columns(v)`, `plot.Steps(v)` for per-bar color. |
+| Horizontal line | `hline(50)` | `@level(50, title='Mid')` | Static, drawn with no return value. |
+| Horizontal band | `hline` ×2 plus `fill` | `@band(30, 70)` | Static. |
+| Fill between plots | `fill(p1, p2, color)` | `@plot.fill('id1', 'id2')` and `plot.Fill(color=...)` | Give the lines `id=`. The fill takes a slot in the returned tuple. |
+| Background color | `bgcolor(...)` | `@plot.background(...)` and `plot.Background(color=...)` | Use `color.TRANSPARENT` for "no color". Optional `outline_left`, `outline_right`. |
+| Bar color | `barcolor(...)` | `@plot.bar_color()` and `plot.BarColor(color)` | `plot.BarColor(None)` keeps the default candle color. |
+| Candles | `plotcandle(o, h, l, c)` | `@plot.candles(...)` and `plot.Candles(o, h, l, c)` | Added in v5.19. Draws an independent OHLC series. A `nan` in any value skips the candle. |
+| Shapes and chars | `plotshape`, `plotchar` | `@plot.marker(...)` and `plot.Marker(value, color, text)` | Styles `NONE`, `CIRCLE`, `LABEL`, `CROSS`. No triangles or arrows. |
+| Marker placement | `location.abovebar` | `position=plot.marker_position.ABOVE` | Also `BELOW`, `LEFT`, `RIGHT`, `CENTER`. The marker sits at `value`, so pass `self.high[0]` or `self.low[0]`. |
+| Hide a point | `na` | `nan` (markers) or `None` (bar color) | A `nan` marker value draws nothing. |
+| Shift | `offset=` | `offset=` on the plot object | E.g. `plot.Steps(v, offset=-4)`. |
+| Where values show | `display=` | `display_options=plot.LineDisplayOptions(pane=..., status_line=..., price_label=...)` | Each plot type has its own `...DisplayOptions` class. |
 
 ```python
-rsi = Rsi.new(self.close, 14)
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, plot, color, level, band
+from indie.algorithms import Ema, Rsi
 
-@plot("RSI")
-def plot_rsi(self):
-    return rsi[0]
+
+@indicator('Plot map', overlay_main_pane=False)
+@level(50, title='Midline')
+@band(30, 70, title='Neutral zone')
+@plot.line(id='rsi', title='RSI', color=color.AQUA, line_width=2)
+@plot.line(id='rsi_ma', title='RSI EMA', color=color.ORANGE)
+@plot.fill('rsi', 'rsi_ma', title='RSI vs EMA')
+@plot.bar_color(title='Bar color')
+@plot.background(title='Overbought background')
+@plot.marker(title='Oversold marker', style=plot.marker_style.LABEL, position=plot.marker_position.BELOW)
+def Main(self):
+    rsi = Rsi.new(self.close, 14)
+    rsi_ma = Ema.new(rsi, 9)
+
+    fill_color = color.GREEN(0.2) if rsi[0] > rsi_ma[0] else color.RED(0.2)
+    bar_color = color.YELLOW if rsi[0] > 70 else None
+    background = color.RED(0.1) if rsi[0] > 70 else color.TRANSPARENT
+    marker_value = rsi[0] if rsi[0] < 30 else nan
+
+    return (
+        rsi[0],
+        rsi_ma[0],
+        plot.Fill(color=fill_color),
+        plot.BarColor(bar_color),
+        plot.Background(color=background),
+        plot.Marker(marker_value, text='OS'),
+    )
 ```
 
----
+Per-bar line color, a histogram and the candles plot:
 
-Indie function declarations follow standard Python rules. Functions can be defined for helper logic, indicator processing, or value composition.  
-Built-in indicators like `Sma`, `Macd`, `Atr` return series-like objects that must be accessed by indexing (`[0]`, `[1]`, etc.).
-
-Here is the corrected and confirmed **Section 9: Multi-Timeframe & Security Access**, comparing how Pine Script™ and Indie handle multi-timeframe logic and symbol switching.
-
----
-
-## 9. Multi-Timeframe & Security Access
-
-This section covers how to request data from other timeframes or symbols in Pine Script™ using `request.security()`, and how to do the same in Indie using `@sec_context` and `calc_on()`.
-
-| **Feature**                      | **Pine Script™**                                                | **Indie**                                                                                   | **Notes**                                                                                                                     |
-|----------------------------------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| **Timeframe Access**             | `request.security(syminfo.tickerid, "D", close)`                | `@sec_context` function + `self.calc_on(..., time_frame="D")`                               | Indie uses context-decorated functions and `calc_on()` for external timeframe calculations.                                   |
-| **Symbol Access**                | `request.security("AAPL", "D", close)`                          | `self.calc_on(Sec, time_frame="D", symbol="AAPL")`                                           | Indie supports symbol switching via `symbol="..."` parameter in `calc_on()`.                                                  |
-| **Multiple Values Return**       | `request.security(..., expression=[a, b])`                      | `def Sec(self): return a, b` → `a, b = self.calc_on(Sec, ...)`                               | Both support multiple values; Indie returns as tuple.                                                                         |
-| **Indexed Output**               | `request.security(...)[1]`                                      | `daily = self.calc_on(Sec, time_frame="D")`<br>`daily[1]`                                    | Same logic — use series indexing to access past values.                                                                       |
-| **MTF calculation function**     | Lambda inside `request.security()`                              | Full function body using `@sec_context`                                                      | Indie separates MTF logic into dedicated named functions.                                                                     |
-| **Resolution string format**     | `"D"`, `"60"`, `"1"`                                            | `"D"`, `"60"`, `"1"`                                                                         | Both use identical strings for timeframes.                                                                                    |
-| **Nested calls allowed**         | ✅ Yes                                                           | ✅ Yes                                                                                        | You can use multiple layers of `calc_on()` or `request.security()` as needed.                                                 |
-| **Cannot plot directly inside**  | ⚠ Only simple expressions                                       | ✅ Indie can plot internally but values must still be returned                               | Use return values in Indie to pass info to main context.                                                                      |
-
----
-
-### ✅ Example: Daily Close on Intraday Chart
-
-**Pine Script™:**
-```pinescript
-daily_close = request.security(syminfo.tickerid, "D", close)
-```
-
-**Indie:**
 ```python
-@sec_context
-def Sec(self):
-    return self.close[0]
+# indie:lang_version = 5
+from indie import indicator, plot, color
 
-daily_close = self.calc_on(Sec, time_frame="D")
+
+@indicator('Dynamic colors and candles', overlay_main_pane=True)
+@plot.line(title='Close', line_width=2, continuous=True)
+@plot.histogram(title='Body size', base_value=0.0)
+@plot.candles(title='Candles', up_color=color.GREEN, down_color=color.RED)
+def Main(self):
+    line_color = color.GREEN if self.close[0] > self.open[0] else color.RED
+    body = self.close[0] - self.open[0]
+    hist_color = color.rgba(30, 144, 255, 0.5)
+    return (
+        plot.Line(self.close[0], color=line_color),
+        plot.Histogram(body, color=hist_color),
+        plot.Candles(self.open[0], self.high[0], self.low[0], self.close[0]),
+    )
 ```
+
+> [!NOTE]
+> `@level` and `@band` need no return value. Every `@plot.*` decorator, including `@plot.fill`, does: the tuple length must equal the number of `@plot.*` decorators. Plots (series) can be used in alerts; drawings, levels and bands cannot.
 
 ---
 
-### ✅ Example: Daily EMA (previous bar)
+## 6. Drawings: labels, lines, boxes, tables
 
-**Pine Script™:**
-```pinescript
-prev_ema = request.security(syminfo.tickerid, "D", ta.ema(close, 20))[1]
-```
+Series plots cannot be erased or placed outside the bar grid. For that Indie has a separate drawing API: create objects, call `self.chart.draw(obj)`, change their fields and `draw` again, and `self.chart.erase(obj)` to remove them. `self.chart` exists only in `MainContext`.
 
-**Indie:**
+| **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|
+| `label.new(x, y, text)` | `LabelAbs(text, AbsolutePosition(time, price))` | `LabelRel(text, RelativePosition(...))` pins a label to the screen instead of the chart. |
+| `line.new(x1, y1, x2, y2)` | `LineSegment(AbsolutePosition(...), AbsolutePosition(...), color=...)` | Segments, rays and arrow or circle ends. |
+| `box.new(left, top, right, bottom)` | `Rectangle(AbsolutePosition(...), AbsolutePosition(...), line_color=..., bg_color=...)` | Added in v5.13. |
+| (no Pine equivalent) | `Circle`, `Triangle`, `Channel` | Added in v5.13. |
+| `table.new`, `table.cell` | `Table`, `TableRow`, `TableCell` | Added in v5.17. Cell values are strings. Fixed to the screen via `RelativePosition`. |
+| `label.set_*`, `line.set_*` | Assign to the object's fields, then `self.chart.draw(obj)` again | |
+| `label.delete(l)` | `self.chart.erase(obj)` | |
+| `chart.point(index, time, price)` | `AbsolutePosition(self.time[i], price)` | The time coordinate is a timestamp in seconds. Read it from `self.time[i]`. |
+
 ```python
-@sec_context
-def Sec(self):
-    return Ema.new(self.close, 20)[0]
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, MainContext, color
+from indie.algorithms import Highest, Lowest
+from indie.drawings import (
+    LabelAbs, LineSegment, Rectangle, Table, TableRow, TableCell,
+    AbsolutePosition, RelativePosition, vertical_anchor as va, horizontal_anchor as ha,
+)
 
-daily_ema = self.calc_on(Sec, time_frame="D")
-prev_ema = daily_ema[1]
+
+@indicator('Drawings map', overlay_main_pane=True)
+class Main(MainContext):
+    def __init__(self):
+        self._table = Table(position=RelativePosition(va.TOP, ha.RIGHT, 0.05, 0.95))
+
+    def calc(self):
+        hi = Highest.new(self.high, 20)
+        lo = Lowest.new(self.low, 20)
+
+        if self.bar_index % 50 == 0 and not isnan(self.time[20]):
+            # Pine: label.new(bar_index, high, text="...")
+            self.chart.draw(LabelAbs('H=' + str(self.high[0]), AbsolutePosition(self.time[0], self.high[0])))
+            # Pine: line.new(x1, y1, x2, y2)
+            self.chart.draw(LineSegment(
+                AbsolutePosition(self.time[20], self.close[20]),
+                AbsolutePosition(self.time[0], self.close[0]),
+                color=color.BLUE,
+            ))
+            # Pine: box.new(left, top, right, bottom)
+            self.chart.draw(Rectangle(
+                AbsolutePosition(self.time[20], hi[0]),
+                AbsolutePosition(self.time[0], lo[0]),
+                line_color=color.PURPLE,
+                bg_color=color.PURPLE(0.1),
+            ))
+
+        if self.is_last_bar:
+            # Pine: table.new / table.cell
+            self._table.clear()
+            self._table.append(TableRow([
+                TableCell('Metric', bg_color=color.GRAY(0.5)),
+                TableCell('Value', bg_color=color.GRAY(0.5)),
+            ]))
+            self._table.add_row(['Close', str(self.close[0])])
+            self._table.add_row(['Bar', str(self.bar_index)])
+            self.chart.draw(self._table)
+        return self.close[0]
 ```
 
----
-
-### ✅ Example: Multiple Values (High & Low)
-
-**Pine Script™:**
-```pinescript
-[hh, ll] = request.security(syminfo.tickerid, "D", [high, low])
-```
-
-**Indie:**
-```python
-@sec_context
-def Sec(self):
-    return self.high[0], self.low[0]
-
-hh, ll = self.calc_on(Sec, time_frame="D")
-```
+> [!TIP]
+> Create a `Table` once in `__init__`, refill it only on `self.is_last_bar`, and call `self.chart.draw` once after the changes. A table holds at most 50 rows and 20 columns, cells cannot be merged, and there is no separate header row (style the first row yourself). Pine arrays of drawings map to a bounded `list[LineSegment]` that you mutate in place.
 
 ---
 
-### ✅ Example: Other Symbol
+## 7. Control flow
 
-**Pine Script™:**
-```pinescript
-spy_close = request.security("SPY", "D", close)
-```
-
-**Indie:**
-```python
-spy_close = self.calc_on(Sec, time_frame="D", symbol="SPY")
-```
-
-> Note: `Sec` must be a `@sec_context`-decorated function returning `self.close[0]`.
-
----
-
-### Summary
-
-- In **Pine**, `request.security()` is a single function with embedded logic.
-- In **Indie**, cross-timeframe access is modularized:
-  - Create a function decorated with `@sec_context`
-  - Use `self.calc_on(...)` to request its result in another timeframe or symbol
-
-
-Here is the corrected and confirmed **Section 10: Alerts, Labels & Tables**, detailing how Pine Script™ and Indie handle visual alerts, annotations, and (simulated) table elements.
-
----
-
-Thanks — here’s the updated and corrected version of **Section 10: Alerts, Labels & Tables**, integrating your feedback and verified against the latest Indie documentation.
-
----
-
-## 10. Alerts, Labels & Tables
-
-Here is the final, corrected and expanded **Section 10: Alerts, Labels & Tables**, now including clarification on `self.bar_index`, additional Indie marker capabilities, and a brief intro to color handling (with a full color breakdown deferred to Section 11).
-
----
-
-## 10. Alerts, Labels & Tables
-
-This section explains how visual alerts, labels, and simulated tables are implemented in Pine Script™ and Indie. Since Indie doesn’t support runtime alerts or GUI tables, it relies on plotting markers and label-style visuals as functional alternatives.
 | **Feature** | **Pine Script™** | **Indie** | **Notes** |
-| ------- | ------------ | ----- | ----- |
-| **Alert condition** | `alertcondition(cond, title, message)` | ❌ Not supported — use marker with color/text instead | Indie doesn’t provide runtime alerts; use plotted visual cues instead. |
-| **Label creation** | `label.new(x, y, text="BUY")` | `@plot(..., style=marker_style.LABEL)`<br>`return plot.Marker(text="BUY")` | Indie markers with `LABEL` style act as labels. |
-| **Label position** | `location.abovebar`, etc. | `marker_position.ABOVE`, `BELOW`, `PRICE` | Position must be set using marker position enums. |
-| **Marker styles** | 30+ styles (e.g. `shape.triangleup`, `labelup`) | `marker_style.LABEL`, `CIRCLE`, `CROSS` | Indie has fewer marker types. |
-| **Conditional visibility** | `plotshape(cond)` | `return plot.Marker(...) if cond else plot.Marker(math.nan)` | Return `math.nan` to hide the marker. |
-| **Marker text** | `text="BUY"` | `plot.Marker(text="BUY")` | Indie allows direct text inside markers. |
-| **Color** | `color=color.green`<br>or RGB | `color="green"` or `color=color.GREEN`<br>or RGBA | Indie allows both strings and constants like `color.RED`.<br>Indie uses RGBA float values (`a` from 0.0 to 1.0). |
-| **Table UI** | `table.new()`, `table.cell(...)` | ❌ Not supported — simulate with spaced markers | Use `bar_index % n == 0` spacing logic to mimic table rows. |
-| **Bar index access** | `bar_index` | `self.bar_index` | Confirmed available in Indie — works the same for spacing/conditions. |
-| **Custom spacing** | `if bar_index % 10 == 0` | `if self.bar_index % 10 == 0` | Used to simulate table rows, limit marker clutter, etc. |
-| **New marker extensions** | ❌ | Indie allows marker size, color, text, and style via `plot.Marker(...)` | Supports `size`, `text`, `style`, `color`, `value`, and `marker_position`. |
-
-***
-
-### ✅ Example: Visual Alert Marker
-
-**Pine Script™:**
-```pinescript
-alertcondition(close > open, title="Bullish", message="Green bar")
-plotshape(close > open, style=shape.triangleup, color=color.green)
-```
-
-**Indie:**
-```python
-@plot("Bull Marker", style=marker_style.LABEL, marker_position=marker_position.ABOVE, color="green")
-def marker(self):
-    return plot.Marker(text="BUY") if self.close[0] > self.open[0] else plot.Marker(math.nan)
-```
-
----
-
-### ✅ Example: Marker Every N Bars (Simulated Table)
+|---|---|---|---|
+| `if` / `else if` / `else` | `if c` ... `else if c` ... `else` | `if c:` ... `elif c:` ... `else:` | Python syntax: colon and indentation. |
+| Conditional expression | `x = c ? a : b` | `x = a if c else b` | |
+| `for` loop | `for i = 0 to 9` | `for i in range(10):` | Pine's upper bound is inclusive, `range` excludes it. |
+| Reverse loop | `for i = 9 to 0` | `for i in range(9, -1, -1):` | |
+| `while` | `while cond` | `while cond:` | Supported. |
+| `break`, `continue` | `break`, `continue` | `break`, `continue` | Both supported. |
+| `switch` | `switch x` | `if` / `elif` chain | `match` statements are rejected by the compiler. |
+| Logic operators | `and`, `or`, `not` | `and`, `or`, `not` | |
+| Chained comparison | `a < b < c` is not valid | `a < b and b < c` | Python's `a < b < c` does not compile in Indie. |
+| Variable scope | Block-local | Block-local | Declare before the block. See [section 2](#2-types-series-and-state). |
 
 ```python
-@plot("RSI Label", style=marker_style.LABEL, marker_position=marker_position.ABOVE)
-def rsi_label(self):
-    return plot.Marker(text=f"RSI: {round(rsi[0])}") if self.bar_index % 20 == 0 else plot.Marker(math.nan)
+# indie:lang_version = 5
+from indie import indicator
+
+
+@indicator('Control flow')
+def Main(self):
+    total = 0.0
+    for i in range(10):
+        if i == 3:
+            continue
+        total += self.close[i]
+
+    j = 0
+    while j < 5 and self.close[j] > 0:
+        j += 1
+
+    label = 0
+    if self.close[0] > self.open[0]:
+        label = 1
+    elif self.close[0] < self.open[0]:
+        label = -1
+    else:
+        label = 0
+
+    side = 'up' if label > 0 else 'down'
+    return total / 9.0, float(j), float(label), float(len(side))
 ```
 
 ---
 
-### ✅ Available Marker Styles (Indie)
+## 8. Functions, classes and containers
 
-| **Style**   | **Enum**                |
-|-------------|-------------------------|
-| Label/Text  | `marker_style.LABEL`    |
-| Dot/Circle  | `marker_style.CIRCLE`   |
-| Cross/X     | `marker_style.CROSS`    |
-
----
-
-### ✅ Marker Positions (Indie)
-
-| **Position**    | **Enum**                    |
-|------------------|-----------------------------|
-| Above bar        | `marker_position.ABOVE`     |
-| Below bar        | `marker_position.BELOW`     |
-| At price level   | `marker_position.PRICE`     |
-
----
-
-Here is the complete and corrected **Section 11: Color System & Styling**, including **named color usage**, **RGBA support**, and differences in opacity control between Pine Script™ and Indie.
-
----
-
-## 11. Color System & Styling
-
-| **Feature**               | **Pine Script™**                                     | **Indie**                                                          | **Notes**                                                                                                           |
-|---------------------------|------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| **Named Colors**          | `color.red`, `color.green`, etc.                    | `"red"`, `"green"` or `color.RED`, `color.GREEN`                    | Indie allows lowercase strings or `color.*` constants (uppercase).                                                  |
-| **Custom RGB Colors**     | `color.rgb(r, g, b)`                                | `color.rgba(r, g, b, a)`                                            | Indie uses RGBA only; the alpha channel must be a float between `0.0` and `1.0`.                                    |
-| **Opacity / Transparency**| `color.new(baseColor, transp=80)`                   | `color.rgba(r, g, b, 0.2)`                                          | Pine uses `transp` (0–100); Indie uses `alpha` (0.0–1.0) in RGBA.                                                   |
-| **Hexadecimal Color**     | `"#FF0000"`                                          | ❌ Not supported directly                                            | Indie requires using `color.rgba()` for custom colors; no hex literal support.                                     |
-| **Dynamic Color Logic**   | `plot(x, color=x > y ? color.green : color.red)`    | `@plot(..., color=when(x > y, "green", "red"))`                     | Indie uses `when(...)` helper or inline `if/else`.                                                                 |
-| **Color Constants**       | `color.red`, etc.                                    | `color.RED`, `color.BLUE`, etc.                                     | Indie constants are ALL CAPS — must be imported via `color` module.                                                |
-| **Transparent Plot Line** | `plot(x, color=color.new(color.red, 80))`           | `@plot(..., color=color.rgba(255, 0, 0, 0.2))`                       | Indie has no `transp=` — opacity is controlled via alpha value directly.                                           |
-| **Re-usable Color Var**   | `myColor = color.rgb(255, 100, 0)`                  | `my_color = color.rgba(255, 100, 0, 1.0)`                            | Indie allows color as variables for re-use in multiple decorators.                                                 |
-| **Label/Marker Coloring** | `plotshape(..., color=color.orange)`                | `plot.Marker(..., color="orange")`                                  | Set color directly in return value or decorator.                                                                   |
-| **Bar / Background Color**| `barcolor(...)`, `bgcolor(...)`                     | `@bar_color(...)`, `@background_color(...)`                         | Indie uses decorators with string or `color.rgba` values.                                                           |
-
----
-
-### ✅ Named Colors in Indie
-
-You can use color names as **strings**:
-```python
-@plot("Price", color="red")
-```
-
-Or use **constants** (imported automatically):
-```python
-@plot("Price", color=color.GREEN)
-```
-
----
-
-### ✅ RGBA Color Format in Indie
+| **Feature** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Function | `f(x) => x + 1` | `def f(x: float) -> float:` | Type hints are required on parameters and return values. |
+| Default arguments | `f(x, k = 2) => x * k` | `def f(x: float, k: float = 2.0) -> float:` | |
+| Several results | `[a, b] = f(x)` | `a, b = f(x)` | Tuple unpacking works from a function call. |
+| Multi-line bodies | Allowed | Allowed | Full Python blocks. |
+| Nested function, `lambda` | Not allowed | Not allowed | Declare every function at module level or as a method. |
+| Function that keeps series state | Any function | `@algorithm` function, called as `Name.new(...)` | Needed whenever the body calls `Sma.new`, `MutSeriesF.new` or `Var.new`. |
+| Arrays | `array<float>` | `list[float]` | `append`, `pop`, `insert`, `remove`, `extend`, `clear`, `copy`, `index`, `count`, `reverse`, slices, `len`. |
+| Maps | `map<string, int>` | `dict[str, int]` | Added in v5.18. Keys: `str`, `int`, `bool`, finite `float`. `get`, `keys()`, `values()`, `len`, `del d[k]`. |
+| Matrices, sets | `matrix<float>` | Not available | Nested lists work. `set`, `queue`, `deque` are not implemented. |
+| Sorted collection | (arrays + sort) | `from sortedcontainers import SortedList` | Added in v5.8. |
+| User-defined type | `type Pivot` with fields | A plain class with typed `__init__` | Keep instances in a `list[Pivot]`. No decorators on the class. |
+| Libraries | `import user/lib/1` | Not available | One file per indicator. You cannot import other scripts. |
 
 ```python
-color.rgba(R, G, B, A)
-```
-- `R, G, B`: Integers from 0–255
-- `A`: Float from 0.0 (transparent) to 1.0 (opaque)
+# indie:lang_version = 5
+from indie import indicator, MainContext
 
-Examples:
-```python
-color.rgba(255, 0, 0, 0.3)    # semi-transparent red
-color.rgba(0, 255, 0, 1.0)    # solid green
-color.rgba(0, 0, 0, 0.0)      # invisible black
+
+def band_edges(mid: float, width: float = 2.0) -> tuple[float, float]:
+    return mid - width, mid + width
+
+
+class Pivot:
+    def __init__(self, price: float, bar: int):
+        self.price = price
+        self.bar = bar
+
+
+@indicator('Functions and containers', overlay_main_pane=True)
+class Main(MainContext):
+    def __init__(self):
+        self._pivots: list[Pivot] = []
+        self._counts: dict[str, int] = {}
+
+    def calc(self):
+        low_edge, high_edge = band_edges(self.close[0], 1.5)
+
+        if self.high[1] > self.high[0] and self.high[1] > self.high[2]:
+            self._pivots.append(Pivot(self.high[1], self.bar_index - 1))
+            if len(self._pivots) > 50:
+                del self._pivots[0]
+            key = 'up' if self.close[0] > self.open[0] else 'down'
+            self._counts[key] = self._counts.get(key, 0) + 1
+
+        last = self._pivots[-1].price if len(self._pivots) > 0 else self.close[0]
+        return low_edge, high_edge, last, float(len(self._counts))
 ```
+
+Python features the compiler rejects: `try`/`except`, `with`, `lambda`, `global`/`nonlocal`, comprehensions and generator expressions, `match`, the walrus operator, `assert` (raise `IndieError` instead), `%` string formatting, nested functions and functions passed as arguments (except to `calc_on`). Unpacking a tuple stored in a variable (`a, b = some_tuple`) is rejected; unpack directly from a call. f-strings work only as `{expr}` and `{expr:.Nf}`. Containers stored as indicator state may hold tuples of two items only.
 
 ---
 
-### ✅ Conditional Coloring
+## 9. Multi-timeframe, other symbols and external data
 
-**Pine Script™:**
-```pinescript
-plot(close, color=close > open ? color.green : color.red)
-```
+### `request.security` becomes `@sec_context` plus `calc_on`
 
-**Indie:**
+Put the expression you would pass to `request.security` into a `@sec_context` function, then request it with `self.calc_on(...)` **in `__init__`**. The result is a series merged into the chart's timeline.
+
+| **Feature** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Other timeframe | `request.security(syminfo.tickerid, "D", close)` | `self.calc_on(Fn, time_frame=TimeFrame.from_str('1D'))` | `Fn` is a function decorated with `@sec_context`. |
+| Other symbol | `request.security("BINANCE:BTCUSD", ...)` | `self.calc_on(Fn, exchange='BINANCEUS', ticker='BTC/USD', ...)` | Exchange and ticker are separate arguments. Omitted ones default to the chart's. |
+| Several values | `[a, b] = request.security(..., [h, l])` | `a, b = self.calc_on(Fn, ...)` | The function returns a tuple. |
+| Past values | `request.security(...)[1]` | `result[1]` | The result is a `SeriesF`. |
+| Expression with `ta.*` | `request.security(..., ta.ema(close, 20))` | `return Ema.new(self.close, 20)[0]` inside `Fn` | Algorithms are created inside the secondary context. |
+| Lookahead | `lookahead=barmerge.lookahead_on` | `lookahead=True` | Default is `False`. `True` can leak future data into history. |
+| Timeframe strings | `"D"`, `"60"`, `"W"` | `'1D'`, `'1h'`, `'1W'`, `'1M'`, `'3m'` | Format is `<number><unit>` with `m`, `h`, `D`, `W`, `M`, `Y`. A bare `'60'` is invalid. |
+| Chart timeframe | `timeframe.period` | `self.time_frame` | A `TimeFrame`; compare with `<`, `<=`, `==`. |
+| Read Main's inputs | Closure | `@param_ref('id')` on the `@sec_context` function | |
+
 ```python
-@plot("Color Line", color=when(self.close > self.open, "green", "red"))
-def color_line(self):
+# indie:lang_version = 5
+from indie import indicator, MainContext, sec_context, param, TimeFrame
+from indie.algorithms import Ema
+
+
+@sec_context
+def HtfData(self):
+    return self.close[0], self.high[0], self.low[0], Ema.new(self.close, 20)[0]
+
+
+@sec_context
+def OtherSymbolClose(self):
     return self.close[0]
+
+
+@indicator('Multi-timeframe demo', overlay_main_pane=True)
+@param.time_frame('htf', default='1D', options=['1h', '4h', '1D', '1W'], title='Higher timeframe')
+class Main(MainContext):
+    def __init__(self, htf):
+        self._htf_close, self._htf_high, self._htf_low, self._htf_ema = self.calc_on(HtfData, time_frame=htf)
+        self._other = self.calc_on(OtherSymbolClose, exchange='BINANCEUS', ticker='BTC/USD', time_frame=htf)
+
+    def calc(self):
+        return self._htf_close[0], self._htf_high[0], self._htf_low[0], self._htf_ema[1], self._other[0]
 ```
 
-Or:
-```python
-color = "green" if self.close[0] > self.open[0] else "red"
-```
-
----
-
-### ✅ Transparent Line Example
-
-**Pine Script™:**
-```pinescript
-plot(close, color=color.new(color.red, 80))
-```
-
-**Indie:**
-```python
-@plot("Faint Red", color=color.rgba(255, 0, 0, 0.2))
-def faint_line(self):
-    return self.close[0]
-```
-
----
-
-### ✅ Full Example With Custom Color Variable
+Since v5.14 `calc_on` also accepts a timeframe **lower** than the chart's, so signals can be computed on a faster series while you watch a slower chart:
 
 ```python
-my_color = color.rgba(128, 50, 255, 0.5)
+# indie:lang_version = 5
+from indie import indicator, MainContext, sec_context, TimeFrame
 
-@plot("Styled", color=my_color)
-def styled_line(self):
-    return self.close[0]
+
+@sec_context
+def MinuteBar(self):
+    return self.close[0], self.volume[0]
+
+
+@indicator('Lower timeframe demo')
+class Main(MainContext):
+    def __init__(self):
+        self._min_close, self._min_volume = self.calc_on(MinuteBar, time_frame=TimeFrame.from_str('1m'))
+
+    def calc(self):
+        return self._min_close[0], self._min_volume[0]
 ```
 
----
+> [!NOTE]
+> The library reference entry for `Context.calc_on` still says only higher or equal timeframes are allowed; the changelog entry for v5.14 and the runtime say otherwise, and the sample above ran without error. Secondary instruments (including external sources) count toward one shared limit per indicator.
 
-Next: Section 12 – Error Handling & NaN Detection.
+### External data (new since v5.18)
 
-## 12\. Error Handling & NaN Detection
+Pine has no equivalent of the following. An indicator can read your own data from a public HTTPS CSV file (a frozen snapshot, fetched once when the indicator is created) or from a live WebSocket or SSE feed (v5.19):
 
-| **Feature** | **Pine Script** | **Indie** | **Notes** |
-| ------- | ----------- | ----- | ----- |
-| **Undefined value (NaN)** | `na` | `math.nan` | Both represent “not available” with language-specific constants. |
-| **Check for NaN** | `na(x)` | `math.isnan(x)` | Indie uses Python’s `math.isnan()` function. |
-| **Replace NaN with fallback** | `nz(x, 0)` | `x if not math.isnan(x) else 0` | Indie does not have `nz()`, you handle this manually. |
-| **Raise error manually** | `runtime.error("Message")` | Not supported | Indie does not support runtime exceptions or explicit errors. |
-| **Catch errors / try-except** | ❌ Not available | ❌ Not supported | Indie does not support Python `try`/`except` blocks. |
-| **Divide by zero behavior** | Returns `na` (no crash) | Returns `math.nan` (safe, no crash) | Both languages are designed to fail silently — no hard crashes. |
-| **Missing data fallback** | `x := na(x) ? 0 : x` | `x = 0 if math.isnan(x) else x` | Both require conditional assignment for fallbacks. |
-| **Silent fail prevention** | `na(x)` guards before plot | `if not math.isnan(x): return plot.Line(x)` | Use guard condition before plotting or calculation. |
-| **isfinite() / isinf()** | ❌ Not available | `math.isfinite(x)`, `math.isinf(x)` | Indie can use Python `math` module for additional safety checks. |
-
-***
-
-### 🔹 Code Examples
-
-#### 1\. Basic NaN Check
-
-**Pine Script:**
-
-```
-plot(na(close) ? 0 : close)
-```
-
-**Indie:**
-
-```
-@plot("Clean Close")
-def clean_close(self):
-    return 0 if math.isnan(self.close[0]) else self.close[0]
-```
-
-***
-
-#### 2\. Safe divide \(avoid div by zero\)
-
-**Pine Script:**
-
-```
-safe_div = close / (volume == 0 ? na : volume)
-```
-
-**Indie:**
-
-```
-vol = self.volume[0]
-safe_div = self.close[0] / vol if vol != 0 else math.nan
-```
-
-***
-
-#### 3\. Plot only if valid
-
-**Pine Script:**
-
-```
-plot(na(x) ? na : x)
-```
-
-**Indie:**
-
-```
-@plot("Safe Plot")
-def safe(self):
-    return plot.Line(self.x[0]) if not math.isnan(self.x[0]) else plot.Line(math.nan)
-```
-
-***
-
-## 13. Built-in Constants & System Variables
-
-| **Feature**                 | **Pine Script™**             | **Indie**                          | **Notes**                                                                                      |
-|-----------------------------|------------------------------|------------------------------------|-----------------------------------------------------------------------------------------------|
-| **Bar index**               | `bar_index`                  | `self.bar_index`                  | Bar number on chart (0-based).                                                               |
-| **Timestamp (epoch)**       | `time`                       | `self.time` (as `datetime`)       | Indie gives a `datetime` object instead of milliseconds.                                     |
-| **Time fields**             | `year`, `month`, etc.        | `self.time.year`, `self.time.day` | Indie supports all `datetime` attributes (e.g., `hour`, `minute`, `weekday`).                |
-| **Symbol name**             | `syminfo.ticker`             | `self.symbol`                     | Active instrument symbol.                                                                    |
-| **Resolution**              | `syminfo.resolution`         | `self.time_frame`                 | Returns chart timeframe (e.g., `"5"`, `"D"`).                                                 |
-| **Ticker ID**               | `syminfo.tickerid`           | ❌ Not available                   | Indie does not expose exchange-prefixed full IDs.                                            |
-| **Current time (now)**      | `timenow`                    | `datetime.now()`                  | For wall-clock time. Use only in non-series context (e.g., logs, titles).                   |
-| **Session checks**          | `session.isfirstbar`         | `self.bar_index == 0`             | Indie does not have session flags — emulate with conditions.                                 |
-| **Chart type / style**      | `chart.style_line`, etc.     | ❌ Not available                   | Chart style settings are not exposed in Indie.                                                |
-| **Timezone conversions**    | `timestamp(...)`             | `datetime(...).astimezone(...)`   | Indie supports full timezone-aware datetime logic via standard Python libraries.             |
-
----
-
-### ✅ Example: Detect First Bar
-
-**Pine Script™:**
-```pinescript
-if bar_index == 0
-    label.new(bar_index, high, text="First")
-```
-
-**Indie:**
-```python
-@plot("Start Marker", style=marker_style.LABEL, marker_position=marker_position.ABOVE)
-def first_bar(self):
-    return plot.Marker(text="Start") if self.bar_index == 0 else plot.Marker(math.nan)
-```
-
----
-
-### ✅ Example: Show Date Info
+- candle CSV: a `@sec_context` function attached with `calc_on(..., source=sources.Csv(url))`;
+- typed rows: a `@dataclass` row type read through a `@data_context` callback or `request_series[T](source=...)`;
+- live feed: `sources.DataFeed('wss://...', stale_after=timedelta(seconds=30))` in place of `sources.Csv`.
 
 ```python
-@plot("Date Label", style=marker_style.LABEL, marker_position=marker_position.ABOVE)
-def date_label(self):
-    if self.bar_index % 100 == 0:
-        return plot.Marker(text=self.time.strftime("%Y-%m-%d"))
-    return plot.Marker(math.nan)
+# indie:lang_version = 5
+from dataclasses import dataclass
+from indie import indicator, MainContext, request_series
+from indie.data import sources
+
+
+@dataclass
+class RiskFactor:
+    value: float
+
+
+@indicator('External CSV demo')
+class Main(MainContext):
+    def __init__(self):
+        self._risk = request_series[RiskFactor](
+            source=sources.Csv('https://example.com/risk.csv'))
+
+    def calc(self):
+        row = self._risk.get(0, RiskFactor(1.0))
+        return self.close[0] * row.value
 ```
+
+Use `.get(0, default)` while history is warming up; `[0]` raises before the first row arrives. Indicators that use external data **cannot be published to the Marketplace**. Format rules, limits and the feed protocol are in the official [External data](https://takeprofit.com/docs/indie/External-data/External-data-overview) pages. The platform's own TPO and volume-footprint profiles are read through the same `request_series` mechanism.
 
 ---
 
-### ✅ Example: Resolution + Symbol Overlay
+## 10. Strategies
+
+Strategies exist in Indie since v5.10, with backtesting since v5.11. A strategy is declared with `@strategy`, its `self` is a `MainStrategyContext`, and orders go through `self.trading`. The current limit: a strategy trades **only the chart instrument** (other instruments can be requested with `calc_on` for analysis).
+
+| **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|
+| `strategy("S", overlay=true, initial_capital=100000)` | `@strategy('S', overlay_main_pane=True, initial_capital=100000.0)` | Also `commission`, `leverage`, `intrabar_order_filter`, `market_order_price`, `risk_free_rate`. |
+| `commission_type`, `commission_value` | `commission=Commission(0.0008, commission_type.PERCENT)` | Percent is a **fraction**: Pine's 0.08 % is `0.0008`. |
+| `process_orders_on_close=true` | `intrabar_order_filter=intrabar_order_filter.ON_BAR_CLOSE` | `ON_BAR_CLOSE` is the default. |
+| `strategy.entry("L", strategy.long, qty)` | `self.trading.place_order(order_side.BUY, size=qty).submit()` | A market order. Pine's `entry` reverses an opposite position by itself; in Indie make the size `qty + abs(position)`. |
+| Limit or stop entry | `.limit(price=...)`, `.stop(price=...)` on the builder | Both together make a stop-limit order. |
+| `strategy.exit(..., limit=, stop=)` | `.take_profit(stop=..., limit=...)`, `.stop_loss(stop=...)` on the entry order | Supported on **limit and stop-limit** entries, not on market orders. |
+| `strategy.close`, `strategy.close_all` | An opposite market order of size `position.size` | There is no close method. |
+| `strategy.cancel` | `self.trading.cancel_order(order.id)` | Or `order.cancel()`. |
+| Modify an order | `self.trading.amend_order(order.id)....submit()` | |
+| `strategy.position_size` | `self.trading.position.size` | Signed: positive long, negative short. |
+| `strategy.position_avg_price` | `self.trading.position.price` | |
+| `strategy.initial_capital`, cash | `self.trading.cash` | |
+| `default_qty_type`, `pyramiding`, margin settings | No decorator arguments | Size every order yourself. |
 
 ```python
-@plot("Chart Info", style=marker_style.LABEL, marker_position=marker_position.ABOVE)
-def chart_meta(self):
-    return plot.Marker(text=f"{self.symbol} - {self.time_frame}") if self.bar_index % 50 == 0 else plot.Marker(math.nan)
+# indie:lang_version = 5
+from indie import strategy, param
+from indie.algorithms import Sma
+from indie.math import cross_over, cross_under
+from indie.strategies import order_side
+
+
+@strategy('MA Cross Strategy', overlay_main_pane=True, initial_capital=100000.0)
+@param.int('fast_len', default=10, min=1, title='Fast length')
+@param.int('slow_len', default=30, min=1, title='Slow length')
+@param.float('order_size', default=1.0, min=0.01, title='Order size')
+def Main(self, fast_len, slow_len, order_size):
+    fast = Sma.new(self.close, fast_len)
+    slow = Sma.new(self.close, slow_len)
+    pos_size = self.trading.position.size
+
+    # Pine: strategy.entry("Long", strategy.long)
+    # A market order that is larger than the open short position reverses it.
+    if cross_over(fast, slow) and pos_size <= 0:
+        self.trading.place_order(order_side.BUY, size=order_size + abs(pos_size)).submit()
+    elif cross_under(fast, slow) and pos_size >= 0:
+        self.trading.place_order(order_side.SELL, size=order_size + abs(pos_size)).submit()
 ```
 
----
-
-### ✅ Accessing Datetime Attributes (Indie)
+A limit entry with take-profit and stop-loss, and a flatten step, in class form so the order can be remembered:
 
 ```python
-year   = self.time.year
-month  = self.time.month
-hour   = self.time.hour
-weekday = self.time.weekday()  # 0 = Monday
+# indie:lang_version = 5
+from indie import strategy, MainStrategyContext, Optional
+from indie.algorithms import Rsi
+from indie.strategies import order_side, Order
+
+
+@strategy('RSI Bracket Strategy', overlay_main_pane=True)
+class Main(MainStrategyContext):
+    def __init__(self):
+        self._entry: Optional[Order] = None
+
+    def calc(self):
+        rsi = Rsi.new(self.close, 14)
+        pos_size = self.trading.position.size
+
+        if pos_size == 0 and self._entry is None and rsi[0] < 30:
+            # Pine: strategy.entry("Long", strategy.long, limit=...) + strategy.exit(..., stop=..., limit=...)
+            self._entry = (
+                self.trading.place_order(order_side.BUY, size=1.0).
+                limit(price=self.close[0]).
+                take_profit(stop=self.close[0] * 1.03).
+                stop_loss(stop=self.close[0] * 0.98).
+                submit()
+            )
+
+        if pos_size > 0 and rsi[0] > 70:
+            # Pine: strategy.close_all(): submit an opposite market order for the whole position
+            self.trading.place_order(order_side.SELL, size=pos_size).submit()
+            self._entry = None
 ```
 
-You can build custom session/time filters using full Python datetime logic.
+> [!WARNING]
+> Check the unit of every number you port. The commission fraction above is the usual silent error (`0.08` instead of `0.0008` is 8 % per trade). Also note that `take_profit` and `stop_loss` are position-level orders: one of each can be active, and they are cancelled when the position closes or reverses. Details are in the official [Strategies](https://takeprofit.com/docs/indie/Strategies/Strategies-overview) and [Orders](https://takeprofit.com/docs/indie/Strategies/Orders) pages. Nine ready-made strategies are listed in the [built-in strategies examples](https://takeprofit.com/docs/indie/Code-examples/built-in-strategies).
 
 ---
 
-Indie exposes a **rich datetime object**, direct access to chart metadata (symbol and timeframe), and a flexible `bar_index`. Anything beyond this (like exchange ID, chart styling, or built-in session tags) must be manually recreated or is not supported yet.
- 
+## 11. Alerts
 
- ---
- ---
- ---
- ***
+Indie has no `alert()` or `alertcondition()` call inside the script. The pattern is:
 
-# Indie Language Packages / Built-ins Cheat Sheet
+1. Compute the signal and return it as a **plot** (a line, a column series, or a marker).
+2. Create the alert in the platform on that plot of the indicator.
 
-### **1\. Core Package \(`indie`)**
+Alert messages can reference any plot of the indicator, not only the series in the condition (v5.16). Drawings, levels and bands are not available to alerts.
 
-#### **Decorators**
+| **Pine Script™** | **Indie** |
+|---|---|
+| `alertcondition(cond, "Bullish", "msg")` | Return `1.0 if cond else 0.0` (or a marker value) as a plot, then add a platform alert on it. |
+| `alert("msg")` inside a script | Not available. |
+| Webhook configuration in the script | Configured on the platform alert, not in code. |
 
-| Decorator | Purpose | Example |
-| --------- | ------- | ------- |
-| `@indicator` | Main indicator function | `@indicator("RSI", False)` |
-| `@param.int` | Integer input parameter | `@param.int('length', 14)` |
-| `@param.source` | Price source selection | `@param.source('src', default=source.CLOSE)` |
-| `@band` | Horizontal band with fill | `@band(145, 155, line_color=color.RED)` |
-| `@level` | Horizontal line for levels | `@level(150, line_color=color.RED)` |
-| `@param.bool` | Boolean parameter input | `@param.bool('show_lines', default=True)` |
-| `@param.float` | Floating-point parameter input | `@param.float('threshold', default=0.5)` |
-| `@param.str` | String parameter input | `@param.str('option', default='A', options=['A'])` |
-| `@param.time_frame` | Timeframe input | `@param.time_frame('tf', default='1D')` |
-| `@param_ref` | Refers to param in `@sec_context` | `@param_ref('referenced_param')` |
-| `@sec_context` | Marks secondary context entrypoint | `@sec_context` |
-| `@algorithm` | Declares a custom series processor | `@algorithm` |
+---
 
-#### **Context & Types**
+## 12. Colors
 
-| Component | Description | Example |
-| --------- | ----------- | ------- |
-| `Context` | OHLCV access and instrument metadata | `self.close[0]` |
-| `MainContext` | Main chart instrument context | `class Main(MainContext):` |
-| `SecContext` | Additional instrument context | `def SecMain(self):` |
-| `SeriesF` | Immutable float series | `SeriesF.new(values)` |
-| `MutSeriesF` | Mutable float series | `MutSeriesF.new(init=0)` |
-| `Var[T]` | Revertible variable container | `Var.new(init_val)` |
-| `Optional[T]` | Optional wrapper (nullable type) | `Optional[str]("fallback")` |
-| `SymbolInfo` | Metadata about current instrument | `self.info.ticker` |
-| `TimeFrame` | Time granularity of instrument | `TimeFrame.from_str("1D")` |
-| `TradingSession` | Trading hours per instrument | `self.trading_session.is_regular(time)` |
+Colors are `Color` objects. **Plain strings such as `'red'` do not compile** (`color` arguments accept `Color` only).
 
-#### **Enums**
+| **Feature** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Named color | `color.red` | `color.RED` | Constants: `AQUA`, `BLACK`, `BLUE`, `BROWN`, `FUCHSIA`, `GRAY`, `GREEN`, `LIME`, `MAROON`, `NAVY`, `OLIVE`, `ORANGE`, `PINK`, `PURPLE`, `RED`, `SILVER`, `TEAL`, `TRANSPARENT`, `WHITE`, `YELLOW`. |
+| RGB color | `color.rgb(255, 0, 0)` | `color.rgba(255, 0, 0)` | `alpha` defaults to `1.0`. |
+| Hex color | `#FF0000` | `color.hex('#FF0000')` | Exactly `#RRGGBB`. Short or 8-digit forms fail at runtime. |
+| Transparency | `color.new(color.red, 80)` | `color.RED(0.2)` | Indie takes **opacity** (0.0 to 1.0), Pine takes transparency (0 to 100). Pine's 80 is Indie's 0.2. |
+| RGBA | `color.rgb(r, g, b, 80)` | `color.rgba(255, 0, 0, 0.2)` | |
+| No color | `na` | `color.TRANSPARENT` or `None` | `None` needs an `Optional[Color]` variable. |
+| Color input | `input.color(...)` | `@param.color('id', default=...)` | v5.9. The default can be a constant or `color.hex(...)`. |
+| Gradient, `color.r()` and similar | `color.from_gradient`, `color.r` | Not available | |
 
-| Enum | Values | Example |
-| ---- | ------ | ------- |
-| `format` | `INHERITED`, `PRICE`, `VOLUME` | `@indicator(format=format.PRICE)` |
-| `line_style` | `SOLID`, `DASHED`, `DOTTED` | `@level(100, line_style=line_style.DOTTED)` |
-| `source` | `OPEN`, `HIGH`, `LOW`, `CLOSE`, `HL2`, `HLC3`, `OHLC4` | `@param.source('src', default=source.HLC3)` |
-| `time_frame_unit` | `MINUTE`, `HOUR`, `DAY`, `WEEK`, `MONTH` | Used with `TimeFrame` |
-
-***
-
-### 2\. Package `indie.algorithms`
-
-| Algorithm | Function Signature & Return Type | Description |
-| --------- | -------------------------------- | ----------- |
-| `Adx` | `new(adx_len, di_len) -> (SeriesF, SeriesF, SeriesF)` | Minus DI, ADX, Plus DI |
-| `Atr` | `new(length, ma_algorithm='RMA') -> SeriesF` | Average True Range |
-| `Bb` | `new(src, length, mult) -> (SeriesF, SeriesF, SeriesF)` | Bollinger Bands |
-| `Cci` | `new(src, length) -> SeriesF` | Commodity Channel Index |
-| `Change` | `new(src, length=1) -> SeriesF` | Difference from `length` bars ago |
-| `Corr` | `new(x, y, length) -> SeriesF` | Correlation Coefficient |
-| `CumSum` | `new(src) -> SeriesF` | Cumulative Sum |
-| `Dev` | `new(src, length) -> SeriesF` | Mean Absolute Deviation |
-| `Donchian` | `new(length) -> SeriesF` | Middle line of Donchian Channel |
-| `Ema` | `new(src, length) -> SeriesF` | Exponential MA |
-| `FixNan` | `new(src) -> SeriesF` | Replace NaNs with last valid value |
-| `Highest` | `new(src, length) -> SeriesF` | Max over `length` |
-| `LinReg` | `new(src, length, offset=0) -> SeriesF` | Linear Regression Curve |
-| `Lowest` | `new(src, length) -> SeriesF` | Min over `length` |
-| `Ma` | `new(src, length, algorithm) -> SeriesF` | MA with algorithm: 'EMA', 'SMA', etc. |
-| `Macd` | `new(src, fast_len, slow_len, sig_len, ma_source='EMA', ma_signal='EMA') -> (SeriesF, SeriesF, SeriesF)` | MACD Line, Signal, Histogram |
-| `Median` | `new(src, length) -> SeriesF` | Moving Median |
-| `Mfi` | `new(src, length) -> SeriesF` | Money Flow Index |
-| `Mfv` | `new() -> SeriesF` | Money Flow Volume |
-| `NanToZero` | `new(src) -> SeriesF` | Replace NaNs with 0 |
-| `NetVolume` | `new(src) -> SeriesF` | Net Volume |
-| `PercentRank` | `new(src, length) -> SeriesF` | Percent Rank |
-| `Rma` | `new(src, length) -> SeriesF` | Smoothed MA for RSI |
-| `Roc` | `new(src, length) -> SeriesF` | Rate of Change |
-| `Rsi` | `new(src, length) -> SeriesF` | Relative Strength Index |
-| `Sar` | `new(start, increment, maximum) -> SeriesF` | Parabolic SAR |
-| `SinceHighest` | `new(src, length) -> Series[int]` | Bars since max in window |
-| `SinceLowest` | `new(src, length) -> Series[int]` | Bars since min in window |
-| `SinceTrue` | `new(condition) -> Series[int]` | Bars since last `True` |
-| `Sma` | `new(src, length) -> SeriesF` | Simple Moving Average |
-| `StdDev` | `new(src, length) -> SeriesF` | Standard Deviation |
-| `Stoch` | `new(src, low, high, length) -> SeriesF` | Stochastic Oscillator |
-| `Sum` | `new(src, length) -> SeriesF` | Sliding Sum |
-| `Supertrend` | `new(factor, atr_period, ma_algorithm) -> (SeriesF, SeriesF)` | Supertrend Line & Direction |
-| `Tr` | `new(handle_na=False) -> SeriesF` | True Range |
-| `Tsi` | `new(src, long_len, short_len) -> SeriesF` | True Strength Index |
-| `Uo` | `new(fast_len, middle_len, slow_len) -> SeriesF` | Ultimate Oscillator |
-| `Vwap` | `new(src, anchor, std_dev_mult) -> (SeriesF, SeriesF, SeriesF)` | VWAP + bands |
-| `Vwma` | `new(src, length) -> SeriesF` | Volume Weighted MA |
-| `Wma` | `new(src, length) -> SeriesF` | Weighted Moving Average |
-
-***
-
-### **3\. Visualization \(`indie.plot`)**
-
-#### **Plot Types**
-
-| Type | Decorator | Key Parameters | Example |
-| ---- | --------- | -------------- | ------- |
-| Line | `@plot.line` | `color`, `line_style`, `line_width`, `continuous` | `@plot.line(color=color.RED)` |
-| Histogram | `@plot.histogram` | `color`, `base_value`, `line_width` | `@plot.histogram(base_value=0)` |
-| Columns | `@plot.columns` | `color`, `base_value`, `rel_width` | `@plot.columns(color=color.YELLOW)` |
-| Marker | `@plot.marker` | `color`, `text`, `style`, `position`, `size` | `@plot.marker(style=marker_style.CIRCLE)` |
-| Fill | `@plot.fill` | `id1`, `id2`, `color` | `@plot.fill('plot1', 'plot2')` |
-| Steps | `@plot.steps` | `color`, `line_width` | `@plot.steps(line_width=2)` |
-
-#### **Styling Enums**
-
-| Enum | Options | Example |
-| ---- | ------- | ------- |
-| `line_style` | `SOLID`, `DASHED`, `DOTTED` | `line_style=DOTTED` |
-| `marker_style` | `NONE`, `CIRCLE`, `LABEL`, `CROSS` | `style=marker_style.CROSS` |
-| `marker_position` | `ABOVE`, `BELOW`, `LEFT`, `RIGHT`, `CENTER` | `position=marker_position.BELOW` |
-
-***
-
-### **4\. Colors \(`indie.color`)**
-
-| Method | Description | Example |
-| ------ | ----------- | ------- |
-| `rgba()` | Custom RGBA color | `rgba(255, 0, 0, 0.5)` |
-| Constants | Built-in named colors | `color.RED`, `color.GREEN(0.3)` |
-
-**Built-in Color Constants**:`AQUA`, `BLACK`, `BLUE`, `FUCHSIA`, `GRAY`, `GREEN`, `LIME`, `MAROON`, `NAVY`, `OLIVE`, `PURPLE`, `RED`, `SILVER`, `TEAL`, `WHITE`, `YELLOW`
-
-### **5\. Math \(`math`)**
-
-| Function | Purpose | Example |
-| -------- | ------- | ------- |
-| `cross()` | Detects any crossover (two series or series vs level) | `cross(self.close, self.open)` |
-| `cross_over()` | Detects upward crossover | `cross_over(self.close, 50)` |
-| `cross_under()` | Detects downward crossover | `cross_under(self.close, self.open)` |
-| `divide()` | Safe division with fallback | `divide(x, y, default=0.0)` |
-
-### **6\. Schedules \(`indie.schedule`)**
-
-| Component | Purpose | Example |
-| --------- | ------- | ------- |
-| `Schedule` | Manages active time rules and exceptions | `Schedule([rule], timezone="UTC")` |
-| `ScheduleRule` | Defines a rule with start/end times and days | `ScheduleRule(start=time(9), end=time(16), days=WORKDAYS)` |
-| `ALL_DAYS` | Mon–Sun list for `ScheduleRule` | `days=ALL_DAYS` |
-| `WORKDAYS` | Mon–Fri list for `ScheduleRule` | `days=WORKDAYS` |
-| `WEEKEND` | Sat–Sun list for `ScheduleRule` | `days=WEEKEND` |
-
-**Enum: `week_day`**`MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`
-
-### **7\. Time \(`datetime`)**
-
-| Type | Purpose | Example |
-| ---- | ------- | ------- |
-| `datetime` | Full date & time object | `datetime(2024, 4, 10, 14, 30)` |
-| `time` | Time of day (no date) | `time(hour=9, minute=0)` |
-| `timedelta` | Duration / difference between datetimes | `timedelta(days=1, hours=5)` |
-
-**Key Methods**
-
-| Method | Description | Example |
-| ------ | ----------- | ------- |
-| `datetime.utcnowfromtimestamp()` | Convert timestamp to datetime | `datetime.utcfromtimestamp(ts)` |
-| `datetime.strptime()` | Parse datetime from string | `datetime.strptime("2025-04-10", "%Y-%m-%d")` |
-| `timedelta.total_seconds()` | Duration in seconds | `delta.total_seconds()` |
-
-### **8\. Statistics \(`statistics`)**
-
-| Function | Purpose | Example |
-| -------- | ------- | ------- |
-| `fmean()` | Mean of list of floats | `fmean([1.2, 2.3, 3.4])` |
-| `mean()` | Arithmetic mean (int or float) | `mean([1, 2, 3, 4])` |
-| `median()` | Median of data list | `median([3, 1, 4, 2])` |
-
-### **9\. Math \(`math`)**
-
-| Function | Description | Example |
-| -------- | ----------- | ------- |
-| `acos(x)` | Arc cosine | `acos(1.0)` |
-| `asin(x)` | Arc sine | `asin(0.5)` |
-| `atan(x)` | Arc tangent | `atan(1.0)` |
-| `ceil(x)` | Ceiling (round up) | `ceil(2.3)` |
-| `cos(x)` | Cosine | `cos(pi)` |
-| `exp(x)` | Exponential | `exp(2)` |
-| `exp2(x)` | 2 raised to power x | `exp2(3)` |
-| `floor(x)` | Floor (round down) | `floor(2.9)` |
-| `isclose(x, y)` | Check approximate equality | `isclose(1.0, 1.0000001)` |
-| `isnan(x)` | Check if value is NaN | `isnan(nan)` |
-| `log(x)` | Natural logarithm | `log(e)` |
-| `log10(x)` | Base-10 logarithm | `log10(100)` |
-| `log2(x)` | Base-2 logarithm | `log2(8)` |
-| `pow(x, y)` | Exponentiation | `pow(2, 3)` |
-| `sin(x)` | Sine | `sin(pi / 2)` |
-| `sqrt(x)` | Square root | `sqrt(9)` |
-| `tan(x)` | Tangent | `tan(pi / 4)` |
-
-**Constants**
-
-| Constant | Description |
-| -------- | ----------- |
-| `e` | Euler’s number |
-| `pi` | π (Pi) |
-| `nan` | Not-a-Number |
-
-### **10\. Built\-ins**
-
-#### **Constants**
-
-| Constant | Type | Description |
-| -------- | ---- | ----------- |
-| `True` | `bool` | Boolean true |
-| `False` | `bool` | Boolean false |
-| `None` | `NoneType` | Null value |
-
-***
-
-#### **Functions**
-
-| Function | Purpose | Example |
-| -------- | ------- | ------- |
-| `abs(x)` | Absolute value of int/float | `abs(-3.5)` → `3.5` |
-| `len(x)` | Length of a list/str/series | `len([1,2,3])` → `3` |
-| `max(x,y)` | Max of two or more values/list | `max(1, 3, 2)` → `3` |
-| `min(x,y)` | Min of two or more values/list | `min(5, 2, 8)` → `2` |
-| `range(...)` | Generate list of ints | `range(1, 5)` → `[1,2,3,4]` |
-| `round(x)` | Round float to nearest int or digit | `round(2.56)` → `3` |
-| `sum(l)` | Sum elements of a list | `sum([1, 2, 3])` → `6` |
-
-***
-
-#### **Types**
-
-| Type | Description |
-| ---- | ----------- |
-| `int` | Integer |
-| `float` | Floating point number |
-| `bool` | Boolean (`True` / `False`) |
-| `str` | String |
-| `list[T]` | List of type `T` |
-| `tuple[...]` | Tuple |
-| `dict[K,V]` | Dictionary with keys and values |
-| `NoneType` | Represents null (`None`) |
-
-***
-
-#### **String Methods**
-
-| Method | Description | Example |
-| ------ | ----------- | ------- |
-| `capitalize()` | Capitalizes first letter | `'abc'.capitalize()` → `'Abc'` |
-| `center(w, ch)` | Centers string in width `w` with `ch` | `'hi'.center(5, '-')` → `'-hi--'` |
-| `count(s)` | Count substring | `'ababa'.count('a')` → `3` |
-| `endswith(s)` | Check if ends with substring | `'test.py'.endswith('.py')` |
-| `find(s)` | First index of substring | `'hello'.find('l')` → `2` |
-| `index(s)` | First index (error if not found) | `'hello'.index('e')` → `1` |
-| `islower()` | Checks if all characters are lowercase | `'abc'.islower()` → `True` |
-| `isupper()` | Checks if all characters are uppercase | `'ABC'.isupper()` → `True` |
-| `isspace()` | Checks if only whitespace | `' '.isspace()` → `True` |
-| `join(lst)` | Join list into string | `','.join(['a','b'])` → `'a,b'` |
-| `ljust(w, ch)` | Left justify string | `'hi'.ljust(4,'-')` → `'hi--'` |
-| `lower()` | Convert to lowercase | `'ABC'.lower()` → `'abc'` |
-| `lstrip(chs)` | Strip leading characters | `'--abc'.lstrip('-')` → `'abc'` |
-| `partition(s)` | Split into 3 parts at first match | `'a=b'.partition('=')` |
-| `replace(o,n)` | Replace substrings | `'one two'.replace('one','1')` |
-| `rfind(s)` | Last index of substring | `'hello'.rfind('l')` → `3` |
-| `rindex(s)` | Last index (error if not found) | `'hello'.rindex('l')` |
-| `rjust(w, ch)` | Right justify | `'hi'.rjust(4,'-')` → `'--hi'` |
-| `rpartition(s)` | Split into 3 parts at last match | `'a=b=c'.rpartition('=')` |
-| `rsplit(sep)` | Right split | `'a,b,c'.rsplit(',', 1)` |
-| `rstrip(chs)` | Strip trailing characters | `'abc--'.rstrip('-')` → `'abc'` |
-| `split(sep)` | Split string by separator | `'a,b,c'.split(',')` |
-| `startswith(s)` | Check if starts with substring | `'abc'.startswith('a')` → `True` |
-| `strip(chs)` | Strip leading/trailing characters | `'--abc--'.strip('-')` → `'abc'` |
-| `swapcase()` | Swap upper/lowercase | `'AbC'.swapcase()` → `'aBc'` |
-| `upper()` | Convert to uppercase | `'abc'.upper()` → `'ABC'` |
+```python
+# indie:lang_version = 5
+from indie import indicator, plot, color
 
 
- 
+@indicator('Colors', overlay_main_pane=True)
+@plot.line(title='Named constant', color=color.TEAL)
+@plot.line(title='Hex', color=color.hex('#1E90FF'))
+@plot.line(title='RGBA', color=color.rgba(255, 140, 0, 0.5))
+@plot.line(title='Named with opacity', color=color.RED(0.3))
+def Main(self):
+    return self.close[0], self.open[0], self.high[0], self.low[0]
+```
+
+---
+
+## 13. NaN, Optional and errors
+
+| **Feature** | **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|---|
+| Not-a-number | `na` | `math.nan` | `from math import nan, isnan`. |
+| Test | `na(x)` | `isnan(x)` | |
+| Replace in a series | `nz(x)` | `NanToZero.new(src)` | Or `0.0 if isnan(x[0]) else x[0]` for one value. |
+| Carry last value | `fixnan(x)` | `FixNan.new(src)` | |
+| Missing history | `na` | `nan` (`Series.get(offset, default)` for a custom default) | |
+| Safe division | `a / (b == 0 ? na : b)` | `divide(a, b)` or `divide(a, b, default)` | `from indie.math import divide`. Default result is `nan`. |
+| "No value" for non-numbers | `na` | `Optional[T]` | Test with `is None`; read with `.value()` or `.value_or(default)`. |
+| Raise an error | `runtime.error("msg")` | `raise IndieError('msg')` | Stops the indicator. |
+| Catch an error | Not available | Not available | There is no `try`/`except`. |
+
+```python
+# indie:lang_version = 5
+from math import nan, isnan
+from indie import indicator, MainContext, Optional
+from indie.algorithms import Sma, NanToZero, FixNan
+
+
+@indicator('NaN and Optional demo', overlay_main_pane=True)
+class Main(MainContext):
+    def __init__(self):
+        self._last_pivot: Optional[float] = None
+
+    def calc(self):
+        sma = Sma.new(self.close, 20)
+        zeroed = NanToZero.new(sma)
+        filled = FixNan.new(sma)
+        manual = 0.0 if isnan(sma[0]) else sma[0]
+
+        if self.high[1] > self.high[0] and self.high[1] > self.high[2]:
+            self._last_pivot = self.high[1]
+        pivot = nan
+        if self._last_pivot is not None:
+            pivot = self._last_pivot.value()
+        return zeroed[0], filled[0], manual, pivot
+```
+
+Errors and safe division:
+
+```python
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, MainContext, IndieError
+from indie.math import divide
+
+
+@indicator('Errors and safe division')
+class Main(MainContext):
+    def __init__(self):
+        if self.info.ticker == '':
+            raise IndieError('This indicator needs a symbol with a ticker')
+
+    def calc(self):
+        # Pine: close / (volume == 0 ? na : volume)
+        price_per_volume = divide(self.close[0], self.volume[0])
+        # Pine: na(x) ? 0 : x
+        return 0.0 if isnan(price_per_volume) else price_per_volume
+```
+
+> [!NOTE]
+> If a calculation error does occur at runtime, since v5.15 the indicator keeps the history it already has and shows a refresh button instead of crashing the chart.
+
+---
+
+## 14. Time, sessions and symbol info
+
+`self.time` is a **series of UNIX timestamps in seconds (UTC)**. It is not a `datetime`, so there is no `self.time.year`. Convert a value with `datetime.utcfromtimestamp(...)`.
+
+| **Pine Script™** | **Indie** | **Notes** |
+|---|---|---|
+| `time` (ms) | `self.time[0]` (seconds) | One hour is `3600`, not `3600000`. |
+| `hour`, `minute`, `month`, `year` | `t = datetime.utcfromtimestamp(self.time[0])`, then `t.hour`, `t.minute`, `t.month`, `t.year` | Also `day`, `second`. |
+| `dayofweek` | `t.weekday()` | Monday is `0`, Sunday is `6` (Pine counts Sunday as 1). |
+| `timestamp(2024, 1, 1)` | `datetime(2024, 1, 1).timestamp()` | `datetime.strptime` parses a string. There is no `strftime`. |
+| `timenow` | Not available | There is no wall-clock `now()`. |
+| `syminfo.ticker` | `self.info.ticker` | |
+| `syminfo.prefix` | `self.info.exchange_code` | `self.info.exchange_aliases` lists common aliases. |
+| `syminfo.mintick` | `self.info.tick_size` | |
+| `syminfo.timezone` | `self.info.timezone` | |
+| (price decimals) | `self.info.price_precision` | |
+| `syminfo.tickerid` | Not available | Combine `exchange_code` and `ticker` yourself. |
+| `timeframe.period`, `timeframe.multiplier` | `self.time_frame` | A `TimeFrame` with `.count`, `.unit`, `.to_minutes()`, `.to_seconds()`. |
+| `barstate.isfirst` | `self.bar_index == 0` | |
+| `barstate.islast` | `self.is_last_bar` | `True` on the last historical bar and on realtime bars. |
+| `barstate.ishistory` | `self.is_history` | |
+| `barstate.isrealtime` | `self.is_realtime` | |
+| `barstate.isconfirmed` | `self.is_closed_bar` | `True` on historical bars and on the final update of a realtime bar. |
+| `barstate.isnew` | `self.is_new_bar` | |
+| `barstate.islastconfirmedhistory` | `self.is_last_history_bar` | |
+| `session.isfirstbar` | `self.is_first_in_session()` | Also `is_first_in_regular_session()`, `is_last_in_session()`, `is_last_in_regular_session()`. |
+| `session.ispremarket`, `session.ispostmarket` | `self.trading_session.is_pre_market(ts)`, `.is_after_hours(ts)` | Also `is_regular(ts)` and `is_extended(ts)`. The argument is a timestamp. |
+
+```python
+# indie:lang_version = 5
+from datetime import datetime
+from indie import indicator, plot, color
+
+
+@indicator('Session filter', overlay_main_pane=True)
+@plot.background(title='Trading hours')
+def Main(self):
+    t = datetime.utcfromtimestamp(self.time[0])
+    in_hours = t.hour >= 8 and t.hour < 16 and t.weekday() < 5
+    return plot.Background(color=color.BLUE(0.1) if in_hours else color.TRANSPARENT)
+```
+
+For custom time windows there is the `indie.schedule` package (`Schedule`, `ScheduleRule`, `week_day`, `WORKDAYS`, `WEEKEND`, `ALL_DAYS`); see [Schedules and Trading Sessions](https://takeprofit.com/docs/indie/Schedules-and-Trading-Sessions).
+
+---
+
+## 15. Standard library available in Indie
+
+Only the following can be imported. Anything else (NumPy, pandas, TA-Lib, file or network access) is unavailable because the runtime is sandboxed.
+
+| **Package** | **What is there** |
+|---|---|
+| `indie` | `indicator`, `strategy`, `algorithm`, `sec_context`, `data_context`, `param_ref`, `param`, `level`, `band`, `request_series`, `MainContext`, `MainStrategyContext`, `SecContext`, `Algorithm`, `Context`, `Series`, `SeriesF`, `MutSeries`, `MutSeriesF`, `Var`, `Optional`, `Color`, `color`, `plot`, `source`, `format`, `line_style`, `TimeFrame`, `time_frame_unit`, `TradingSession`, `SymbolInfo`, `IndieError` |
+| `indie.algorithms` | Series algorithms; see the [appendix](#17-appendix-indiealgorithms-reference) |
+| `indie.math` | `cross`, `cross_over`, `cross_under`, `divide` |
+| `indie.color` | `rgba`, `hex` and the color constants |
+| `indie.plot` | `Line`, `Histogram`, `Columns`, `Steps`, `Marker`, `Fill`, `Background`, `BarColor`, `Candles` and their decorators, `marker_style`, `marker_position` |
+| `indie.drawings` | `LabelAbs`, `LabelRel`, `LineSegment`, `Rectangle`, `Circle`, `Triangle`, `Channel`, `Table`, `TableRow`, `TableCell`, `Chart`, `AbsolutePosition`, `RelativePosition`, `relative_position`, `vertical_anchor`, `horizontal_anchor` |
+| `indie.strategies` | `Trading`, `Order`, `Position`, `Commission`, `order_side`, `order_status`, `commission_type`, `intrabar_order_filter`, `market_order_price`, and more |
+| `indie.schedule` | `Schedule`, `ScheduleRule`, `week_day`, `WORKDAYS`, `WEEKEND`, `ALL_DAYS` |
+| `indie.data` | `sources` (`Csv`, `DataFeed`, `Tpo`, `VolumeFootprint`), `TpoProfile`, `VolumeFootprintProfile` |
+| `math` | `nan`, `inf`, `pi`, `e`, `isnan`, `isclose`, `sqrt`, `pow`, `exp`, `exp2`, `log`, `log2`, `log10`, `floor`, `ceil`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan` |
+| `statistics` | `mean`, `fmean`, `median`, `mode`, `stdev`, `pstdev` |
+| `datetime` | `datetime`, `time`, `timedelta` |
+| `dataclasses` | `dataclass` (row types for external data) |
+| `sortedcontainers` | `SortedList` |
+
+Built-ins that need no import: `abs`, `bool`, `dict`, `enumerate`, `float`, `int`, `len`, `list`, `max`, `min`, `range`, `round`, `str`, `sum`, `tuple`, plus the usual string methods (`split`, `join`, `replace`, `startswith`, `strip`, `upper`, `lower` and similar). `abs`, `min`, `max`, `round` and `sum` are built-ins, not members of `math`. `sum` works on lists, not on series.
+
+---
+
+## 16. Pine features Indie does not have
+
+Based on the v5.19 documentation; if a feature is not listed in the library reference, treat it as missing.
+
+| **Pine feature** | **Status in Indie** |
+|---|---|
+| `alert()`, `alertcondition()` | None in code. Alert on a plot in the platform ([section 11](#11-alerts)). |
+| `plotshape` triangles and arrows, `plotarrow` | Marker styles are `NONE`, `CIRCLE`, `LABEL`, `CROSS` only. |
+| Input `tooltip`, `group`, `inline`, `confirm`; `input.time`, `input.symbol`, `input.price` | Not available. |
+| `request.*` other than `security` (financial, economic, dividends, earnings, splits, seed) | Not documented. Use `calc_on` for other instruments or a CSV or feed for your own data. |
+| Libraries, `import`/`export` of other scripts | Not available. |
+| `matrix.*`, sets | Not available. Lists and dicts only. |
+| `varip`, intrabar persistent state | No documented equivalent. |
+| `strategy.close`, `strategy.exit` as functions | No. Flatten with an opposite market order; use `take_profit` and `stop_loss` on limit entries. |
+| Multi-instrument strategies | A strategy trades only its chart instrument. |
+| `timenow`, `strftime`, `syminfo.tickerid` | Not available. |
+| `log.*`, `print`, debug output | Not available. |
+| `try`/`except`, `lambda`, nested functions, `match` | Rejected by the compiler. |
+| Third-party Python libraries | Not available (sandbox). |
+| Gradient colors, `color.r()` and similar helpers | Not available. |
+| `ta.hma`, `ta.alma`, `ta.kc`, `ta.wpr`, `ta.valuewhen`, `ta.variance` | No built-in class; compose from other algorithms. |
+
+---
+
+## 17. Appendix: `indie.algorithms` reference
+
+All algorithms are used as `Name.new(...)` from `Main`, `calc`, an `@algorithm` or an `@sec_context` function. Import with `from indie.algorithms import Sma, Ema`.
+
+| **Algorithm** | **Signature** | **Returns** |
+|---|---|---|
+| `Adx` | `new(adx_len, di_len)` | `(minus_di, adx, plus_di)` |
+| `Atr` | `new(length, ma_algorithm='RMA')` | `SeriesF` |
+| `Bb` | `new(src, length, mult)` | `(lower, middle, upper)` |
+| `Cci` | `new(src, length)` | `SeriesF` |
+| `Change` | `new(src, length=1)` | `SeriesF` |
+| `Corr` | `new(x, y, length)` | `SeriesF` |
+| `CumSum` | `new(src)` | `SeriesF` |
+| `Dev` | `new(src, length)` | `SeriesF` |
+| `Donchian` | `new(length)` | `SeriesF`, the middle line |
+| `Ema` | `new(src, length)` | `SeriesF` |
+| `FixNan` | `new(src)` | `SeriesF` |
+| `Highest` | `new(src, length)` | `SeriesF` |
+| `LinReg` | `new(src, length, offset=0)` | `SeriesF` |
+| `Lowest` | `new(src, length)` | `SeriesF` |
+| `Ma` | `new(src, length, algorithm)` | `SeriesF` |
+| `Macd` | `new(src, fast_len, slow_len, sig_len, ma_source='EMA', ma_signal='EMA')` | `(macd, signal, histogram)` |
+| `Median` | `new(src, length)` | `SeriesF` |
+| `Mfi` | `new(src, length)` | `SeriesF` |
+| `Mfv` | `new()` | `SeriesF` |
+| `NanToZero` | `new(src)` | `SeriesF` |
+| `NetVolume` | `new(src)` | `SeriesF` |
+| `PercentRank` | `new(src, length)` | `SeriesF` |
+| `Percentile` | `new(src, length, pct, interpolate)` | `SeriesF` (added in v5.8) |
+| `PivotHighLow` | `new(src, left_bars, right_bars)` | `(pivot_high, pivot_low)` (added in v5.8) |
+| `Rma` | `new(src, length)` | `SeriesF` |
+| `Roc` | `new(src, length)` | `SeriesF` |
+| `Rsi` | `new(src, length)` | `SeriesF` |
+| `Sar` | `new(start, increment, maximum)` | `SeriesF` |
+| `SinceHighest` | `new(src, length)` | `Series[int]` |
+| `SinceLowest` | `new(src, length)` | `Series[int]` |
+| `SinceTrue` | `new(condition)` | `Series[int]`; `condition` is a `Series[bool]` |
+| `Sma` | `new(src, length)` | `SeriesF` |
+| `StdDev` | `new(src, length)` | `SeriesF` |
+| `Stoch` | `new(src, low, high, length)` | `SeriesF` |
+| `Sum` | `new(src, length)` | `SeriesF` |
+| `Supertrend` | `new(factor, atr_period, ma_algorithm)` | `(value, direction)` |
+| `Tr` | `new(handle_na=False)` | `SeriesF` |
+| `Tsi` | `new(src, long_len, short_len)` | `SeriesF` |
+| `Uo` | `new(fast_len, middle_len, slow_len)` | `SeriesF` |
+| `Vwap` | `new(src, anchor, std_dev_mult)` | `(main, upper, lower)` |
+| `Vwma` | `new(src, length)` | `SeriesF` |
+| `Wma` | `new(src, length)` | `SeriesF` |
+| `ZigZag` | `new(left_bars, right_bars, dev_threshold, allow_zig_zag_within_one_bar)` | four `bool` values: new high pivot, updated high pivot, new low pivot, updated low pivot. Pivots are reported `right_bars` bars late. |
+
+The complete, current API is in the official [library reference](https://takeprofit.com/docs/indie/Library-reference-overview), and the [changelog](https://takeprofit.com/docs/indie/Changelog) lists what changed between versions.

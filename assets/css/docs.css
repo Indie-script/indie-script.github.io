@@ -34,10 +34,10 @@
 }
 .doc-chip .octicon { color: currentColor; }
 .doc-title {
-  margin: 0; max-width: 24ch; font-size: clamp(32px, 3.9vw, 50px); font-weight: 650; line-height: 1.08; letter-spacing: -.03em;
+  margin: 0; max-width: 30ch; font-size: clamp(30px, 3.4vw, 44px); font-weight: 650; line-height: 1.08; letter-spacing: -.03em;
   text-wrap: balance; border: 0; padding: 0;
 }
-.doc-lede { margin: 18px 0 0; max-width: 64ch; font-size: 19px; line-height: 1.6; color: var(--fg-muted); text-wrap: pretty; }
+.doc-lede { margin: 16px 0 0; max-width: 68ch; font-size: 18px; line-height: 1.6; color: var(--fg-muted); text-wrap: pretty; }
 .doc-lede a { color: var(--accent); }
 .doc-lede code { font-size: .86em; }
 .doc-meta {
@@ -51,7 +51,7 @@
 .doc-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
 /* ---------- reading column ---------- */
-.doc-body { padding: 36px 8px 8px; font-size: 16.5px; line-height: 1.75; color: var(--fg); }
+.doc-body { padding: 36px 8px 8px; font-size: 16px; line-height: 1.75; color: var(--fg); }
 .doc-body > p, .doc-body > ul, .doc-body > ol, .doc-body > blockquote:not(.callout), .doc-body > dl { max-width: 78ch; }
 .doc-body p, .doc-body ul, .doc-body ol { margin-bottom: 20px; }
 .doc-body li + li { margin-top: .4em; }
@@ -130,6 +130,7 @@
 .doc-body .codeblock-lang { font-size: 12px; letter-spacing: .01em; }
 .doc-body .codeblock-copy { margin-left: auto; opacity: .75; }
 .doc-body .codeblock:hover .codeblock-copy, .doc-body .codeblock-copy:focus-visible { opacity: 1; }
+.doc-body .codeblock .highlighter-rouge, .doc-body .codeblock .highlight { margin: 0; }
 .doc-body .codeblock pre { padding: 18px 22px; font-size: 13.5px; line-height: 1.7; background: var(--bg); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-subtle); }
 .dot-indie { background: var(--c-indie); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-indie) 22%, transparent); }
