@@ -1,7 +1,7 @@
 name: preview-build
 on:
   push:
-    branches: [redesign, docs-refresh]
+    branches: [redesign]
 permissions:
   contents: read
 jobs:
