@@ -3,7 +3,7 @@ layout: null
 sitemap: false
 ---
 {%- include data.html -%}
-{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|" -%}
+{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|"  | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," -%}
 {"docs":[
 {%- for p in docs -%}
   {%- assign m = portal.docs | where: "file", p.name | first -%}

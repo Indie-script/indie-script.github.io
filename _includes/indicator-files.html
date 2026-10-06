@@ -2,7 +2,7 @@
   Source files of one indicator folder. Usage: {% include indicator-files.html dir=p.dir %}
   Sets: ind_files (static files that are Indie / Pine sources), ind_labels (unique "Indie v5" labels), ind_keys ("indie5 pine5 ")
 {%- endcomment -%}
-{%- assign ind_dir = include.dir -%}
+{%- assign ind_dir = include.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," -%}
 {%- assign ind_files = "" | split: "" -%}
 {%- assign ind_labels = "" | split: "" -%}
 {%- assign ind_keys = "" -%}
