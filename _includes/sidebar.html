@@ -35,7 +35,7 @@
       <ul>
         <li><a class="side-link side-all" href="{{ '/indicators/' | append: c.id | append: '/' | relative_url }}">{% include icon.html name="list-unordered" %}<span>All {{ c.label | downcase | escape }}</span></a></li>
         {%- for cl_p in cat_comm %}
-        <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
+        <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir" %}<span>{{ cl_p.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," | split: "/" | last | escape }}</span></a></li>
         {%- endfor %}
         {%- if cat_bi.size > 0 %}
         <li>
@@ -44,7 +44,7 @@
             <ul>
               <li><a class="side-link side-all" href="{{ '/indicators/' | append: c.id | append: '/built-in/' | relative_url }}">{% include icon.html name="list-unordered" %}<span>All built-in</span></a></li>
               {%- for cl_p in cat_bi %}
-              <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir builtin" %}<span>{{ cl_p.dir | split: "/" | last | escape }}</span></a></li>
+              <li><a class="side-link" href="{{ cl_p.url | relative_url }}">{% include icon.html name="file-directory-fill" class="dir builtin" %}<span>{{ cl_p.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," | split: "/" | last | escape }}</span></a></li>
               {%- endfor %}
             </ul>
           </details>

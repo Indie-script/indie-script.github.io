@@ -135,7 +135,7 @@ plot(stddev, color=color.yellow, title="StdDev")</code></pre>
           <p class="catcard-sum">{{ c.summary | escape }}</p>
           <ul class="catcard-list">
             {%- for p in cat_rows limit: 4 %}
-            <li><a href="{{ p.url | relative_url }}">{% include icon.html name="file-directory-fill" %}<span>{{ p.dir | split: "/" | last | escape }}</span></a></li>
+            <li><a href="{{ p.url | relative_url }}">{% include icon.html name="file-directory-fill" %}<span>{{ p.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," | split: "/" | last | escape }}</span></a></li>
             {%- endfor %}
           </ul>
           {%- if cat_rows.size > 4 %}

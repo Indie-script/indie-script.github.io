@@ -3,9 +3,11 @@
   Sets: im_name (folder name), im_cat_id, im_cat (entry from portal.categories), im_builtin (page lives in indicators/<category>/built-in/)
   Source of the category: README front matter `category`, then the path (indicators/<category>/built-in/...), then _data/indicators.yml, then "other".
 {%- endcomment -%}
-{%- assign im_name = include.p.dir | split: "/" | last -%}
+{%- comment -%} page.dir can arrive percent-encoded ("Zig%20Zag%20Channels"); decode it before using it as a name or a path. {%- endcomment -%}
+{%- assign im_dir = include.p.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," -%}
+{%- assign im_name = im_dir | split: "/" | last -%}
 {%- assign im_reg = site.data.indicators[im_name] -%}
-{%- assign im_parts = include.p.dir | split: "/" -%}
+{%- assign im_parts = im_dir | split: "/" -%}
 {%- assign im_builtin = false -%}
 {%- assign im_path_cat = "" -%}
 {%- if im_parts contains "built-in" -%}

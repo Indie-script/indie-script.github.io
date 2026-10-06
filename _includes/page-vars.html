@@ -10,7 +10,8 @@
     meta_desc   - meta description, when the page has one
     page_empty  - true for a category without indicators (kept out of the index)
 {%- endcomment -%}
-{%- assign dir_parts = page.dir | split: "/" -%}
+{%- assign page_dir_dec = page.dir | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," -%}
+{%- assign dir_parts = page_dir_dec | split: "/" -%}
 {%- assign section = dir_parts[1] | default: "" -%}
 {%- assign folder_name = dir_parts | last | default: "" -%}
 {%- if page.kind -%}

@@ -1,7 +1,7 @@
 {%- comment -%} Indicator catalog (/indicators/): every indicator, grouped by category. {%- endcomment -%}
 {%- assign code_n = 0 -%}
 {%- assign orphans = "" | split: "" -%}
-{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|" -%}
+{%- assign ind_dirs = indicators | map: "dir" | join: "|" | prepend: "|" | append: "|"  | replace: "%20", " " | replace: "%2B", "+" | replace: "%26", "&" | replace: "%23", "#" | replace: "%2C", "," -%}
 {%- for f in src_files -%}
   {%- include file-meta.html name=f.name -%}
   {%- if fm_lang != "" -%}
