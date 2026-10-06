@@ -89,6 +89,7 @@
 
 /* images */
 .doc-body img { border-radius: 12px; box-shadow: var(--shadow-md); }
+.doc-body > p:has(> img:only-child) { max-width: none; margin: 8px 0 28px; }
 
 /* ---------- callouts (GitHub alert syntax, built by docs.js) ---------- */
 .callout {
@@ -157,14 +158,14 @@
 }
 .doc-body .md-card code { font-size: .84em; }
 
-.doc-body .md-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 20px 0 8px; max-width: none; }
+.doc-body .md-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 20px 0 8px; max-width: none; }
 .doc-body a.md-link {
   display: flex; flex-direction: column; gap: 2px; padding: 14px 40px 14px 18px; position: relative;
   color: var(--fg); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; text-decoration: none;
   transition: border-color .15s, background .15s, transform .15s;
 }
 .doc-body a.md-link::after {
-  content: "92"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--fg-subtle); font-size: 16px; transition: transform .15s, color .15s;
+  content: "\2192"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--fg-subtle); font-size: 16px; transition: transform .15s, color .15s;
 }
 .doc-body a.md-link:hover { border-color: color-mix(in srgb, var(--c-indie) 55%, var(--border)); background: color-mix(in srgb, var(--c-indie) 5%, var(--bg-subtle)); }
 .doc-body a.md-link:hover::after { color: var(--c-indie); transform: translate(3px, -50%); }
