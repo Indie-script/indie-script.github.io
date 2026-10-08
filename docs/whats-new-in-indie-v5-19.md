@@ -1,3 +1,7 @@
+---
+description: "Indie v5.19.0 adds candles plots, live data feeds (sources.DataFeed) and color.hex(). Compiled examples and a runnable SSE feed server in Python."
+---
+
 # What's new in Indie v5.19: candles plots, live data feeds and hex colors
 
 Indie v5.19.0 (7 October 2026) lets an indicator draw its own candles next to the chart candles, read live records from a WebSocket or SSE server through `sources.DataFeed`, and build colors from `#RRGGBB` strings with `color.hex()`. This page walks through each feature with a complete script you can paste into the IDE, plus a runnable feed server in Python.
