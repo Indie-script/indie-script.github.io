@@ -52,6 +52,8 @@
   {%- if cat_rows.size == 0 -%}{%- assign page_empty = true -%}{%- endif -%}
 {%- elsif kind == "catalog" -%}
   {%- unless meta_desc -%}{%- assign meta_desc = page.lead -%}{%- endunless -%}
+{%- elsif doc_meta -%}
+  {%- unless meta_desc -%}{%- assign meta_desc = doc_meta.summary -%}{%- endunless -%}
 {%- endif -%}
 {%- assign src_path = page.path | uri_escape -%}
 {%- assign canonical = page.url | absolute_url -%}
