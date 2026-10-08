@@ -1,0 +1,78 @@
+# indie:lang_version = 5
+# WaveTrend with Crosses [LazyBear]  -> Indie conversion
+from math import nan
+from indie import indicator, param, source, color, plot, level, MutSeriesF
+from indie.algorithms import Ema, Sma
+from indie.math import cross, divide
+
+
+@indicator('WaveTrend with Crosses')
+@param.int('n1', default=10, min=1, title='Channel Length')
+@param.int('n2', default=21, min=1, title='Average Length')
+@param.source('src', default=source.HLC3, title='Source')
+@level(0, line_color=color.GRAY, title='Zero')
+@level(60, line_color=color.RED, title='Over Bought 1')
+@level(53, line_color=color.RED, title='Over Bought 2')
+@level(-60, line_color=color.GREEN, title='Over Sold 1')
+@level(-53, line_color=color.GREEN, title='Over Sold 2')
+@plot.line(id='wt1', color=color.GREEN, title='WT1')
+@plot.line(id='wt2', color=color.RED, title='WT2')
+@plot.histogram(color=color.BLUE(0.5), title='WT1-WT2', line_width=5)
+@plot.marker(style=plot.marker_style.CIRCLE, size=5, title='Cross (outer)')
+@plot.marker(style=plot.marker_style.CIRCLE, size=3, title='Cross (direction)')
+@plot.bar_color(title='Cross Bar Color')
+def Main(self, n1, n2, src):
+    # Average price (HLC3 by default, configurable via 'src')
+    ap = src[0]
+
+    # esa = ema(ap, n1)
+    esa = Ema.new(src, n1)
+
+    # d = ema(abs(ap - esa), n1)
+    abs_diff = MutSeriesF.new(abs(ap - esa[0]))
+    d = Ema.new(abs_diff, n1)
+
+    # ci = (ap - esa) / (0.015 * d)  -- safe divide to avoid div-by-zero
+    ci_val = divide(ap - esa[0], 0.015 * d[0], 0.0)
+    ci = MutSeriesF.new(ci_val)
+
+    # tci = ema(ci, n2)
+    tci = Ema.new(ci, n2)
+
+    # wt1 = tci, wt2 = sma(wt1, 4)
+    wt1_val = tci[0]
+    wt1 = MutSeriesF.new(wt1_val)
+    wt2_s = Sma.new(wt1, 4)
+    wt2_val = wt2_s[0]
+
+    # WT1 - WT2 (Pine's "area" style approximated by a translucent histogram)
+    diff = wt1_val - wt2_val
+
+    # Cross detection
+    is_cross = cross(wt1, wt2_s)
+
+    # Outer black circle on cross
+    outer_marker = plot.Marker(
+        value=wt2_val if is_cross else nan,
+        color=color.BLACK,
+    )
+    # Direction-colored inner circle on cross
+    inner_color = color.RED if (wt2_val - wt1_val) > 0 else color.LIME
+    inner_marker = plot.Marker(
+        value=wt2_val if is_cross else nan,
+        color=inner_color,
+    )
+
+    # Bar coloring on cross: aqua (bearish cross) / yellow (bullish cross), default otherwise
+    bar_col = plot.BarColor(
+        color=(color.AQUA if (wt2_val - wt1_val) > 0 else color.YELLOW) if is_cross else None
+    )
+
+    return wt1_val, wt2_val, diff, outer_marker, inner_marker, bar_col
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "WaveTrend with Crosses [LazyBear] by LazyBear" (TradingView).
+# ---------------------------------------------------------------------------

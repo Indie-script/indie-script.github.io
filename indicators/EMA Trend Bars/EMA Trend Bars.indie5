@@ -1,0 +1,26 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Ema
+
+
+@indicator('EMA Trend Bars', overlay_main_pane=True)
+@param.int('ema_length', default=34, min=1, max=300, title='EMA UpTrend')
+@param.bool('show_ema', default=True, title='Show EMA Trend is Based On?')
+@plot.line(color=color.WHITE, line_width=3, title='EMA')
+@plot.bar_color(title='Bar Color')
+def Main(self, ema_length, show_ema):
+    used_ema = Ema.new(self.close, length=ema_length)
+    hlc3_val = self.hlc3[0]
+    ema_val = used_ema[0]
+
+    is_up = hlc3_val >= ema_val
+
+    # Bar coloring: lime when HLC3 >= EMA, red otherwise
+    bar_col = color.LIME if is_up else color.RED
+
+    # EMA line with conditional color (hidden via NaN when toggled off)
+    ema_color = color.LIME if is_up else color.RED
+    ema_line = plot.Line(ema_val, color=ema_color) if show_ema else plot.Line(nan)
+
+    return ema_line, plot.BarColor(bar_col)

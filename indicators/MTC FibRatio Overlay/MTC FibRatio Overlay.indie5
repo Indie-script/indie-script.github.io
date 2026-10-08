@@ -1,0 +1,294 @@
+# indie:lang_version = 5
+from indie import indicator, param, Var
+from indie.drawings import LabelRel, RelativePosition, vertical_anchor as va, horizontal_anchor as ha
+from indie import color
+
+@indicator('MTC Pattern FibRatio Overlay)', overlay_main_pane=True)
+# === Standard (default = True) ===
+@param.bool('show_gartley', default=True, title='Gartley anzeigen')
+@param.bool('show_butterfly', default=True, title='Butterfly anzeigen')
+@param.bool('show_bat', default=True, title='Bat anzeigen')
+@param.bool('show_crab', default=True, title='Crab anzeigen')
+@param.bool('show_deep_crab', default=True, title='Deep Crab anzeigen')
+@param.bool('show_cypher', default=True, title='Cypher anzeigen')
+@param.bool('show_shark', default=True, title='Shark anzeigen')
+@param.bool('show_black_swan', default=True, title='Black Swan anzeigen')
+
+# === Erweiterte / Exotische (default = False) ===
+@param.bool('show_max_butterfly', default=False, title='Max Butterfly anzeigen')
+@param.bool('show_max_gartley', default=False, title='Max Gartley anzeigen')
+@param.bool('show_navarro200', default=False, title='Navarro 200 anzeigen')
+@param.bool('show_white_swan', default=False, title='White Swan anzeigen')
+@param.bool('show_strong_henry', default=False, title='Strong Henry anzeigen')
+@param.bool('show_five_zero', default=False, title='5-0 anzeigen')
+@param.bool('show_butterfly113', default=False, title='Butterfly 113 anzeigen')
+@param.bool('show_three_drives', default=False, title='Three Drives anzeigen')
+@param.bool('show_nen_star', default=False, title='Nen Star anzeigen')
+@param.bool('show_a_nen_star', default=False, title='A Nen Star anzeigen')
+@param.bool('show_leonardo', default=False, title='Leonardo anzeigen')
+
+# === Anti-Muster / Alternativ (default = False) ===
+@param.bool('show_anti_crab', default=False, title='Anti Crab anzeigen')
+@param.bool('show_anti_shark', default=False, title='Anti Shark anzeigen')
+@param.bool('show_alt_bat', default=False, title='Alt Bat anzeigen')
+@param.bool('show_pattern121', default=False, title='121 anzeigen')
+@param.bool('show_a_alt_shark', default=False, title='A Alt Shark anzeigen')
+
+def Main(self,
+         show_gartley, show_butterfly, show_bat, show_crab, show_deep_crab, show_cypher, show_shark, show_black_swan,
+         show_max_butterfly, show_max_gartley, show_navarro200, show_white_swan, show_strong_henry,
+         show_five_zero, show_butterfly113, show_three_drives, show_nen_star, show_a_nen_star, show_leonardo,
+         show_anti_crab, show_anti_shark, show_alt_bat, show_pattern121, show_a_alt_shark):
+
+    position = 0.01  # Startposition (unten links). Nach jedem Label += 0.06
+
+    # -------------------------
+    # Bild 2 Muster (aus Liste 2)
+    # -------------------------
+
+    # CRAB
+    if show_crab:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "CRAB\nX→B: 0.382 – 0.618\nA→C: 0.382 – 0.886\nB→D: 2.240 – 3.618\nX→D: 1.618 – 1.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # 5-0
+    if show_five_zero:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "5-0\nX→B: 1.128 – 1.618\nA→C: 1.618 – 2.236\nB→D: 0.500 – 0.500\nX→D: 0.0 – 0.0"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # STRONG HENRY
+    if show_strong_henry:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "STRONG HENRY\nX→B: 0.128 – 2.618\nA→C: 0.440 – 0.618\nB→D: 0.618 – 0.886\nX→D: 0.618 – 1.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # BUTTERFLY (Bild 2)
+    if show_butterfly:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "BUTTERFLY\nX→B: 0.786 – 0.786\nA→C: 0.382 – 0.886\nB→D: 1.618 – 2.618\nX→D: 1.272 – 1.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # DEEP CRAB (Bild 2)
+    if show_deep_crab:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "DEEP CRAB\nX→B: 0.886 – 0.886\nA→C: 0.382 – 0.886\nB→D: 2.618 – 3.618\nX→D: 1.618 – 1.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # WHITE SWAN
+    if show_white_swan:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "WHITE SWAN\nX→B: 0.382 – 0.724\nA→C: 2.000 – 4.237\nB→D: 0.500 – 0.886\nX→D: 0.382 – 0.886"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # BLACK SWAN
+    if show_black_swan:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "BLACK SWAN\nX→B: 1.382 – 2.618\nA→C: 0.236 – 0.500\nB→D: 1.128 – 2.000\nX→D: 1.128 – 2.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # MAX BUTTERFLY
+    if show_max_butterfly:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "MAX BUTTERFLY\nX→B: 0.618 – 0.886\nA→C: 0.382 – 0.886\nB→D: 1.272 – 2.618\nX→D: 1.272 – 1.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # CYPHER
+    if show_cypher:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "CYPHER\nX→B: 0.382 – 0.618\nA→C: 1.130 – 1.414\nB→D: 1.272 – 2.000\nX→D: 0.786 – 0.786"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # A NEN STAR
+    if show_a_nen_star:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "A NEN STAR\nX→B: 0.500 – 0.886\nA→C: 0.467 – 0.707\nB→D: 1.618 – 2.618\nX→D: 0.786 – 0.786"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # THREE DRIVES
+    if show_three_drives:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "THREE DRIVES\nX→B: 0.618 – 0.618\nA→C: 1.272 – 1.272\nB→D: 0.618 – 0.618\nX→D: 1.272 – 1.272"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # BUTTERFLY 113
+    if show_butterfly113:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "BUTTERFLY 113\nX→B: 0.786 – 1.000\nA→C: 0.618 – 1.000\nB→D: 1.128 – 1.618\nX→D: 1.128 – 1.128"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # -------------------------
+    # Bild 1 Muster (aus Liste 1)
+    # -------------------------
+
+    # SHARK
+    if show_shark:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "SHARK\nX→B: 0.382 – 0.618\nA→C: 1.128 – 1.618\nB→D: 1.618 – 2.236\nX→D: 0.886 – 0.886"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # GARTLEY
+    if show_gartley:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "GARTLEY\nX→B: 0.618 – 0.618\nA→C: 0.382 – 0.886\nB→D: 1.272 – 1.618\nX→D: 0.786 – 0.786"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # BAT (Bild 1)
+    if show_bat:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "BAT\nX→B: 0.382 – 0.500\nA→C: 0.382 – 0.886\nB→D: 1.618 – 2.618\nX→D: 0.886 – 0.886"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # ANTI CRAB
+    if show_anti_crab:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "ANTI CRAB\nX→B: 0.276 – 0.446\nA→C: 1.128 – 2.618\nB→D: 1.618 – 2.618\nX→D: 0.618 – 0.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # ANTI SHARK
+    if show_anti_shark:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "ANTI SHARK\nX→B: 0.446 – 0.618\nA→C: 0.618 – 0.886\nB→D: 1.618 – 2.618\nX→D: 1.128 – 1.128"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # MAX GARTLEY
+    if show_max_gartley:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "MAX GARTLEY\nX→B: 0.382 – 0.618\nA→C: 0.382 – 0.886\nB→D: 1.128 – 2.236\nX→D: 0.618 – 0.786"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # ALT BAT
+    if show_alt_bat:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "ALT BAT\nX→B: 0.382 – 0.382\nA→C: 0.382 – 0.886\nB→D: 2.000 – 3.618\nX→D: 1.128 – 1.128"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # 121
+    if show_pattern121:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "121\nX→B: 0.618 – 0.786\nA→C: 1.272 – 2.000\nB→D: 0.447 – 0.618\nX→D: 0.500 – 0.618"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # A ALT SHARK
+    if show_a_alt_shark:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "A ALT SHARK\nX→B: 0.446 – 0.618\nA→C: 0.886 – 1.272\nB→D: 1.618 – 2.618\nX→D: 0.886 – 0.886"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # NEN STAR (von Bild 1)
+    if show_nen_star:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "NEN STAR\nX→B: 0.382 – 0.618\nA→C: 1.414 – 2.140\nB→D: 1.128 – 2.000\nX→D: 1.272 – 1.272"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # NAVARRO 200
+    if show_navarro200:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "NAVARRO 200\nX→B: 0.382 – 0.786\nA→C: 0.886 – 1.128\nB→D: 0.886 – 3.618\nX→D: 0.886 – 1.128"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # LEONARDO
+    if show_leonardo:
+        label_var = Var[LabelRel].new(LabelRel("", RelativePosition(va.BOTTOM, ha.LEFT, 0.95, position)))
+        label_var.get().text = "LEONARDO\nX→B: 0.500 – 0.500\nA→C: 0.382 – 0.886\nB→D: 1.128 – 2.618\nX→D: 0.786 – 0.786"
+        label_var.get().font_size = 8
+        label_var.get().text_color = color.WHITE
+        label_var.get().bg_color = color.BLACK(0.8)
+        self.chart.draw(label_var.get())
+        position += 0.06
+
+    # Ende
+    return

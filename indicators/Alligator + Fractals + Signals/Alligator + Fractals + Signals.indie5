@@ -1,0 +1,95 @@
+# indie:lang_version = 5
+# Alligator Pro — Williams Alligator + Fractals + Signals (Indie v5)
+from math import nan
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Rma
+
+
+@indicator("Alligator Pro", overlay_main_pane=True)
+# ── Alligator ──
+@param.int("jaw_len",   default=13, min=1, title="Jaw: length")
+@param.int("jaw_off",   default=8,  min=0, title="Jaw: offset")
+@param.int("teeth_len", default=8,  min=1, title="Teeth: length")
+@param.int("teeth_off", default=5,  min=0, title="Teeth: offset")
+@param.int("lips_len",  default=5,  min=1, title="Lips: length")
+@param.int("lips_off",  default=3,  min=0, title="Lips: offset")
+# ── Signals ──
+@param.float("sleep_pct",   default=0.25, min=0.0, title="Sleep threshold (line spread, % of price)")
+@param.bool("show_signals", default=True, title="Show Buy/Sell signals")
+# ── Fractals ──
+@param.bool("show_fractals", default=True, title="Show fractals")
+@param.bool("only_valid",    default=True, title="Only valid fractals (outside the mouth)")
+# ── Plots (order must match the return tuple) ──
+@plot.line(title="Jaw",   line_width=2)
+@plot.line(title="Teeth", line_width=2)
+@plot.line(title="Lips",  line_width=2)
+@plot.marker(title="Up fractal",   style=plot.marker_style.CIRCLE, position=plot.marker_position.ABOVE, color=color.GRAY)
+@plot.marker(title="Down fractal", style=plot.marker_style.CIRCLE, position=plot.marker_position.BELOW, color=color.GRAY)
+@plot.marker(title="Buy",          style=plot.marker_style.LABEL,  position=plot.marker_position.BELOW, color=color.GREEN)
+@plot.marker(title="Sell",         style=plot.marker_style.LABEL,  position=plot.marker_position.ABOVE, color=color.RED)
+@plot.marker(title="Exit Long",    style=plot.marker_style.CROSS,  position=plot.marker_position.ABOVE, color=color.GREEN(0.6))
+@plot.marker(title="Exit Short",   style=plot.marker_style.CROSS,  position=plot.marker_position.BELOW, color=color.RED(0.6))
+def Main(self, jaw_len, jaw_off, teeth_len, teeth_off, lips_len, lips_off,
+         sleep_pct, show_signals, show_fractals, only_valid):
+
+    # Source: hl2 (median price), as in the original Alligator
+    src = MutSeriesF.new(0)
+    src[0] = (self.high[0] + self.low[0]) / 2
+
+    # SMMA (Williams' smoothed MA) == Wilder's RMA
+    jaw   = Rma.new(src, jaw_len)
+    teeth = Rma.new(src, teeth_len)
+    lips  = Rma.new(src, lips_len)
+
+    # Not enough history yet — draw nothing (types must match the main return)
+    need = max(jaw_off, teeth_off, lips_off) + jaw_len + 5
+    if self.bar_index < need:
+        return (plot.Line(nan), plot.Line(nan), plot.Line(nan),
+                nan, nan,
+                plot.Marker(nan), plot.Marker(nan),
+                nan, nan)
+
+    # Line values as they are visible on the current bar (offset applied)
+    jaw_v,   teeth_v,   lips_v   = jaw[jaw_off],     teeth[teeth_off],     lips[lips_off]
+    jaw_p,   teeth_p,   lips_p   = jaw[jaw_off + 1], teeth[teeth_off + 1], lips[lips_off + 1]
+
+    # ── Market state ──
+    bull   = lips_v > teeth_v and teeth_v > jaw_v          # lips > teeth > jaw
+    bear   = lips_v < teeth_v and teeth_v < jaw_v          # lips < teeth < jaw
+    bull_p = lips_p > teeth_p and teeth_p > jaw_p
+    bear_p = lips_p < teeth_p and teeth_p < jaw_p
+
+    spread   = (max(lips_v, teeth_v, jaw_v) - min(lips_v, teeth_v, jaw_v)) / self.close[0] * 100
+    sleeping = spread < sleep_pct                          # lines intertwined — alligator sleeps
+
+    # ── Fractals (5-bar, confirmed 2 bars later) ──
+    h, l = self.high, self.low
+    up_fr = h[2] > h[0] and h[2] > h[1] and h[2] > h[3] and h[2] > h[4]
+    dn_fr = l[2] < l[0] and l[2] < l[1] and l[2] < l[3] and l[2] < l[4]
+    teeth_at_fr = teeth[teeth_off + 2]
+    up_ok = up_fr and (not only_valid or h[2] > teeth_at_fr)
+    dn_ok = dn_fr and (not only_valid or l[2] < teeth_at_fr)
+
+    # ── Signals ──
+    close, close_p = self.close[0], self.close[1]
+    buy        = bull and not bull_p and not sleeping and close > lips_v
+    sell       = bear and not bear_p and not sleeping and close < lips_v
+    exit_long  = bull_p and close < teeth_v and close_p >= teeth_p
+    exit_short = bear_p and close > teeth_v and close_p <= teeth_p
+
+    # Lines turn gray while the alligator sleeps
+    jaw_line   = plot.Line(jaw_v,   color=color.GRAY if sleeping else color.BLUE)
+    teeth_line = plot.Line(teeth_v, color=color.GRAY if sleeping else color.RED)
+    lips_line  = plot.Line(lips_v,  color=color.GRAY if sleeping else color.GREEN)
+
+    return (
+        jaw_line,
+        teeth_line,
+        lips_line,
+        h[2] if show_fractals and up_ok else nan,
+        l[2] if show_fractals and dn_ok else nan,
+        plot.Marker(value=self.low[0],  text="BUY")  if show_signals and buy  else plot.Marker(nan),
+        plot.Marker(value=self.high[0], text="SELL") if show_signals and sell else plot.Marker(nan),
+        self.high[0] if show_signals and exit_long  else nan,
+        self.low[0]  if show_signals and exit_short else nan,
+    )

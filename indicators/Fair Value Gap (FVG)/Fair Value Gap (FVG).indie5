@@ -1,0 +1,67 @@
+# indie:lang_version = 5
+from math import isnan, nan
+from indie import indicator, param, MainContext, color, plot
+
+@indicator('FVG', overlay_main_pane=True)
+@plot.line("p1")
+@plot.line("p2")
+@plot.fill("p1", "p2")
+@param.int("fill_offset", default=2, title="Fill Offset")
+class Main(MainContext):
+    def __init__(self, fill_offset: int):
+        self.fill_offset = fill_offset
+        # Persistent gap boundaries – initialized as NaN.
+        self.fvg_top: float = nan
+        self.fvg_bottom: float = nan
+        # We'll track the type: "bullish" or "bearish"; empty string if none.
+        self.fvg_type: str = ""
+        
+    def calc(self):
+        # --- Check for a new gap at the close of the current bar ---
+        # Note: In Indie, self.low[0] is the current bar's low,
+        # self.high[0] is the current bar's high,
+        # self.high[2] is the high of the bar two bars ago,
+        # and self.low[2] is the low of the bar two bars ago.
+        
+        new_gap = False
+        gap_color = color.GREEN(0.5)  # default for bullish gap
+        
+        # Bullish FVG condition: current bar's low is above the high of the bar two bars ago.
+        if self.low[0] > self.high[2]:
+            new_gap = True
+            self.fvg_top = self.high[2]
+            self.fvg_bottom = self.low[0]
+            self.fvg_type = "bullish"
+            gap_color = color.GREEN(0.5)
+        # Bearish FVG condition: current bar's high is below the low of the bar two bars ago.
+        elif self.high[0] < self.low[2]:
+            new_gap = True
+            self.fvg_top = self.high[0]
+            self.fvg_bottom = self.low[2]
+            self.fvg_type = "bearish"
+            gap_color = color.RED(0.5)
+        
+        # If no new gap is detected but one is already active, check for gap cancellation.
+        # We cancel a gap if price re-enters the gap zone.
+        if not new_gap and not isnan(self.fvg_top):
+            if self.fvg_type == "bullish":
+                # For bullish gap, if current close is between fvg_top and fvg_bottom, cancel the gap.
+                if self.fvg_top < self.close[0] and self.close[0] < self.fvg_bottom:
+                    self.fvg_top = nan
+                    self.fvg_bottom = nan
+                    self.fvg_type = ""
+            elif self.fvg_type == "bearish":
+                # For bearish gap, if current close is between fvg_bottom and fvg_top, cancel the gap.
+                if self.fvg_bottom < self.close[0] and self.close[0] < self.fvg_top:
+                    self.fvg_top = nan
+                    self.fvg_bottom = nan
+                    self.fvg_type = ""
+        
+        # Create a fill object using keyword arguments.
+        # If a gap is active, use the computed gap_color; otherwise, use a default transparent color.
+        current_fill_color = gap_color if not isnan(self.fvg_top) else color.AQUA
+        gap_fill = plot.Fill(color=current_fill_color, offset=self.fill_offset)
+        
+        # Return three outputs (matching the three plot decorators):
+        # p1: gap upper boundary, p2: gap lower boundary, p3: fill between them.
+        return self.fvg_top, self.fvg_bottom, gap_fill

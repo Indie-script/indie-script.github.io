@@ -1,0 +1,32 @@
+# indie:lang_version = 5
+# Colored volume based on price and volume changes. Inspired by the original concept by LazyBear.
+from math import nan
+from indie import indicator, format, param, plot, color, Color
+from indie.algorithms import Sma
+
+
+@indicator('Colored Volume Bars', format=format.VOLUME)
+@param.int('lookback', default=10, min=1, title='Lookback')
+@param.bool('show_ma', default=False, title='Show MA')
+@param.int('length_ma', default=20, min=1, title='MA Length')
+@plot.columns(title='Volume')
+@plot.line(color=color.rgba(128, 0, 0, 1.0), title='Volume MA')
+def Main(self, lookback, show_ma, length_ma):
+    p2 = self.close[0]
+    v2 = self.volume[0]
+    p1 = self.close[lookback]
+    v1 = self.volume[lookback]
+
+    c: Color = color.GRAY
+    if p2 > p1 and v2 > v1:
+        c = color.GREEN
+    elif p2 > p1 and v2 < v1:
+        c = color.BLUE
+    elif p2 < p1 and v2 < v1:
+        c = color.ORANGE
+    elif p2 < p1 and v2 > v1:
+        c = color.RED
+
+    ma_value = Sma.new(self.volume, length_ma)[0] if show_ma else nan
+
+    return plot.Columns(value=v2, color=c), plot.Line(ma_value)

@@ -1,0 +1,81 @@
+# indie:lang_version = 5
+from math import nan, isnan
+from indie import indicator, algorithm, SeriesF, MutSeriesF, param, plot, color, level
+from indie.algorithms import PercentRank
+from indie.math import divide
+
+
+def nz(val: float) -> float:
+    return 0.0 if isnan(val) else val
+
+
+@algorithm
+def LaguerreFilter(self, gamma: float, src: SeriesF) -> SeriesF:
+    L0 = MutSeriesF.new()
+    L1 = MutSeriesF.new()
+    L2 = MutSeriesF.new()
+    L3 = MutSeriesF.new()
+
+    L0[0] = (1 - gamma) * src[0] + gamma * nz(L0[1])
+    L1[0] = -gamma * L0[0] + nz(L0[1]) + gamma * nz(L1[1])
+    L2[0] = -gamma * L1[0] + nz(L1[1]) + gamma * nz(L2[1])
+    L3[0] = -gamma * L2[0] + nz(L2[1]) + gamma * nz(L3[1])
+
+    f = (L0[0] + 2 * L1[0] + 2 * L2[0] + L3[0]) / 6
+    return MutSeriesF.new(f)
+
+
+@indicator('Laguerre PPO PercentRank – Market Extremes', overlay_main_pane=False)
+@param.int('pctile', default=90, min=1, max=100, title='Percentile Threshold Extreme Value')
+@param.int('wrnpctile', default=70, min=1, max=100, title='Percentile Threshold Warning Value')
+@param.float('short_gamma', default=0.4, title='PPO Short Setting')
+@param.float('long_gamma', default=0.8, title='PPO Long Setting')
+@param.int('lkb_t', default=200, min=1, title='Look Back Period For Tops')
+@param.int('lkb_b', default=200, min=1, title='Look Back Period For Bottoms')
+@param.bool('sl', default=True, title='Show Threshold Line?')
+@param.bool('swl', default=True, title='Show Warning Threshold Line?')
+@level(value=0, title='Zero', line_color=color.GRAY, line_width=2)
+@plot.columns(title='Top Percentile Rank')
+@plot.columns(title='Bottom Percentile Rank')
+@plot.line(title='Extreme Top Threshold', color=color.RED, line_width=4)
+@plot.line(title='Warning Top Threshold', color=color.rgba(255, 120, 0, 1.0), line_width=4)
+@plot.line(title='Extreme Bottom Threshold', color=color.LIME, line_width=4)
+@plot.line(title='Warning Bottom Threshold', color=color.GREEN, line_width=4)
+def Main(self, pctile, wrnpctile, short_gamma, long_gamma, lkb_t, lkb_b, sl, swl):
+    lmas = LaguerreFilter.new(short_gamma, self.hl2)
+    lmal = LaguerreFilter.new(long_gamma, self.hl2)
+
+    pctile_b = -pctile
+    wrnpctile_b = -wrnpctile
+
+    # PPO calculations (divide returns 0 on div-by-zero instead of error)
+    ppo_t_val = divide(lmas[0] - lmal[0], lmal[0]) * 100
+    ppo_b_val = divide(lmal[0] - lmas[0], lmal[0]) * 100
+
+    ppo_t = MutSeriesF.new(ppo_t_val)
+    ppo_b = MutSeriesF.new(ppo_b_val)
+
+    # PercentRank
+    pct_rank_t = PercentRank.new(ppo_t, length=lkb_t)[0]
+    pct_rank_b = -PercentRank.new(ppo_b, length=lkb_b)[0]
+
+    # Colors for top columns
+    col_t = color.RED if pct_rank_t >= pctile else color.rgba(255, 120, 0, 1.0) if pct_rank_t >= wrnpctile else color.GRAY
+
+    # Colors for bottom columns
+    col_b = color.LIME if pct_rank_b <= pctile_b else color.GREEN if pct_rank_b <= wrnpctile_b else color.SILVER
+
+    # Threshold lines (nan hides the line when toggled off)
+    extreme_top = float(pctile) if sl else nan
+    warn_top = float(wrnpctile) if swl else nan
+    extreme_bot = float(pctile_b) if sl else nan
+    warn_bot = float(wrnpctile_b) if swl else nan
+
+    return (
+        plot.Columns(value=pct_rank_t, color=col_t),
+        plot.Columns(value=pct_rank_b, color=col_b),
+        extreme_top,
+        warn_top,
+        extreme_bot,
+        warn_bot,
+    )

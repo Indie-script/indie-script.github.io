@@ -1,0 +1,139 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Sma
+from indie.math import divide
+
+# Size of all pattern labels (1..7). Marker size is static decorator metadata in
+# Indie, so it can't be a runtime Settings input; change it here in one place.
+LABEL_SIZE = 5
+
+
+@indicator('Candlestick Patterns Identified', overlay_main_pane=True)
+@param.int('trend_bars', default=10, min=1, title='Trend Bars')
+@param.str('trend_type', default='sma', options=['sma', 'momentum', 'none'], title='Trend Filter')
+@param.float('doji_size', default=0.05, min=0.01, title='Doji size')
+@param.color('bull_color', default=color.LIME, title='Bullish Color')
+@param.color('bear_color', default=color.RED, title='Bearish Color')
+@param.color('doji_color', default=color.WHITE, title='Other (i.e. Doji) Color')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Doji')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Bearish Harami')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Bullish Harami')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Bearish Engulfing')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Bullish Engulfing')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Piercing Line')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Bullish Belt')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Bullish Kicker')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Bearish Kicker')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Hanging Man')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Evening Star')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Morning Star')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=LABEL_SIZE, title='Shooting Star')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Hammer')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=LABEL_SIZE, title='Inverted Hammer')
+def Main(self, trend_bars, trend_type, doji_size, bull_color, bear_color, doji_color):
+    o = self.open[0]
+    h = self.high[0]
+    l = self.low[0]
+    c = self.close[0]
+
+    o1 = self.open[1]
+    c1 = self.close[1]
+
+    o2 = self.open[2]
+    c2 = self.close[2]
+
+    body = abs(o - c)
+    rng = h - l
+
+    # --- Trend filter measured BEFORE the signal candle ---
+    # Reading the reversal candle's own close (close[0]) lets a pattern cancel
+    # its own signal (e.g. Evening Star's bearish 3rd candle drags close under
+    # the SMA). So 1-2 bar patterns read the trend at bar [1], and the 3-bar
+    # stars read it at bar [2] (the leading trend candle).
+    # Direction: bullish reversals need a prior downtrend, bearish need uptrend.
+    sma = Sma.new(self.close, trend_bars)
+    sma1 = sma[1]
+    sma2 = sma[2]
+    mom1 = self.close[1 + trend_bars]
+    mom2 = self.close[2 + trend_bars]
+    is_up_1 = True if trend_type == 'none' else (c1 > mom1 if trend_type == 'momentum' else c1 > sma1)
+    is_down_1 = True if trend_type == 'none' else (c1 < mom1 if trend_type == 'momentum' else c1 < sma1)
+    is_up_2 = True if trend_type == 'none' else (c2 > mom2 if trend_type == 'momentum' else c2 > sma2)
+    is_down_2 = True if trend_type == 'none' else (c2 < mom2 if trend_type == 'momentum' else c2 < sma2)
+
+    above = h
+    below = l
+
+    # Doji (no trend filter)
+    doji = body <= rng * doji_size
+
+    # Bearish Harami (prior uptrend)
+    bear_harami = c1 > o1 and o > c and o <= c1 and o1 <= c and o - c < c1 - o1 and is_up_1
+
+    # Bullish Harami (prior downtrend)
+    bull_harami = o1 > c1 and c > o and c <= o1 and c1 <= o and c - o < o1 - c1 and is_down_1
+
+    # Bearish Engulfing (prior uptrend)
+    bear_eng = c1 > o1 and o > c and o >= c1 and o1 >= c and o - c > c1 - o1 and is_up_1
+
+    # Bullish Engulfing (prior downtrend)
+    bull_eng = o1 > c1 and c > o and c >= o1 and c1 >= o and c - o > o1 - c1 and is_down_1
+
+    # Piercing Line (softened gap, long body, prior downtrend)
+    piercing = c1 < o1 and o < c1 and c > c1 + ((o1 - c1) / 2) and c < o1 and (c - o) > rng * 0.5 and is_down_1
+
+    # Bullish Belt Hold (no lower shadow, long bullish body, prior downtrend)
+    bull_belt = l == o and c > o and (c - o) > rng * 0.6 and is_down_1
+
+    # Bullish Kicker (bearish prev, bullish body gap up, real body; no trend filter)
+    bull_kick = o1 > c1 and c > o and o > o1 and (c - o) > rng * 0.5
+
+    # Bearish Kicker (bullish prev, bearish body gap down, real body; no trend filter)
+    bear_kick = o1 < c1 and c < o and o < o1 and (o - c) > rng * 0.5
+
+    # Hanging Man (small body at top, long lower shadow, short upper shadow, prior uptrend)
+    hanging_man = (rng > 4 * body) and divide(c - l, rng, 0.0) >= 0.75 and divide(o - l, rng, 0.0) >= 0.75 and (h - max(o, c)) <= body and is_up_1
+
+    # Evening Star (long bullish, small star, bearish close below midpoint of 1st body; prior uptrend at bar 2)
+    first_body_e = abs(c2 - o2)
+    star_body = abs(c1 - o1)
+    evening_star = c2 > o2 and min(o1, c1) > c2 and star_body < first_body_e * 0.5 and o < min(o1, c1) and c < o and c < (o2 + c2) / 2 and is_up_2
+
+    # Morning Star (long bearish, small star, bullish close above midpoint of 1st body; prior downtrend at bar 2)
+    first_body_m = abs(o2 - c2)
+    morning_star = c2 < o2 and max(o1, c1) < c2 and star_body < first_body_m * 0.5 and o > max(o1, c1) and c > o and c > (o2 + c2) / 2 and is_down_2
+
+    # Shooting Star (small body, long upper shadow, short lower shadow, gap up isolation, prior uptrend)
+    shooting_star = (rng > 3 * body) and (h - max(o, c) >= body * 3) and (min(c, o) - l <= body) and o > c1 and is_up_1
+
+    # Hammer (long lower shadow, short upper shadow, prior downtrend)
+    hammer = (rng > 3 * body) and divide(c - l, rng, 0.0) > 0.66 and divide(o - l, rng, 0.0) > 0.66 and (h - max(o, c)) <= body and is_down_1
+
+    # Inverted Hammer (long upper shadow, short lower shadow, gap down isolation, prior downtrend)
+    inv_hammer = (rng > 3 * body) and divide(h - c, rng, 0.0) > 0.66 and divide(h - o, rng, 0.0) > 0.66 and (min(o, c) - l) <= body and o < c1 and is_down_1
+
+    return (
+        plot.Marker(above if doji else nan, color=doji_color, text='Doji'),
+        plot.Marker(above if bear_harami else nan, color=bear_color, text='Bearish Harami'),
+        plot.Marker(below if bull_harami else nan, color=bull_color, text='Bullish Harami'),
+        plot.Marker(above if bear_eng else nan, color=bear_color, text='Bearish Engulfing'),
+        plot.Marker(below if bull_eng else nan, color=bull_color, text='Bullish Engulfing'),
+        plot.Marker(below if piercing else nan, color=bull_color, text='Piercing Line'),
+        plot.Marker(below if bull_belt else nan, color=bull_color, text='Bullish Belt'),
+        plot.Marker(below if bull_kick else nan, color=bull_color, text='Bullish Kicker'),
+        plot.Marker(above if bear_kick else nan, color=bear_color, text='Bearish Kicker'),
+        plot.Marker(above if hanging_man else nan, color=bear_color, text='Hanging Man'),
+        plot.Marker(above if evening_star else nan, color=bear_color, text='Evening Star'),
+        plot.Marker(below if morning_star else nan, color=bull_color, text='Morning Star'),
+        plot.Marker(above if shooting_star else nan, color=bear_color, text='Shooting Star'),
+        plot.Marker(below if hammer else nan, color=doji_color, text='H'),
+        plot.Marker(below if inv_hammer else nan, color=doji_color, text='IH'),
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "Candlestick Patterns Identified by repo32" (TradingView).
+# ---------------------------------------------------------------------------

@@ -1,0 +1,31 @@
+# indie:lang_version = 5
+# Script created by Ze4ever
+
+from indie import indicator, format, plot, color, MutSeriesF
+from indie.algorithms import Change, Ema
+from indie import param
+
+@indicator('Improved Klinger Oscillator', format=format.VOLUME)
+@param.int("fast_ema_period", default=34, title="Fast EMA Period")
+@param.int("slow_ema_period", default=55, title="Slow EMA Period")
+@param.int("signal_ema_period", default=13, title="Signal EMA Period")
+@plot.line(color=color.BLUE, title='Klinger Oscillator')
+@plot.line(color=color.GREEN, title='Signal Line')
+def Main(self, fast_ema_period: int, slow_ema_period: int, signal_ema_period: int):
+    # Direction signal based on change in hlc3 (average of high, low, close)
+    direction = 1 if Change.new(self.hlc3)[0] >= 0 else -1
+    
+    # Volume adjusted by direction signal
+    sv = MutSeriesF.new(self.volume[0] * direction)
+    
+    # Fast and slow EMA for the adjusted volume
+    ema_fast = Ema.new(sv, fast_ema_period)
+    ema_slow = Ema.new(sv, slow_ema_period)
+    
+    # Klinger Oscillator is the difference between the EMAs
+    kvo = MutSeriesF.new(ema_fast[0] - ema_slow[0])
+    
+    # Signal line is an EMA of the KVO
+    signal = Ema.new(kvo, signal_ema_period)
+    
+    return kvo[0], signal[0]

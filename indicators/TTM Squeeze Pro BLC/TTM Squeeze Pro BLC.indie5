@@ -1,0 +1,60 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, line_style, MutSeriesF
+from indie.algorithms import Sma, Bb, Tr, Highest, Lowest, LinReg
+from math import nan, isnan
+
+@indicator('Squeeze Pro')
+@param.int('length', default=20, title="Squeeze Length")
+@param.float('bb_mult', default=2.0, title="Bollinger Band STD Multiplier")
+@param.float('kc_mult_high', default=1.0, title="Keltner Channel #1")
+@param.float('kc_mult_mid', default=1.5, title="Keltner Channel #2")
+@param.float('kc_mult_low', default=2.0, title="Keltner Channel #3")
+@plot.histogram(title='Momentum', line_width=5)
+@plot.marker(title='Squeeze', style=plot.marker_style.CIRCLE, position=plot.marker_position.CENTER, size=5, display_options=plot.MarkerDisplayOptions(pane=True, status_line=False, price_label=False))
+def Main(self, length: int, bb_mult: float, kc_mult_high: float, kc_mult_mid: float, kc_mult_low: float):
+   
+    # Bollinger Bands
+    bb_lower_series, bb_basis_series, bb_upper_series = Bb.new(self.close, length, bb_mult)
+    bb_lower = bb_lower_series[0]
+    bb_upper = bb_upper_series[0]
+    bb_basis = bb_basis_series[0]
+
+    # Keltner Channels
+    kc_basis = bb_basis  
+    tr_series = Tr.new()
+    dev_kc = Sma.new(tr_series, length)[0]
+    kc_upper_high = kc_basis + dev_kc * kc_mult_high
+    kc_lower_high = kc_basis - dev_kc * kc_mult_high
+    kc_upper_mid = kc_basis + dev_kc * kc_mult_mid
+    kc_lower_mid = kc_basis - dev_kc * kc_mult_mid
+    kc_upper_low = kc_basis + dev_kc * kc_mult_low
+    kc_lower_low = kc_basis - dev_kc * kc_mult_low
+
+    # Squeeze Conditions
+    no_sqz = bb_lower < kc_lower_low or bb_upper > kc_upper_low
+    low_sqz = bb_lower >= kc_lower_low or bb_upper <= kc_upper_low
+    mid_sqz = bb_lower >= kc_lower_mid or bb_upper <= kc_upper_mid
+    high_sqz = bb_lower >= kc_lower_high or bb_upper <= kc_upper_high
+
+    # Momentum Oscillator
+    highest = Highest.new(self.high, length)[0]
+    lowest = Lowest.new(self.low, length)[0]
+    avg_hl = (highest + lowest) / 2.0
+    sma_close = Sma.new(self.close, length)[0]
+    avg_all = (avg_hl + sma_close) / 2.0
+    diff = self.close[0] - avg_all
+    diff_series = MutSeriesF.new(diff)
+    mom = LinReg.new(diff_series, length)[0]
+    mom_series = MutSeriesF.new(mom)
+
+    # Momentum Histogram Colo
+    prev_mom = 0.0 if isnan(mom_series[1]) else mom_series[1]
+    iff_1 = color.AQUA if mom > prev_mom else color.BLUE
+    iff_2 = color.RED if mom < prev_mom else color.YELLOW
+    mom_color = iff_1 if mom > 0 else iff_2
+
+    # Squeeze Dot Colors
+    sq_color = color.MAROON if high_sqz else color.RED if mid_sqz else color.BLACK if low_sqz else color.GREEN
+
+    # Plots
+    return plot.Histogram(mom, color=mom_color), plot.Marker(value=0.0, color=sq_color)

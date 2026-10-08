@@ -1,0 +1,19 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Rsi
+
+
+@indicator('RSI Chart Bars', overlay_main_pane=True)
+@param.int('length', default=14, min=1, title='Length')
+@param.int('up_level', default=70, min=1, title='UpLevel')
+@param.int('down_level', default=30, min=1, title='DownLevel')
+@param.color('up_color', default=color.LIME, title='Overbought Color')
+@param.color('down_color', default=color.FUCHSIA, title='Oversold Color')
+@plot.bar_color(title='Bar Color')
+def Main(self, length, up_level, down_level, up_color, down_color):
+    rsi = Rsi.new(self.close, length)
+    rsi_val = rsi[0]
+
+    return plot.BarColor(
+        up_color if rsi_val > up_level else down_color if rsi_val < down_level else None
+    )

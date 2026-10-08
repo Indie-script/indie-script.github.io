@@ -1,0 +1,120 @@
+# indie:lang_version = 5
+# Free indie port inspired by InSilico
+from math import sqrt, nan
+from indie import (
+    indicator, MainContext, sec_context, param, param_ref,
+    source, plot, color, MutSeriesF
+)
+from indie.algorithms import Wma, Ema
+
+
+# Pine-compatible rounding: round() instead of floor(), min period = 1
+def rint(x: float) -> int:
+    return max(1, int(round(x)))
+
+
+@sec_context
+@param_ref('src')
+@param_ref('mode_switch')
+@param_ref('length')
+@param_ref('length_mult')
+def SecHull(self, src, mode_switch, length, length_mult):
+    _len = max(2, int(length * length_mult))
+    sqrt_len = rint(sqrt(float(_len)))
+    result = 0.0
+
+    if mode_switch == 'Hma':
+        wma_half = Wma.new(src, rint(_len / 2))[0]
+        wma_full = Wma.new(src, _len)[0]
+        result = Wma.new(MutSeriesF.new(2.0 * wma_half - wma_full), sqrt_len)[0]
+    elif mode_switch == 'Ehma':
+        ema_half = Ema.new(src, rint(_len / 2))[0]
+        ema_full = Ema.new(src, _len)[0]
+        result = Ema.new(MutSeriesF.new(2.0 * ema_half - ema_full), sqrt_len)[0]
+    else:
+        th_len = rint(_len / 2)
+        wma_t3 = Wma.new(src, rint(th_len / 3))[0]
+        wma_t2 = Wma.new(src, rint(th_len / 2))[0]
+        wma_t1 = Wma.new(src, th_len)[0]
+        result = Wma.new(MutSeriesF.new(wma_t3 * 3.0 - wma_t2 - wma_t1), th_len)[0]
+
+    return result
+
+
+@indicator('Hull Suite', overlay_main_pane=True)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.str('mode_switch', default='Hma', options=['Hma', 'Thma', 'Ehma'], title='Hull Variation')
+@param.int('length', default=55, min=1, title='Length(180-200 for floating S/R, 55 for swing entry)')
+@param.float('length_mult', default=1.0, min=0.1, max=10.0, title='Length multiplier')
+@param.bool('use_htf', default=False, title='Show Hull MA from higher timeframe?')
+@param.time_frame('htf', default='1W', title='Higher timeframe')
+@param.bool('switch_color', default=True, title='Color Hull according to trend?')
+@param.bool('candle_col', default=False, title='Color candles based on Hull Trend?')
+@param.bool('visual_switch', default=True, title='Show as a Band?')
+@param.int('transp_switch', default=40, min=0, max=100, step=5, title='Band Transparency')
+@plot.line('mhull', color=color.ORANGE, title='MHULL')
+@plot.line('shull', color=color.ORANGE, title='SHULL')
+@plot.fill('mhull', 'shull', title='Band Filler')
+@plot.bar_color(title='Bar Color')
+class Main(MainContext):
+    def __init__(self, src, mode_switch, length, length_mult, use_htf, htf,
+                 switch_color, candle_col, visual_switch, transp_switch):
+        self._src = src
+        self._mode_switch = mode_switch
+        self._length = length
+        self._length_mult = length_mult
+        self._use_htf = use_htf
+        self._switch_color = switch_color
+        self._candle_col = candle_col
+        self._visual_switch = visual_switch
+        self._transp_switch = transp_switch
+        self._htf_hull = self.calc_on(SecHull, time_frame=htf)
+
+    def calc(self):
+        _len = max(2, int(self._length * self._length_mult))
+        sqrt_len = rint(sqrt(float(_len)))
+
+        local_hull = 0.0
+        if self._mode_switch == 'Hma':
+            wma_half = Wma.new(self._src, rint(_len / 2))[0]
+            wma_full = Wma.new(self._src, _len)[0]
+            local_hull = Wma.new(MutSeriesF.new(2.0 * wma_half - wma_full), sqrt_len)[0]
+        elif self._mode_switch == 'Ehma':
+            ema_half = Ema.new(self._src, rint(_len / 2))[0]
+            ema_full = Ema.new(self._src, _len)[0]
+            local_hull = Ema.new(MutSeriesF.new(2.0 * ema_half - ema_full), sqrt_len)[0]
+        else:
+            th_len = rint(_len / 2)
+            wma_t3 = Wma.new(self._src, rint(th_len / 3))[0]
+            wma_t2 = Wma.new(self._src, rint(th_len / 2))[0]
+            wma_t1 = Wma.new(self._src, th_len)[0]
+            local_hull = Wma.new(MutSeriesF.new(wma_t3 * 3.0 - wma_t2 - wma_t1), th_len)[0]
+
+        hull_val = self._htf_hull[0] if self._use_htf else local_hull
+
+        hull = MutSeriesF.new(hull_val)
+        mhull_val = hull[0]
+        shull_val = hull[2] if self._visual_switch else nan
+
+        hull_color = color.ORANGE
+        if self._switch_color:
+            hull_color = color.rgba(0, 255, 0) if hull[0] > hull[2] else color.rgba(255, 0, 0)
+
+        fill_alpha = (100.0 - float(self._transp_switch)) / 100.0
+        fill_color = hull_color(fill_alpha)
+
+        bar_col = hull_color if (self._candle_col and self._switch_color) else None
+
+        return (
+            plot.Line(mhull_val, color=hull_color),
+            plot.Line(shull_val, color=hull_color),
+            plot.Fill(color=fill_color),
+            plot.BarColor(bar_col)
+        )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "Hull Suite by InSilico" (TradingView).
+# ---------------------------------------------------------------------------

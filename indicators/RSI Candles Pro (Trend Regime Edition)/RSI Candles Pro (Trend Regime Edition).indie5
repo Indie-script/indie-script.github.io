@@ -1,0 +1,62 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color, Color, Optional
+from indie.algorithms import Rsi, Ema
+
+
+@indicator('RSI Candles Pro', overlay_main_pane=True)
+@param.int('rsi_length', default=14, min=2, title='RSI Length')
+@param.int('ema_length', default=200, min=1, title='Trend EMA Length')
+@param.int('upper_level', default=70, title='Upper Level')
+@param.int('lower_level', default=30, title='Lower Level')
+@param.int('bull_level', default=55, title='Bull Regime Level')
+@param.int('bear_level', default=45, title='Bear Regime Level')
+@param.bool('show_ema', default=True, title='Show EMA')
+@param.color('strong_up_color', default=color.rgba(200, 255, 150, 1.0), title='Strong Up Color')
+@param.color('strong_down_color', default=color.rgba(255, 0, 200, 1.0), title='Strong Down Color')
+@param.color('up_color', default=color.rgba(0, 200, 50, 1.0), title='Up Color')
+@param.color('down_color', default=color.rgba(220, 0, 60, 1.0), title='Down Color')
+@plot.bar_color(title='RSI Bar Color')
+@plot.line(color=color.ORANGE, title='EMA')
+def Main(self, rsi_length, ema_length, upper_level, lower_level,
+         bull_level, bear_level, show_ema,
+         strong_up_color, strong_down_color, up_color, down_color):
+    rsi = Rsi.new(self.close, rsi_length)
+    ema = Ema.new(self.close, ema_length)
+
+    # Normalize levels to prevent user misconfiguration
+    bull = max(bull_level, bear_level + 1)
+    bear = min(bear_level, bull_level - 1)
+
+    # Smoothed RSI slope (fix flickering)
+    rsi_smooth = Ema.new(rsi, 3)
+    rsi_slope_up = rsi_smooth[0] > rsi_smooth[1]
+    rsi_slope_down = rsi_smooth[0] < rsi_smooth[1]
+
+    # Trend filter
+    trend_up = self.close[0] > ema[0]
+    trend_down = self.close[0] < ema[0]
+
+    # Regime logic (normalized levels)
+    long_regime = rsi[0] > bull and trend_up and rsi_slope_up
+    short_regime = rsi[0] < bear and trend_down and rsi_slope_down
+
+    # Strong impulse (crossover / crossunder, trend-aligned only)
+    strong_long = rsi[0] > upper_level and rsi[1] <= upper_level and trend_up
+    strong_short = rsi[0] < lower_level and rsi[1] >= lower_level and trend_down
+
+    # Bar color
+    bar_col: Optional[Color] = None
+    if strong_long:
+        bar_col = strong_up_color
+    elif strong_short:
+        bar_col = strong_down_color
+    elif long_regime:
+        bar_col = up_color
+    elif short_regime:
+        bar_col = down_color
+
+    # EMA line (nan hides the line — Indie idiom, same as Pine's `na`)
+    ema_value = ema[0] if show_ema else nan
+
+    return plot.BarColor(bar_col), plot.Line(ema_value)

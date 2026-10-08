@@ -1,0 +1,33 @@
+# indie:lang_version = 5
+from indie import indicator, plot, color, MutSeriesF, level, line_style, param
+from indie.algorithms import Sma
+
+@indicator('Simple Crossover Signal Bars for Visual Backtesting', overlay_main_pane=False)
+@param.int('fast_ma_length', default=50, min=1, title='Fast MA Length')
+@param.int('slow_ma_length', default=200, min=1, title='Slow MA Length')
+@plot.columns(title='Crossover Signal', id='#plot_0')
+@level(value=0, title='Mittellinie', line_color=color.GRAY, line_style=line_style.DASHED, line_width=1)
+def Main(self, fast_ma_length, slow_ma_length):
+    # Berechnung der gleitenden Durchschnitte
+    fast_ma = Sma.new(self.close, fast_ma_length)  # Einstellbare Länge für den schnellen MA
+    slow_ma = Sma.new(self.close, slow_ma_length)  # Einstellbare Länge für den langsamen MA
+
+    # Signal-Logik: 1 für bullisches Crossover, -1 für bärisches Crossover
+    signal_value = MutSeriesF.new(init=0)
+
+    if fast_ma[0] > slow_ma[0] and fast_ma[1] <= slow_ma[1]:
+        signal_value[0] = 1  # Bullisches Signal
+    elif fast_ma[0] < slow_ma[0] and fast_ma[1] >= slow_ma[1]:
+        signal_value[0] = -1  # Bärisches Signal
+    else:
+        signal_value[0] = 0  # Kein Signal
+
+    # Farbe basierend auf dem Signalwert
+    plot_color = (
+        color.GREEN if signal_value[0] == 1
+        else color.RED if signal_value[0] == -1
+        else color.rgba(0, 0, 0, 0)  # Transparent, wenn kein Signal
+    )
+
+    # Rückgabe der Balkenanzeige
+    return plot.Columns(value=signal_value[0], color=plot_color)

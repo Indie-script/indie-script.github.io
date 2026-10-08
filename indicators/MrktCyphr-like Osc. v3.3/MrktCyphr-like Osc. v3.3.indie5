@@ -1,0 +1,53 @@
+# Copyright (c) 2025 @slhunter444. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+
+from math import nan
+from indie import indicator, plot, color, param, MutSeriesF
+from indie.algorithms import Ema
+
+
+@param.int('wave_len', default=10, title='Wave Channel Length')
+@param.int('wave_avg', default=21, title='Wave Average Length')
+
+
+@indicator('Cipher-Inspired Oscillator_v3.3[SLHunter444]')
+@plot.line(color=color.BLUE, title='Wave 1')
+@plot.line(color=color.ORANGE, title='Wave 2')
+@plot.histogram(color=color.GREEN, title='Momentum')
+@plot.marker(color=color.LIME, title='Buy')
+@plot.marker(color=color.RED, title='Sell')
+def Main(self, wave_len, wave_avg):
+    # ─────────────────────────────────────────────
+    # Built-in HLC3 (MANDATORY — no + allowed)
+    # ─────────────────────────────────────────────
+    hlc3 = self.hlc3
+
+    esa = Ema.new(hlc3, wave_len)
+    diff = MutSeriesF.new(abs(hlc3[0] - esa[0]))
+    dev = Ema.new(diff, wave_len)
+
+    ci = MutSeriesF.new((hlc3[0] - esa[0]) / (0.015 * dev[0]))
+    wave1 = Ema.new(ci, wave_avg)
+    wave2 = Ema.new(wave1, 4)
+
+    momentum = MutSeriesF.new(wave1[0] - wave2[0])
+
+    # ─────────────────────────────────────────────
+    # Signals
+    # ─────────────────────────────────────────────
+    buy = nan
+    sell = nan
+
+    # Cross up: wave1 crosses above wave2 (wave1[0] > wave2[0] and wave1[1] <= wave2[1])
+    if wave1[0] > wave2[0] and wave1[1] <= wave2[1] and wave1[0] < -50:
+        buy = wave1[0]
+
+    # Cross down: wave1 crosses below wave2 (wave1[0] < wave2[0] and wave1[1] >= wave2[1])
+    if wave1[0] < wave2[0] and wave1[1] >= wave2[1] and wave1[0] > 50:
+        sell = wave1[0]
+
+    return wave1[0], wave2[0], momentum[0], buy, sell

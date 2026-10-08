@@ -1,0 +1,160 @@
+# indie:lang_version = 5
+# Pivot Point SuperTrend
+# Indie port of the Pine Script v4 indicator by LonesomeTheBlue
+# Original: Pivot Point Supertrend LonesomeTheBlue //LonesomeTheBlue
+
+from math import isnan, nan
+from indie import indicator, param, plot, color, MutSeriesF, Var
+from indie.algorithms import Atr, PivotHighLow
+
+
+@indicator('Pivot Point SuperTrend', overlay_main_pane=True)
+@param.int('prd', default=2, min=1, max=50, title='Pivot Point Period')
+@param.float('factor', default=3.0, min=1.0, title='ATR Factor')
+@param.int('pd', default=10, min=1, title='ATR Period')
+@param.bool('show_pivot', default=False, title='Show Pivot Points')
+@param.bool('show_label', default=True, title='Show Buy/Sell Labels')
+@param.bool('show_cl', default=False, title='Show PP Center Line')
+@param.bool('show_sr', default=False, title='Show Support/Resistance')
+@plot.line(title='PP SuperTrend', line_width=2)
+@plot.line(title='Center Line')
+@plot.line(title='Support', color=color.LIME)
+@plot.line(title='Resistance', color=color.RED)
+@plot.marker(title='Pivot High', color=color.RED,
+             style=plot.marker_style.LABEL,
+             position=plot.marker_position.ABOVE, size=7)
+@plot.marker(title='Pivot Low', color=color.LIME,
+             style=plot.marker_style.LABEL,
+             position=plot.marker_position.BELOW, size=7)
+@plot.marker(title='Buy', color=color.LIME,
+             style=plot.marker_style.LABEL,
+             position=plot.marker_position.BELOW, size=7)
+@plot.marker(title='Sell', color=color.RED,
+             style=plot.marker_style.LABEL,
+             position=plot.marker_position.ABOVE, size=7)
+def Main(self, prd, factor, pd, show_pivot, show_label, show_cl, show_sr):
+    # --- Pivot points (Pine: pivothigh(high, prd, prd) / pivotlow(low, prd, prd)) ---
+    ph, _ = PivotHighLow.new(self.high, prd, prd)
+    _, pl = PivotHighLow.new(self.low, prd, prd)
+
+    # --- Weighted center line (updated only on a new pivot) ---
+    center = Var[float].new(nan)
+    last_pp = nan
+    if not isnan(ph[0]):
+        last_pp = ph[0]
+    elif not isnan(pl[0]):
+        last_pp = pl[0]
+
+    if not isnan(last_pp):
+        if isnan(center.get()):
+            center.set(last_pp)
+        else:
+            center.set((center.get() * 2.0 + last_pp) / 3.0)
+
+    cur_center = center.get()
+
+    # --- ATR (Pine atr() == RMA-based ATR) ---
+    atr = Atr.new(pd, 'RMA')
+
+    # --- Up/Dn bands ---
+    up = nan
+    dn = nan
+    if not isnan(cur_center) and not isnan(atr[0]):
+        up = cur_center - factor * atr[0]
+        dn = cur_center + factor * atr[0]
+
+    # --- Trailing series ---
+    t_up = MutSeriesF.new(init=nan)
+    t_down = MutSeriesF.new(init=nan)
+    trend = MutSeriesF.new(init=1.0)
+
+    prev_close = self.close[1]
+    prev_tup = t_up[1]
+    prev_tdn = t_down[1]
+    prev_trend = trend[1]
+    if isnan(prev_trend):
+        prev_trend = 1.0
+
+    # TUp := close[1] > TUp[1] ? max(Up, TUp[1]) : Up
+    new_tup = up
+    if not isnan(prev_close) and not isnan(prev_tup) and prev_close > prev_tup:
+        if isnan(up):
+            new_tup = prev_tup
+        else:
+            new_tup = max(up, prev_tup)
+    t_up[0] = new_tup
+
+    # TDown := close[1] < TDown[1] ? min(Dn, TDown[1]) : Dn
+    new_tdn = dn
+    if not isnan(prev_close) and not isnan(prev_tdn) and prev_close < prev_tdn:
+        if isnan(dn):
+            new_tdn = prev_tdn
+        else:
+            new_tdn = min(dn, prev_tdn)
+    t_down[0] = new_tdn
+
+    # Trend := close > TDown[1] ? 1 : close < TUp[1] ? -1 : nz(Trend[1], 1)
+    cur_trend = prev_trend
+    if not isnan(prev_tdn) and self.close[0] > prev_tdn:
+        cur_trend = 1.0
+    elif not isnan(prev_tup) and self.close[0] < prev_tup:
+        cur_trend = -1.0
+    trend[0] = cur_trend
+
+    trailing_sl = new_tup if cur_trend > 0 else new_tdn
+
+    # --- Trailing-stop coloring (na on transition bar to mimic Pine) ---
+    is_up = cur_trend > 0 and prev_trend > 0
+    is_dn = cur_trend < 0 and prev_trend < 0
+    trail_color = color.LIME
+    if is_dn:
+        trail_color = color.RED
+    trail_value = trailing_sl if (is_up or is_dn) else nan
+
+    # --- Center line plot ---
+    center_value = nan
+    center_color = color.BLUE
+    if show_cl and not isnan(cur_center):
+        hl2 = (self.high[0] + self.low[0]) / 2.0
+        center_value = cur_center
+        if cur_center >= hl2:
+            center_color = color.RED
+
+    # --- Buy/Sell signals ---
+    bsignal = cur_trend > 0 and prev_trend < 0
+    ssignal = cur_trend < 0 and prev_trend > 0
+    buy_value = trailing_sl if (bsignal and show_label and not isnan(trailing_sl)) else nan
+    sell_value = trailing_sl if (ssignal and show_label and not isnan(trailing_sl)) else nan
+
+    # --- Pivot markers (offset back to actual pivot bar) ---
+    pivot_h_value = ph[0] if (show_pivot and not isnan(ph[0])) else nan
+    pivot_l_value = pl[0] if (show_pivot and not isnan(pl[0])) else nan
+
+    # --- Support / Resistance (last pivots, carried forward) ---
+    support = Var[float].new(nan)
+    resistance = Var[float].new(nan)
+    if not isnan(pl[0]):
+        support.set(pl[0])
+    if not isnan(ph[0]):
+        resistance.set(ph[0])
+
+    sup_value = support.get() if show_sr else nan
+    res_value = resistance.get() if show_sr else nan
+
+    return (
+        plot.Line(trail_value, color=trail_color),
+        plot.Line(center_value, color=center_color),
+        plot.Line(sup_value, offset=-prd),
+        plot.Line(res_value, offset=-prd),
+        plot.Marker(pivot_h_value, text='H', offset=-prd),
+        plot.Marker(pivot_l_value, text='L', offset=-prd),
+        plot.Marker(buy_value, text='Buy'),
+        plot.Marker(sell_value, text='Sell'),
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "Pivot Point Supertrend by LonesomeTheBlue" (TradingView).
+# ---------------------------------------------------------------------------
