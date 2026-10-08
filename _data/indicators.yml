@@ -330,3 +330,183 @@
 "Turtle Trade Channels":
   category: trend
   description: "Computes Donchian-based channels with trend line K1 and exit line K2, generating entry/exit signals and background highlights."
+"Adaptive Triple Moving Average crossover":
+  category: trend
+  description: "Adaptive triple moving average crossover with multi-factor score system and ATR-based trailing stops."
+"Alligator + Fractals + Signals":
+  category: trend
+  description: "Bill Williams' Alligator with smoothed moving averages, fractals, and entry/exit signals."
+"Band Trend Indicator":
+  category: moving-averages
+  description: "Plots two SMAs (short and long) with a colored fill between them to indicate trend direction."
+"BitBlockWizard BB3":
+  category: volatility
+  description: "Plots three sets of Bollinger Bands with different standard deviation multipliers to visualize multiple volatility levels."
+"Bollinger Band Touch Marker":
+  category: volatility
+  description: "Bollinger Bands that change color when price touches or breaks the upper or lower band."
+"Bull Bear Power 50% alert":
+  category: oscillators
+  description: "Computes Bull Bear Power (BBP) from EMA and alerts when BBP falls below 50% of its recent peak."
+"Classic Ultimate MA MTF (CM Style)":
+  category: moving-averages
+  description: "Multi-timeframe moving average indicator with 8 types, directional coloring, cross markers, and bar crossing highlights."
+"Coral Trend (6-Stage EMA)":
+  category: trend
+  description: "Six-stage EMA cascade with a polynomial weighting scheme that draws a green/red/blue trend line and optional ribbon or bar coloring."
+"Double - Supertrend":
+  category: trend
+  description: "Combines two Supertrend calculations (fast/slow) to identify trend strength and consolidation phases."
+"Elliott Wave Oscillator (EWO) Pro - Validated Twin Peaks":
+  category: oscillators
+  description: "Computes Elliott Wave Oscillator (fast-slow MA difference) with optional percent normalization and validated Twin Peaks & Saucer pattern detection."
+"Fair Value Gap (FVG)":
+  category: patterns
+  description: "Detects bullish and bearish Fair Value Gaps from bar comparisons and plots persistent colored fill zones until price re-enters."
+"Futures Indicator":
+  category: trend
+  description: "Computes a multi-condition trading score (0-5) from EMA, RSI, ATR, volume, and price momentum, with long/short signals when score >= threshold."
+"In-Depth Volume (@encryption)":
+  category: volume
+  description: "Estimates buy and sell volume per candle using close position in the range, plotted as colored columns above/below zero."
+"kama dual fixed":
+  category: moving-averages
+  description: "Dual KAMA indicator plotting fast and slow Kaufman Adaptive Moving Average lines with independent periods and smoothing constants."
+"kaufman Adaptive Moving Average dual KAMA":
+  category: moving-averages
+  description: "Plots two Kaufman Adaptive Moving Averages (fast and slow) based on Efficiency Ratio."
+"Klinger Oscillator For Crypto Enhanced by Ze4ever":
+  category: oscillators
+  description: "Computes the Klinger Oscillator as the difference between fast and slow EMAs of volume adjusted by price direction, plus a signal line."
+"MACD 4C Pro":
+  category: oscillators
+  description: "Computes MACD histogram with 4-color logic based on filtered MACD and optional signal line and zero cross markers."
+"mara doji hang man hammer":
+  category: patterns
+  description: "Scans for Marubozu, Doji, Hammer, and Hanging Man candlestick patterns and plots colored columns in a separate pane."
+"Market Facilitation Index Squat Bars Skyrexio":
+  category: volume
+  description: "Computes Market Facilitation Index and colors bars maroon when MFI decreases while volume increases (squat bar)."
+"MTC Double Hust Channel":
+  category: volatility
+  description: "Plots two Keltner Channels using EMA and ATR for short-term and long-term volatility analysis."
+"MTC FibRatio Overlay":
+  category: patterns
+  description: "Displays a cheat sheet of Fibonacci ratio ranges for 24 harmonic patterns as labelled overlays on the chart."
+"MTC - Rainbow 30er":
+  category: moving-averages
+  description: "Computes 20 simple moving averages (periods 5 to 62) with gradient-colored fills to visualize trend direction and strength."
+"MTC Trippel Keltner - Hust Channel":
+  category: volatility
+  description: "Plots three Keltner Channels (short, medium, long) based on EMA and ATR with adjustable lengths and multipliers."
+"Opening Range 930 - 945":
+  category: support-resistance
+  description: "Draws the 9:30-9:45 NY opening range high, low and midpoint for each visible trading day as a rectangle and dashed midline."
+"relative strength index + Over Alert":
+  category: oscillators
+  description: "Computes the Relative Strength Index (RSI) with a moving average, optional Bollinger Bands, and crossover alerts at 70 and 30."
+"RollingWVAP":
+  category: volume
+  description: "Computes up to three rolling volume-weighted average price (VWAP) lines with optional standard deviation bands."
+"RSI Candles Pro (Trend Regime Edition)":
+  category: oscillators
+  description: "Colors bars based on RSI levels, trend regime, and RSI slope with an optional trend EMA line."
+"RSI Candles (RSI Chart Bar)":
+  category: oscillators
+  description: "Colors chart bars based on RSI: overbought above up_level, oversold below down_level, neutral otherwise."
+"RSI LacQuanTeu Pub":
+  category: oscillators
+  description: "Computes RSI with two moving averages (default EMA9 and WMA45) and plots static overbought/oversold levels with colored fills."
+"Schaff Trend Cycle (STC)":
+  category: oscillators
+  description: "Computes the Schaff Trend Cycle (STC) oscillator, a double-smoothed stochastic of MACD, with overbought/oversold bands and crossover signals."
+"Simple Crossover Signal Bars for Visual Backtesting":
+  category: moving-averages
+  description: "Plots colored bars in a separate pane when fast SMA crosses above (green) or below (red) slow SMA."
+"Trading Windows":
+  category: support-resistance
+  description: "Highlights and labels trading sessions (Asia, London, US) with colored background zones and boundary markers on intraday charts."
+"Triangle & Wedge Breakout Pro":
+  category: patterns
+  description: "Detects symmetrical, ascending, descending triangles and falling/rising wedges, draws the pattern shape with apex projection, and generates buy/sell signals with a quality score."
+"TTM Squeeze Pro BLC":
+  category: volatility
+  description: "Computes Bollinger Bands, Keltner Channels, squeeze conditions, and a momentum oscillator to identify volatility contractions."
+"Volume with SMA":
+  category: volume
+  description: "Volume columns colored by price direction with an overlapping simple moving average line."
+"VWAP":
+  category: volume
+  description: "Plots VWAP with two customizable standard deviation bands and fills."
+"ZLEMA":
+  category: moving-averages
+  description: "Zero Lag Exponential Moving Average that adjusts the source series to reduce lag before applying EMA."
+"6EMA":
+  category: moving-averages
+  description: "Plots up to 6 user-configurable exponential moving averages with independent toggles."
+"ADX and DI (SMA+Wilder)":
+  category: trend
+  description: "Computes ADX, DI+ and DI- lines with a choice of SMA or Wilder smoothing for ADX."
+"Candlestick Patterns Identified upd '26":
+  category: patterns
+  description: "Detects 15 classical Japanese candlestick patterns with strict geometric rules and optional trend filtering."
+"Pivot Point SuperTrend (Indie)":
+  category: trend
+  description: "Trend-following indicator combining pivot points with ATR-based trailing bands to generate buy/sell signals."
+"Support Resistance Channels":
+  category: support-resistance
+  description: "Computes historical support and resistance zones by clustering pivot points into channels, scoring them by strength, and displaying the strongest non-overlapping levels."
+"ATR Super Trend Multi-Source":
+  category: trend
+  description: "Multi-source Supertrend indicator with customizable ATR engine (RMA/SMA), source selection, and buy/sell labels."
+"Hull Suite by InSilico - Indie Edition":
+  category: moving-averages
+  description: "Hull Suite indicator with three Hull variants (HMA, EHMA, THMA), optional HTF, and band visualization."
+"IDWM Key Levels - ported from SpacemanBTC":
+  category: support-resistance
+  description: "Plots key reference prices (opens, previous highs/lows, midpoints) across multiple timeframes directly on the chart."
+"MavilimW (Fibonacci WMA Cascade)":
+  category: trend
+  description: "Cascaded WMA with Fibonacci-derived lengths and color-coded direction (blue up, red down, yellow flat)."
+"QQE MOD Indicator (Mihkel00 Concept, Port)":
+  category: oscillators
+  description: "Dual QQE oscillator with RSI, ATR-based bands, and Bollinger Band filtering for trend and momentum signals."
+"WaveTrend with Crosses":
+  category: oscillators
+  description: "Computes a double-smoothed momentum oscillator (WaveTrend) with crossover signals for reversal detection."
+"VD binary pro 3 (port)":
+  category: volatility
+  description: "Multi-block volatility indicator with WMA channel, SMA band, RMA zigzag, HTF levels, and cross signals."
+"Enhanced Ichimoku Cloud 5":
+  category: trend
+  description: "Computes Ichimoku Cloud components (Tenkan-Sen, Kijun-Sen, Senkou Spans, Chinkou Span) with cloud color based on trend direction."
+"Pivot Ribbon {BLC}":
+  category: moving-averages
+  description: "Plots a 3-EMA ribbon with conviction EMAs and color-coded clouds to visualize trend direction and EMA crossovers."
+"Stochastic POP Method 2 Classic+Pro":
+  category: oscillators
+  description: "Stochastic oscillator with classic SMA or zero-lag HMA/ALMA smoothing, trading above 55 and below 45, with crossover signals."
+"MTF Stochastic Signals (CM Style)":
+  category: oscillators
+  description: "Multi-timeframe Stochastic Oscillator with configurable cross signals, B/S labels, and an optional second higher-timeframe Stochastic."
+"Bitcoin Sine Wave Power Law Model":
+  category: trend
+  description: "Overlays BTC price with a log-scale power-law trend, rainbow limit bands, and a sinusoidal halving-cycle wave with optional no-miss zones."
+"EMA Trend Bars":
+  category: trend
+  description: "Colors bars based on whether HLC3 is above or below an EMA to show trend direction."
+"Laguerre PPO PercentRank - Market Extremes":
+  category: oscillators
+  description: "Applies a Laguerre-smoothed PPO normalized with PercentRank to detect statistically extreme momentum conditions."
+"Price Action Bar Patterns":
+  category: patterns
+  description: "Detects Pin Bars, Inside Bars, Outside Bars, and Shaved Bars on candlestick charts and colors bars accordingly."
+"Colored Volume Bars":
+  category: volume
+  description: "Colors volume bars based on whether price and volume increased or decreased relative to a lookback period, highlighting market strength."
+"MACD + SMA 200 Enhanced (ChartArt Inspired)":
+  category: trend
+  description: "Combines MACD, trend MA (SMA/EMA/WMA/HMA), and optional ADX/ATR/MTF filters to generate trend signals and bar colors."
+"MrktCyphr-like Osc. v3.3":
+  category: oscillators
+  description: "Market Cipher B-inspired oscillator with two EMAs, momentum histogram, and cross signals."

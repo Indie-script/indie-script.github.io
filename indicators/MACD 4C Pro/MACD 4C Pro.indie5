@@ -1,0 +1,56 @@
+# indie:lang_version = 5
+from math import nan, isnan
+from indie import indicator, param, plot, color, level, MutSeriesF
+from indie.algorithms import Macd
+from indie.math import cross_over, cross_under
+
+
+@indicator('MACD 4C Pro')
+@param.int('fast_ma', default=12, min=1, title='Fast EMA')
+@param.int('slow_ma', default=26, min=1, title='Slow EMA')
+@param.int('signal_len', default=9, min=1, title='Signal Length')
+@param.float('threshold', default=0.0, title='Noise Filter (abs MACD)')
+@param.bool('show_signal', default=False, title='Show Signal Line')
+@param.bool('show_zero_x', default=True, title='Show Zero Cross Markers')
+@level(0, line_color=color.GRAY, title='Zero Line')
+@plot.columns(title='MACD Histogram')
+@plot.line(color=color.WHITE, title='Signal')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, color=color.LIME, size=4, title='Zero Cross Up')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, color=color.RED, size=4, title='Zero Cross Down')
+def Main(self, fast_ma, slow_ma, signal_len, threshold, show_signal, show_zero_x):
+    macd_series, signal_series, _ = Macd.new(self.close, fast_ma, slow_ma, signal_len)
+
+    macd_val = macd_series[0]
+    signal_val = signal_series[0]
+
+    # NaN-safe previous value (first bar fallback)
+    raw_prev = macd_series[1]
+    prev_macd = macd_val if isnan(raw_prev) else raw_prev
+
+    # Symmetric noise filter
+    macd_filtered = 0.0 if abs(macd_val) < threshold else macd_val
+    prev_filtered = 0.0 if abs(prev_macd) < threshold else prev_macd
+
+    # 4-color logic (filtered vs filtered)
+    plot_color = color.RED
+    if macd_filtered > 0:
+        if macd_filtered > prev_filtered:
+            plot_color = color.LIME
+        else:
+            plot_color = color.GREEN
+    else:
+        if macd_filtered < prev_filtered:
+            plot_color = color.MAROON
+        else:
+            plot_color = color.RED
+
+    # Zero cross detection (unfiltered MACD)
+    is_cross_up = cross_over(macd_series, 0.0)
+    is_cross_down = cross_under(macd_series, 0.0)
+
+    return (
+        plot.Columns(macd_filtered, color=plot_color),
+        signal_val if show_signal else nan,
+        plot.Marker(value=macd_val if (show_zero_x and is_cross_up) else nan, text='U'),
+        plot.Marker(value=macd_val if (show_zero_x and is_cross_down) else nan, text='D'),
+    )

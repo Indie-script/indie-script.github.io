@@ -1,0 +1,163 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color, level, line_style, algorithm, MutSeriesF, SeriesF, MutSeries
+from indie.algorithms import Rsi, Ema, Sma, StdDev
+from indie.color import rgba
+
+
+@algorithm
+def CalculateQQE(self, src: SeriesF, rsi_length: int, smoothing_factor: int, qqe_factor: float) -> tuple[SeriesF, SeriesF]:
+    """
+    Calculate QQE Bands
+    Returns: (qqeTrendLine, smoothedRsi)
+    """
+    wilders_length = rsi_length * 2 - 1
+    
+    # Calculate RSI and smooth it
+    rsi = Rsi.new(src, rsi_length)
+    smoothed_rsi = Ema.new(rsi, smoothing_factor)
+    
+    # Calculate ATR of RSI (absolute change between bars)
+    rsi_change = abs(smoothed_rsi[0] - smoothed_rsi[1])
+    atr_rsi = MutSeriesF.new(rsi_change)
+    smoothed_atr_rsi = Ema.new(atr_rsi, wilders_length)
+    dynamic_atr_rsi = smoothed_atr_rsi[0] * qqe_factor
+    
+    # Calculate bands
+    atr_delta = dynamic_atr_rsi
+    new_short_band = smoothed_rsi[0] + atr_delta
+    new_long_band = smoothed_rsi[0] - atr_delta
+    
+    # Initialize long and short bands with persistence
+    long_band = MutSeriesF.new(init=0.0)
+    short_band = MutSeriesF.new(init=0.0)
+    trend_direction = MutSeries[int].new(init=0)
+    
+    # Calculate longBand
+    if smoothed_rsi[1] > long_band[1] and smoothed_rsi[0] > long_band[1]:
+        long_band[0] = max(long_band[1], new_long_band)
+    else:
+        long_band[0] = new_long_band
+    
+    # Calculate shortBand
+    if smoothed_rsi[1] < short_band[1] and smoothed_rsi[0] < short_band[1]:
+        short_band[0] = min(short_band[1], new_short_band)
+    else:
+        short_band[0] = new_short_band
+    
+    # Check for crosses to determine trend direction
+    # Pine: ta.cross(longBand[1], smoothedRsi) compares longBand[1] vs smoothedRsi
+    # Cross = sign change between bars
+    # longBandCross: comparing long_band[2] vs smoothed_rsi[1] AND long_band[1] vs smoothed_rsi[0]
+    long_band_cross = (long_band[2] < smoothed_rsi[1] and long_band[1] >= smoothed_rsi[0]) or \
+                      (long_band[2] > smoothed_rsi[1] and long_band[1] <= smoothed_rsi[0])
+    # shortBandCross: comparing smoothed_rsi[1] vs short_band[2] AND smoothed_rsi[0] vs short_band[1]
+    short_band_cross = (smoothed_rsi[1] < short_band[2] and smoothed_rsi[0] >= short_band[1]) or \
+                       (smoothed_rsi[1] > short_band[2] and smoothed_rsi[0] <= short_band[1])
+    
+    if short_band_cross:
+        trend_direction[0] = 1
+    elif long_band_cross:
+        trend_direction[0] = -1
+    else:
+        trend_direction[0] = trend_direction[1]
+    
+    # Determine the trend line
+    qqe_trend_line = MutSeriesF.new(0.0)
+    if trend_direction[0] == 1:
+        qqe_trend_line[0] = long_band[0]
+    else:
+        qqe_trend_line[0] = short_band[0]
+    
+    return qqe_trend_line, smoothed_rsi
+
+
+@indicator('QQE MOD')
+# === PRIMARY QQE SETTINGS ===
+@param.int('rsi_length_primary', default=6, min=1, title='Primary RSI Length')
+@param.int('rsi_smoothing_primary', default=5, min=1, title='Primary RSI Smoothing')
+@param.float('qqe_factor_primary', default=3.0, min=0.1, title='Primary QQE Factor')
+@param.float('threshold_primary', default=3.0, min=0.0, title='Primary Threshold')
+# === SECONDARY QQE SETTINGS ===
+@param.int('rsi_length_secondary', default=6, min=1, title='Secondary RSI Length')
+@param.int('rsi_smoothing_secondary', default=5, min=1, title='Secondary RSI Smoothing')
+@param.float('qqe_factor_secondary', default=1.61, min=0.1, title='Secondary QQE Factor')
+@param.float('threshold_secondary', default=3.0, min=0.0, title='Secondary Threshold')
+# === BOLLINGER BANDS SETTINGS ===
+@param.int('bollinger_length', default=50, min=1, title='Bollinger Length')
+@param.float('bollinger_multiplier', default=0.35, min=0.001, max=5.0, step=0.1, title='Bollinger Multiplier')
+# === PLOT DECORATORS ===
+@plot.line(id='sec_qqe_line', title='Secondary QQE Trend Line', color=color.WHITE, line_width=2)
+@plot.columns(id='sec_rsi_hist', title='Secondary RSI Histogram')
+@plot.columns(id='qqe_up', title='QQE Up Signal')
+@plot.columns(id='qqe_down', title='QQE Down Signal')
+@level(value=0, title='Zero Line', line_color=color.WHITE, line_style=line_style.DOTTED, line_width=1)
+def Main(self, 
+         rsi_length_primary, rsi_smoothing_primary, qqe_factor_primary, threshold_primary,
+         rsi_length_secondary, rsi_smoothing_secondary, qqe_factor_secondary, threshold_secondary,
+         bollinger_length, bollinger_multiplier):
+    
+    # === MAIN CALCULATIONS ===
+    # Calculate Primary QQE
+    primary_qqe_trend_line, primary_rsi = CalculateQQE.new(
+        self.close, 
+        rsi_length_primary, 
+        rsi_smoothing_primary, 
+        qqe_factor_primary
+    )
+    
+    # Calculate Secondary QQE
+    secondary_qqe_trend_line, secondary_rsi = CalculateQQE.new(
+        self.close, 
+        rsi_length_secondary, 
+        rsi_smoothing_secondary, 
+        qqe_factor_secondary
+    )
+    
+    # Calculate Bollinger Bands for the Primary QQE Trend Line (shifted by -50)
+    # Create series for BB calculation
+    primary_qqe_shifted = MutSeriesF.new(primary_qqe_trend_line[0] - 50)
+    bollinger_basis = Sma.new(primary_qqe_shifted, bollinger_length)
+    std_dev = StdDev.new(primary_qqe_shifted, bollinger_length)
+    bollinger_upper = bollinger_basis[0] + bollinger_multiplier * std_dev[0]
+    bollinger_lower = bollinger_basis[0] - bollinger_multiplier * std_dev[0]
+    
+    # Calculate shifted values for plotting
+    secondary_qqe_shifted = secondary_qqe_trend_line[0] - 50
+    secondary_rsi_shifted = secondary_rsi[0] - 50
+    primary_rsi_shifted = primary_rsi[0] - 50
+    
+    # Color Conditions for Secondary RSI Histogram
+    rsi_color_secondary = rgba(112, 112, 112, 0.8)  # Gray with some transparency
+    if secondary_rsi_shifted > threshold_secondary or secondary_rsi_shifted < -threshold_secondary:
+        rsi_color_secondary = rgba(112, 112, 112, 0.8)
+    else:
+        rsi_color_secondary = rgba(0, 0, 0, 0)  # Transparent when within threshold
+    
+    # QQE Up Signal - Cyan (#00c3ff)
+    qqe_up_value = nan
+    qqe_up_color = rgba(0, 0, 0, 0)  # Transparent by default
+    if secondary_rsi_shifted > threshold_secondary and primary_rsi_shifted > bollinger_upper:
+        qqe_up_value = secondary_rsi_shifted
+        qqe_up_color = rgba(0, 195, 255, 1.0)  # Cyan
+    
+    # QQE Down Signal - Magenta (#ff0062)
+    qqe_down_value = nan
+    qqe_down_color = rgba(0, 0, 0, 0)  # Transparent by default
+    if secondary_rsi_shifted < -threshold_secondary and primary_rsi_shifted < bollinger_lower:
+        qqe_down_value = secondary_rsi_shifted
+        qqe_down_color = rgba(255, 0, 98, 1.0)  # Magenta/Pink
+    
+    return (
+        secondary_qqe_shifted,  # Secondary QQE Trend Line
+        plot.Columns(value=secondary_rsi_shifted, color=rsi_color_secondary),  # Secondary RSI Histogram
+        plot.Columns(value=qqe_up_value if qqe_up_value == qqe_up_value else 0, color=qqe_up_color),  # QQE Up Signal
+        plot.Columns(value=qqe_down_value if qqe_down_value == qqe_down_value else 0, color=qqe_down_color)  # QQE Down Signal
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "QQE MOD by Mihkel00" (TradingView).
+# ---------------------------------------------------------------------------

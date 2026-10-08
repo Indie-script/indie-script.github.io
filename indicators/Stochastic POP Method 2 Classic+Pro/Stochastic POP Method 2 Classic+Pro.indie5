@@ -1,0 +1,154 @@
+# indie:lang_version = 5
+# CM_Stochastic POP Method 2 — V3 (2026 ultimate)
+# Original: ChrisMoody (2015), based on Jake Bernstein's algo, 
+# V3 changes:
+#   - ALMA weights precomputed once in __init__ (massive speedup on long history)
+#   - Crossover signal markers (Long when K crosses up through UL, Short for LL)
+#   - Class-based Main for stateful initialization
+#   - Thinner default lines, English comments, ASCII-only marker titles
+from math import exp, pow, sqrt, floor, nan
+from indie import (
+    indicator, algorithm, format, param, color, plot,
+    SeriesF, MutSeriesF, MainContext,
+)
+from indie.algorithms import Sma, Stoch, Wma
+from indie.math import divide
+
+
+@algorithm
+def Hma(self, src: SeriesF, length: int) -> SeriesF:
+    """Hull MA: WMA(2*WMA(n/2) - WMA(n)) finished with sqrt(n) WMA pass."""
+    half = max(1, length // 2)
+    sqrt_len = max(1, floor(sqrt(length)))
+    wma_l2 = Wma.new(src, half)[0]
+    wma_l = Wma.new(src, length)[0]
+    return Wma.new(MutSeriesF.new(2 * wma_l2 - wma_l), sqrt_len)
+
+
+@indicator('Stochastic POP Method 2 Classic+Pro', format=format.PRICE)
+@param.int('length', default=14, min=1, title='Stochastic Length')
+@param.int('smooth_k', default=5, min=1, title='Smooth K')
+@param.str('mode', default='Classic', options=['Classic', 'Pro'], title='Mode')
+@param.str('pro_algo', default='HMA', options=['HMA', 'ALMA'],
+           title='Pro: Smoothing Algorithm')
+@param.float('alma_offset', default=0.85, min=0.0, max=1.0, step=0.05,
+             title='Pro/ALMA: Offset (only used when Pro+ALMA)')
+@param.float('alma_sigma', default=6.0, min=0.5, step=0.5,
+             title='Pro/ALMA: Sigma (only used when Pro+ALMA)')
+@param.float('ul', default=55.0, min=50.0, title='Buy Entry/Exit Line')
+@param.float('ll', default=45.0, max=50.0, title='Sell Entry/Exit Line')
+@param.bool('st', default=False, title='Color Bars (Long / Short / NoTrade)')
+@param.bool('show_signals', default=True, title='Show Crossover Signals')
+@plot.line('upper', line_width=2, color=color.GREEN, title='Upper Line')
+@plot.line('top', color=color.GRAY(0.3), title='100 Line')
+@plot.line('lower', line_width=2, color=color.RED, title='Lower Line')
+@plot.line('bottom', color=color.GRAY(0.3), title='0 Line')
+@plot.line('k', line_width=2, title='Stochastic')
+@plot.fill('upper', 'top', color=color.GREEN(0.1), title='Long Trade Fill')
+@plot.fill('upper', 'lower', color=color.BLUE(0.1), title='No Trade Fill')
+@plot.fill('lower', 'bottom', color=color.RED(0.1), title='Short Trade Fill')
+@plot.marker(color=color.LIME, style=plot.marker_style.CIRCLE,
+             position=plot.marker_position.CENTER, size=6, title='Long Signal')
+@plot.marker(color=color.RED, style=plot.marker_style.CIRCLE,
+             position=plot.marker_position.CENTER, size=6, title='Short Signal')
+@plot.bar_color(title='Bar Color')
+class Main(MainContext):
+    def __init__(self, smooth_k, mode, pro_algo, alma_offset, alma_sigma):
+        # Cache mode-related params for fast access in calc().
+        self._smooth_k = smooth_k
+        self._mode = mode
+        self._pro_algo = pro_algo
+
+        # Var holds the previous bar's K value for crossover detection.
+        # Var supports rollback on realtime updates — correct in live mode.
+        self._prev_k = self.new_var(nan)
+
+        # Precompute ALMA weights once at indicator init.
+        # Weights depend only on window/offset/sigma — never on per-bar data.
+        # On a 50K-bar history with window=10 this saves ~500K exp/pow calls.
+        window = max(2, smooth_k)
+        self._alma_window = window
+        self._alma_weights: list[float] = []
+        self._alma_norm = 1.0
+        if mode == 'Pro' and pro_algo == 'ALMA':
+            m = alma_offset * (window - 1)
+            s = window / alma_sigma
+            norm_acc = 0.0
+            for i in range(window):
+                w = exp(-1 * pow(i - m, 2) / (2 * pow(s, 2)))
+                self._alma_weights.append(w)
+                norm_acc += w
+            self._alma_norm = norm_acc
+
+    def calc(self, length, ul, ll, st, show_signals):
+        raw_stoch = Stoch.new(self.close, self.low, self.high, length)
+
+        # Smoothing dispatch.
+        # k_val is declared above the if-block — Indie's scoping ends with
+        # indentation, so vars defined inside if/elif don't survive outside.
+        k_val = 0.0
+        if self._mode == 'Classic':
+            k_val = Sma.new(raw_stoch, self._smooth_k)[0]
+        elif self._pro_algo == 'HMA':
+            k_val = Hma.new(raw_stoch, max(2, self._smooth_k))[0]
+        else:  # Pro + ALMA — uses precomputed weights from __init__
+            window = self._alma_window
+            raw_stoch.request_size(window)
+            weighted_sum = 0.0
+            for i in range(window):
+                weighted_sum += raw_stoch[window - i - 1] * self._alma_weights[i]
+            k_val = divide(weighted_sum, self._alma_norm)
+
+        prev_k = self._prev_k.get()
+
+        # Stochastic line color.
+        line_col = color.BLUE
+        if k_val >= ul:
+            line_col = color.GREEN
+        elif k_val <= ll:
+            line_col = color.RED
+
+        # Bar coloring (only when st toggle is on).
+        bar_col = color.TRANSPARENT
+        if st:
+            if k_val >= ul:
+                bar_col = color.LIME
+            elif k_val <= ll:
+                bar_col = color.RED
+            else:
+                bar_col = color.BLUE
+
+        # Crossover signals — fire on the bar where K crosses through a level.
+        # Long: K crosses up through UL (entry / short-exit).
+        # Short: K crosses down through LL (entry / long-exit).
+        long_signal = nan
+        short_signal = nan
+        if show_signals:
+            if prev_k <= ul and k_val > ul:
+                long_signal = ul
+            if prev_k >= ll and k_val < ll:
+                short_signal = ll
+
+        # Persist current K for next bar's crossover comparison.
+        self._prev_k.set(k_val)
+
+        return (
+            plot.Line(ul),
+            plot.Line(100.0),
+            plot.Line(ll),
+            plot.Line(0.0),
+            plot.Line(k_val, color=line_col),
+            plot.Fill(),
+            plot.Fill(),
+            plot.Fill(),
+            plot.Marker(long_signal),
+            plot.Marker(short_signal),
+            plot.BarColor(color=bar_col),
+        )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "CM Stochastic POP Method 2 by ChrisMoody" (TradingView).
+# ---------------------------------------------------------------------------

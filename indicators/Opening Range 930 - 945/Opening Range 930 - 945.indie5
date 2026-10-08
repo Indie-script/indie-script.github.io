@@ -1,0 +1,127 @@
+# indie:lang_version = 5
+
+##############################################################################
+#  Opening Range Indicator  –  9:30 to 9:45 NY time  (EDT / UTC-4)
+#
+#  In winter when UTC-5 change NY_OFFSET = 4 * 3600 to 5 * 3600
+#
+#  Draws for EVERY visible trading day:
+#    • A white rectangle  : left=9:30, right=16:00, top=OR high, bottom=OR low
+#    • A dashed white midline at (OR high + OR low) / 2
+#
+#  Works on 1-min, 5-min and 15-min charts.
+#
+#  ── Timezone note ──────────────────────────────────────────────────────────
+#  NY_OFFSET = 4 * 3600  →  EDT (UTC-4, summer / daylight-saving time)
+#  Change to 5 * 3600    →  EST (UTC-5, winter standard time)
+##############################################################################
+
+from indie import indicator, MainContext, color
+from indie.drawings import LineSegment, AbsolutePosition, line_segment_style
+
+# ── Session / timezone constants ──────────────────────────────────────────────
+NY_OFFSET  = 4 * 3600      # seconds east of UTC for New York (EDT)
+OR_START   = 9 * 60 + 30   # 570 min  →  9:30 NY  (session open & OR open)
+OR_END     = 9 * 60 + 45   # 585 min  →  9:45 NY  (OR window closes)
+SESS_CLOSE = 16 * 60        # 960 min  → 16:00 NY  (session close)
+
+# ── Indicator ─────────────────────────────────────────────────────────────────
+@indicator('Opening Range (9:30-9:45 NY)', overlay_main_pane=True)
+class Main(MainContext):
+
+    def __init__(self):
+        # Persistent state variables (survive across bar-by-bar calls)
+        self._day      = self.new_var(-1)      # midnight-NY timestamp of current session
+        self._or_hi    = self.new_var(0.0)     # OR high accumulator
+        self._or_lo    = self.new_var(0.0)     # OR low  accumulator
+        self._or_valid = self.new_var(False)   # True once we have seen at least 1 OR bar
+        self._or_drawn = self.new_var(False)   # True once the rectangle is drawn for this day
+
+    def calc(self):
+        ts   = self.time[0]                     # UTC seconds (per Indie docs)
+        ny   = ts - NY_OFFSET                   # shift to NY local time (seconds)
+        base = ny - (int(ny) % 86400)                # midnight of this NY day (NY-local seconds)
+        ny_m = (int(ny) % 86400) // 60            # minutes elapsed since NY midnight
+
+        # ── Skip bars outside the regular session ───────────────────────────
+        if ny_m < OR_START or ny_m >= SESS_CLOSE:
+            return
+
+        # Unique integer key for this calendar day (NY midnight as int)
+        day_key = int(base)
+
+        # ── Detect a new trading session ────────────────────────────────────
+        if day_key != self._day.get():
+            self._day.set(day_key)
+            self._or_hi.set(self.high[0])
+            self._or_lo.set(self.low[0])
+            self._or_valid.set(False)
+            self._or_drawn.set(False)
+
+        # ── Accumulate Opening Range (9:30 inclusive → 9:45 exclusive) ──────
+        if ny_m < OR_END:
+            self._or_valid.set(True)
+            self._or_hi.set(max(self._or_hi.get(), self.high[0]))
+            self._or_lo.set(min(self._or_lo.get(), self.low[0]))
+            return   # keep collecting until OR window closes
+
+        # Guard: only draw if we collected real OR data for this session
+        if not self._or_valid.get():
+            return
+
+        # Guard: already drawn for today - nothing more to do
+        if self._or_drawn.get():
+            return
+
+        # ── Compute UTC boundary timestamps for this NY day ─────────────────
+        # base is midnight NY in NY-local seconds; add NY_OFFSET to get UTC
+        t_open  = base + OR_START   * 60 + NY_OFFSET  # 9:30  NY in UTC seconds
+        t_close = base + SESS_CLOSE * 60 + NY_OFFSET  # 16:00 NY in UTC seconds
+
+        or_hi  = self._or_hi.get()
+        or_lo  = self._or_lo.get()
+        or_mid = (or_hi + or_lo) * 0.5
+
+        # ── Top border (OR high, spanning 9:30 to 16:00) ────────────────────
+        self.chart.draw(LineSegment(
+            AbsolutePosition(t_open,  or_hi),
+            AbsolutePosition(t_close, or_hi),
+            color=color.WHITE,
+            line_width=1,
+        ))
+
+        # ── Bottom border (OR low, spanning 9:30 to 16:00) ──────────────────
+        self.chart.draw(LineSegment(
+            AbsolutePosition(t_open,  or_lo),
+            AbsolutePosition(t_close, or_lo),
+            color=color.WHITE,
+            line_width=1,
+        ))
+
+        # ── Left border (vertical line at 9:30) ─────────────────────────────
+        self.chart.draw(LineSegment(
+            AbsolutePosition(t_open, or_hi),
+            AbsolutePosition(t_open, or_lo),
+            color=color.WHITE,
+            line_width=1,
+        ))
+
+        # ── Right border (vertical line at 16:00) ───────────────────────────
+        self.chart.draw(LineSegment(
+            AbsolutePosition(t_close, or_hi),
+            AbsolutePosition(t_close, or_lo),
+            color=color.WHITE,
+            line_width=1,
+        ))
+
+        # ── Dashed midline at (OR high + OR low) / 2 ────────────────────────
+        self.chart.draw(LineSegment(
+            AbsolutePosition(t_open,  or_mid),
+            AbsolutePosition(t_close, or_mid),
+            color=color.WHITE,
+            line_width=1,
+            line_style=line_segment_style.DASHED,
+        ))
+
+        # Mark as drawn so subsequent bars of the same day don't recreate it
+        self._or_drawn.set(True)

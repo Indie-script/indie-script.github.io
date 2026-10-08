@@ -1,0 +1,113 @@
+# Copyright (c) 2026 @sukunabtc. All rights reserved.
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+# indie:lang_version = 5
+from math import nan, isnan
+from indie import indicator, param, source, color, plot, MainContext, SeriesF
+
+
+@indicator('Kaufman Adaptive Moving Average (KAMA)', overlay_main_pane=True)
+@param.int('fast_er', default=10, min=1, title='Fast KAMA ER Period')
+@param.int('fast_sc_fast', default=2, min=1, title='Fast KAMA Fast EMA')
+@param.int('fast_sc_slow', default=20, min=1, title='Fast KAMA Slow EMA')
+@param.int('slow_er', default=15, min=1, title='Slow KAMA ER Period')
+@param.int('slow_sc_fast', default=3, min=1, title='Slow KAMA Fast EMA')
+@param.int('slow_sc_slow', default=30, min=1, title='Slow KAMA Slow EMA')
+@param.source('src', default=source.CLOSE)
+@plot.line('Fast KAMA', color=color.AQUA)
+@plot.line('Slow KAMA', color=color.BLUE)
+class Main(MainContext):
+    def __init__(self):
+        # Var[T] remembers the value committed on the LAST CLOSED bar and
+        # rolls back to it automatically every time a new realtime tick
+        # starts a fresh recalculation of the still-open bar. That's what
+        # a recursive (EMA-style) formula needs: every recalculation of
+        # the open bar must start from the same fixed baseline, not from
+        # whatever the previous tick of the SAME bar produced.
+        self.kama_fast_v = self.new_var(nan)
+        self.kama_slow_v = self.new_var(nan)
+
+    def calc(self, fast_er: int, fast_sc_fast: int, fast_sc_slow: int,
+             slow_er: int, slow_sc_fast: int, slow_sc_slow: int,
+             src: SeriesF) -> tuple[float, float]:
+        bar_index = self.bar_index
+
+        # Declared BEFORE the if-blocks with an explicit type and a
+        # default value, then only ever reassigned (never re-declared)
+        # inside the blocks below. Indie scopes a variable to the block
+        # where it is first declared, so a name that only exists inside
+        # an if/else body is gone once the body ends, even if every
+        # branch happens to assign it. Declaring it here keeps it alive
+        # all the way to `return`.
+        fast_kama: float = nan
+        slow_kama: float = nan
+
+        # ---------------------------------------------------------------
+        # Fast KAMA
+        # ---------------------------------------------------------------
+        if bar_index >= fast_er:
+            # Efficiency Ratio recomputed in full on every call instead of
+            # an incremental +=/-= running sum. The incremental version is
+            # only correct if calc() runs exactly once per NEW bar, which
+            # is false on the forming (realtime) bar, where calc() reruns
+            # on every tick. Re-summing the fixed window each time gives
+            # the same result no matter how many times this bar reruns.
+            noise = 0.0
+            for i in range(fast_er):
+                noise += abs(src[i] - src[i + 1])
+            signal = abs(src[0] - src[fast_er])
+            er = 0.0 if noise == 0.0 else signal / noise
+
+            fastest_sc = 2.0 / (float(fast_sc_fast) + 1.0)
+            slowest_sc = 2.0 / (float(fast_sc_slow) + 1.0)
+            sc_raw = er * (fastest_sc - slowest_sc) + slowest_sc
+            sc = sc_raw * sc_raw
+            if sc > 1.0:
+                sc = 1.0
+            elif sc < 0.0:
+                sc = 0.0
+
+            prev_kama = self.kama_fast_v.get()
+            if isnan(prev_kama):
+                # First bar with enough history: seed with a plain SMA of
+                # the lookback window, computed directly.
+                seed = 0.0
+                for i in range(fast_er):
+                    seed += src[i]
+                fast_kama = seed / float(fast_er)
+            else:
+                fast_kama = prev_kama + sc * (src[0] - prev_kama)
+
+            self.kama_fast_v.set(fast_kama)
+
+        # ---------------------------------------------------------------
+        # Slow KAMA (identical logic, independent parameters and state)
+        # ---------------------------------------------------------------
+        if bar_index >= slow_er:
+            noise = 0.0
+            for i in range(slow_er):
+                noise += abs(src[i] - src[i + 1])
+            signal = abs(src[0] - src[slow_er])
+            er = 0.0 if noise == 0.0 else signal / noise
+
+            fastest_sc = 2.0 / (float(slow_sc_fast) + 1.0)
+            slowest_sc = 2.0 / (float(slow_sc_slow) + 1.0)
+            sc_raw = er * (fastest_sc - slowest_sc) + slowest_sc
+            sc = sc_raw * sc_raw
+            if sc > 1.0:
+                sc = 1.0
+            elif sc < 0.0:
+                sc = 0.0
+
+            prev_kama = self.kama_slow_v.get()
+            if isnan(prev_kama):
+                seed = 0.0
+                for i in range(slow_er):
+                    seed += src[i]
+                slow_kama = seed / float(slow_er)
+            else:
+                slow_kama = prev_kama + sc * (src[0] - prev_kama)
+
+            self.kama_slow_v.set(slow_kama)
+
+        return fast_kama, slow_kama

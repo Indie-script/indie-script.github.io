@@ -1,0 +1,96 @@
+# indie:lang_version = 5
+from indie import indicator, MainContext, param, source, color, plot, MutSeriesF, SeriesF
+from math import isnan, nan
+
+@indicator('Rolling VWAP', overlay_main_pane=True)
+@param.int('period_1', default=14, min=7, max=365, title='VWAP Period 1')
+@param.bool('show_vwap_1', default=True, title='Show VWAP 1')
+@param.int('period_2', default=21, min=7, max=365, title='VWAP Period 2')
+@param.bool('show_vwap_2', default=True, title='Show VWAP 2')
+@param.int('period_3', default=50, min=7, max=365, title='VWAP Period 3')
+@param.bool('show_vwap_3', default=False, title='Show VWAP 3')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.float('std_dev', default=2.0, min=0.1, max=5.0, title='StdDev Band')
+@param.bool('show_bands', default=True, title='Show Bands')
+@plot.line('vwap_1', color=color.BLUE, line_width=2, title='VWAP 1')
+@plot.line('vwap_2', color=color.ORANGE, line_width=2, title='VWAP 2')
+@plot.line('vwap_3', color=color.PURPLE, line_width=2, title='VWAP 3')
+@plot.line('upper_band', color=color.RED, title='Upper Band')
+@plot.line('lower_band', color=color.RED, title='Lower Band')
+@plot.fill('upper_band', 'lower_band', color=color.RED(0.05))
+class Main(MainContext):
+    def __init__(self, period_1, show_vwap_1, period_2, show_vwap_2, period_3, show_vwap_3, src, std_dev, show_bands):
+        pass
+        
+    def calc(self, period_1, show_vwap_1, period_2, show_vwap_2, period_3, show_vwap_3, src, std_dev, show_bands):
+        # Calculate VWAP for each period
+        vwap_1 = self._calculate_vwap(src, period_1)
+        vwap_2 = self._calculate_vwap(src, period_2)
+        vwap_3 = self._calculate_vwap(src, period_3)
+        
+        # Use the first VWAP for band calculations (shortest period typically)
+        primary_vwap = vwap_1
+        
+        # Calculate standard deviation bands based on primary VWAP
+        upper_band = primary_vwap
+        lower_band = primary_vwap
+        
+        if show_bands:
+            std_dev_value = self._calculate_std_dev(src, primary_vwap, period_1)
+            if not isnan(std_dev_value):
+                upper_band = primary_vwap + (std_dev_value * std_dev)
+                lower_band = primary_vwap - (std_dev_value * std_dev)
+        else:
+            upper_band = nan
+            lower_band = nan
+        
+        # Hide VWAPs if disabled
+        if not show_vwap_1:
+            vwap_1 = nan
+        if not show_vwap_2:
+            vwap_2 = nan
+        if not show_vwap_3:
+            vwap_3 = nan
+        
+        return (vwap_1, vwap_2, vwap_3, upper_band, lower_band, plot.Fill())
+    
+    def _calculate_vwap(self, src: SeriesF, period: int) -> float:
+        # Calculate volume-weighted sum and volume sum for the period
+        pv_sum = 0.0  # price * volume sum
+        v_sum = 0.0   # volume sum
+        
+        # Sum over the rolling period
+        i = 0
+        while i < period and i < self.bar_count:
+            price = src[i]
+            volume = self.volume[i]
+            if not isnan(price) and not isnan(volume):
+                pv_sum = pv_sum + (price * volume)
+                v_sum = v_sum + volume
+            i = i + 1
+        
+        # Calculate VWAP
+        if v_sum > 0.0:
+            return pv_sum / v_sum
+        return src[0]  # fallback
+    
+    def _calculate_std_dev(self, src: SeriesF, vwap_value: float, period: int) -> float:
+        # Calculate standard deviation of price deviations from VWAP
+        deviation_sum = 0.0
+        valid_count = 0
+        
+        # Calculate variance manually for the rolling period
+        j = 0
+        while j < period and j < self.bar_count:
+            price = src[j]
+            if not isnan(price):
+                deviation = price - vwap_value
+                deviation_sum = deviation_sum + (deviation * deviation)
+                valid_count = valid_count + 1
+            j = j + 1
+        
+        # Calculate standard deviation
+        if valid_count > 1:
+            variance = deviation_sum / float(valid_count - 1)
+            return variance ** 0.5
+        return 0.0

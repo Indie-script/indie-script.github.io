@@ -1,0 +1,37 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Ema
+
+@indicator('6EMA', overlay_main_pane=True)
+@param.int('ema1_length', default=9, min=1, title='EMA 1 Length')
+@param.int('ema2_length', default=21, min=1, title='EMA 2 Length')
+@param.int('ema3_length', default=50, min=1, title='EMA 3 Length')
+@param.int('ema4_length', default=100, min=1, title='EMA 4 Length')
+@param.int('ema5_length', default=200, min=1, title='EMA 5 Length')
+@param.int('ema6_length', default=365, min=1, title='EMA 6 Length')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.bool('show_ema1', default=True, title='Show EMA 1')
+@param.bool('show_ema2', default=True, title='Show EMA 2')
+@param.bool('show_ema3', default=True, title='Show EMA 3')
+@param.bool('show_ema4', default=True, title='Show EMA 4')
+@param.bool('show_ema5', default=True, title='Show EMA 5')
+@param.bool('show_ema6', default=True, title='Show EMA 6')
+@plot.line(color=color.BLUE, title='EMA 1')
+@plot.line(color=color.GREEN, title='EMA 2')
+@plot.line(color=color.WHITE, title='EMA 3')
+@plot.line(color=color.RED, title='EMA 4')
+@plot.line(color=color.PURPLE, title='EMA 5')
+@plot.line(color=color.YELLOW, title='EMA 6')
+def Main(self, ema1_length, ema2_length, ema3_length, ema4_length, ema5_length, ema6_length, 
+         src, show_ema1, show_ema2, show_ema3, show_ema4, show_ema5, show_ema6):
+    
+    # Calculate EMAs
+    ema1 = Ema.new(src, ema1_length)[0] if show_ema1 else nan
+    ema2 = Ema.new(src, ema2_length)[0] if show_ema2 else nan
+    ema3 = Ema.new(src, ema3_length)[0] if show_ema3 else nan
+    ema4 = Ema.new(src, ema4_length)[0] if show_ema4 else nan
+    ema5 = Ema.new(src, ema5_length)[0] if show_ema5 else nan
+    ema6 = Ema.new(src, ema6_length)[0] if show_ema6 else nan
+    
+    return ema1, ema2, ema3, ema4, ema5, ema6

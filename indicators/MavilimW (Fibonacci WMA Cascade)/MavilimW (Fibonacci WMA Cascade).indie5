@@ -1,0 +1,53 @@
+# indie:lang_version = 5
+# inspired by: @mavilim0732
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Wma
+
+
+@indicator('MavilimW', overlay_main_pane=True)
+@param.bool('mavilimold', default=False, title='Show Previous Version of MavilimW?')
+@param.int('fmal', default=3, min=1, title='First Moving Average length')
+@param.int('smal', default=5, min=1, title='Second Moving Average length')
+@plot.line(color=color.BLUE, title='MAVW', line_width=2)
+@plot.line(color=color.BLUE, title='MavWOld', line_width=2)
+def Main(self, mavilimold, fmal, smal):
+    tmal = fmal + smal
+    Fmal = smal + tmal
+    Ftmal = tmal + Fmal
+    Smal = Fmal + Ftmal
+
+    M1 = Wma.new(self.close, fmal)
+    M2 = Wma.new(M1, smal)
+    M3 = Wma.new(M2, tmal)
+    M4 = Wma.new(M3, Fmal)
+    M5 = Wma.new(M4, Ftmal)
+    MAVW = Wma.new(M5, Smal)
+
+    mavw_val = MAVW[0]
+    mavw_prev = MAVW[1]
+
+    col = color.YELLOW
+    if mavw_val > mavw_prev:
+        col = color.BLUE
+    elif mavw_val < mavw_prev:
+        col = color.RED
+
+    # Old version with fixed Fibonacci lengths
+    M12 = Wma.new(self.close, 3)
+    M22 = Wma.new(M12, 5)
+    M32 = Wma.new(M22, 8)
+    M42 = Wma.new(M32, 13)
+    M52 = Wma.new(M42, 21)
+    MAVW2 = Wma.new(M52, 34)
+
+    mavw2_val = MAVW2[0] if mavilimold else nan
+
+    return plot.Line(mavw_val, color=col), plot.Line(mavw2_val)
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "MavilimW by KivancOzbilgic" (TradingView).
+# ---------------------------------------------------------------------------

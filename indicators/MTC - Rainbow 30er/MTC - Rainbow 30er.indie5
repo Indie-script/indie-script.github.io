@@ -1,0 +1,69 @@
+# indie:lang_version = 5
+from indie import indicator, plot, color
+from indie.algorithms import Sma
+
+# Rainbow Indicator mit 30 Linien. UPDATE: Changed to 20 lines
+@indicator('MTC-Rainbow Indicator', overlay_main_pane=True)
+@plot.line('gma_5', color=color.rgba(255, 0, 0, 1))   # Rot
+@plot.line('gma_8', color=color.rgba(255, 64, 0, 1))  # Helles Orange
+@plot.line('gma_11', color=color.rgba(255, 128, 0, 1)) # Orange
+@plot.line('gma_14', color=color.rgba(255, 192, 0, 1)) # Hellorange
+@plot.line('gma_17', color=color.rgba(224, 255, 0, 1)) # Übergang zu Grün
+@plot.line('gma_20', color=color.rgba(160, 255, 0, 1)) # Gelbgrün
+@plot.line('gma_23', color=color.rgba(96, 255, 0, 1))  # Hellgrün
+@plot.line('gma_26', color=color.rgba(0, 255, 64, 1))  # Grasgrün
+@plot.line('gma_29', color=color.rgba(0, 255, 128, 1)) # Übergang zu Blau
+@plot.line('gma_32', color=color.rgba(0, 255, 192, 1)) # Türkis
+@plot.line('gma_35', color=color.rgba(0, 224, 255, 1)) # Hellblau
+@plot.line('gma_38', color=color.rgba(0, 160, 255, 1)) # Himmelblau
+@plot.line('gma_41', color=color.rgba(0, 96, 255, 1))  # Königsblau
+@plot.line('gma_44', color=color.rgba(37, 0, 224, 1))  # Indigo
+@plot.line('gma_47', color=color.rgba(75, 0, 192, 1))  # Dunkelviolett
+@plot.line('gma_50', color=color.rgba(112, 0, 160, 1)) # Übergang zu Violett
+@plot.line('gma_53', color=color.rgba(150, 0, 128, 1)) # Violett
+@plot.line('gma_56', color=color.rgba(188, 0, 96, 1))  # Magentaviolett
+@plot.line('gma_59', color=color.rgba(225, 0, 64, 1))  # Dunkelrosa
+@plot.line('gma_62', color=color.rgba(238, 130, 238, 1)) # Magenta
+@plot.fill('gma_5', 'gma_8', color=color.rgba(255, 32, 0, 0.3), id='#fill_20')    # Helles Rot-Orange
+@plot.fill('gma_8', 'gma_11', color=color.rgba(255, 96, 0, 0.3), id='#fill_21')   # Helles Orange
+@plot.fill('gma_11', 'gma_14', color=color.rgba(255, 160, 0, 0.3), id='#fill_22') # Hellorange
+@plot.fill('gma_14', 'gma_17', color=color.rgba(240, 240, 0, 0.3), id='#fill_23') # Hellgelb
+@plot.fill('gma_17', 'gma_20', color=color.rgba(192, 240, 0, 0.3), id='#fill_24') # Gelbgrün
+@plot.fill('gma_20', 'gma_23', color=color.rgba(128, 240, 0, 0.3), id='#fill_25') # Apfelgrün
+@plot.fill('gma_23', 'gma_26', color=color.rgba(64, 240, 0, 0.3), id='#fill_26')  # Hellgrün
+@plot.fill('gma_26', 'gma_29', color=color.rgba(0, 240, 64, 0.3), id='#fill_27')  # Grasgrün
+@plot.fill('gma_29', 'gma_32', color=color.rgba(0, 240, 128, 0.3), id='#fill_28') # Türkisgrün
+@plot.fill('gma_32', 'gma_35', color=color.rgba(0, 208, 192, 0.3), id='#fill_29') # Türkisblau
+@plot.fill('gma_35', 'gma_38', color=color.rgba(0, 160, 224, 0.3), id='#fill_30') # Himmelblau
+@plot.fill('gma_38', 'gma_41', color=color.rgba(0, 112, 240, 0.3), id='#fill_31') # Königsblau
+@plot.fill('gma_41', 'gma_44', color=color.rgba(0, 64, 240, 0.3), id='#fill_32')  # Tiefblau
+@plot.fill('gma_44', 'gma_47', color=color.rgba(28, 0, 208, 0.3), id='#fill_33')  # Indigo
+@plot.fill('gma_47', 'gma_50', color=color.rgba(56, 0, 176, 0.3), id='#fill_34')  # Dunkelindigo
+@plot.fill('gma_50', 'gma_53', color=color.rgba(84, 0, 144, 0.3), id='#fill_35')  # Violett
+@plot.fill('gma_53', 'gma_56', color=color.rgba(112, 0, 112, 0.3), id='#fill_36') # Purpur
+@plot.fill('gma_56', 'gma_59', color=color.rgba(140, 0, 80, 0.3), id='#fill_37')  # Dunkelrosa
+@plot.fill('gma_59', 'gma_62', color=color.rgba(204, 0, 96, 0.3), id='#fill_38')  # Helles Magenta
+def Main(self):
+    gma_5 = Sma.new(self.close, 5)
+    gma_8 = Sma.new(self.close, 8)
+    gma_11 = Sma.new(self.close, 11)
+    gma_14 = Sma.new(self.close, 14)
+    gma_17 = Sma.new(self.close, 17)
+    gma_20 = Sma.new(self.close, 20)
+    gma_23 = Sma.new(self.close, 23)
+    gma_26 = Sma.new(self.close, 26)
+    gma_29 = Sma.new(self.close, 29)
+    gma_32 = Sma.new(self.close, 32)
+    gma_35 = Sma.new(self.close, 35)
+    gma_38 = Sma.new(self.close, 38)
+    gma_41 = Sma.new(self.close, 41)
+    gma_44 = Sma.new(self.close, 44)
+    gma_47 = Sma.new(self.close, 47)
+    gma_50 = Sma.new(self.close, 50)
+    gma_53 = Sma.new(self.close, 53)
+    gma_56 = Sma.new(self.close, 56)
+    gma_59 = Sma.new(self.close, 59)
+    gma_62 = Sma.new(self.close, 62)
+
+    # Rückgabe der MAs und Füllungen
+    return plot.Line(gma_5[0]), plot.Line(gma_8[0]), plot.Line(gma_11[0]), plot.Line(gma_14[0]), plot.Line(gma_17[0]), plot.Line(gma_20[0]), plot.Line(gma_23[0]), plot.Line(gma_26[0]), plot.Line(gma_29[0]), plot.Line(gma_32[0]), plot.Line(gma_35[0]), plot.Line(gma_38[0]), plot.Line(gma_41[0]), plot.Line(gma_44[0]), plot.Line(gma_47[0]), plot.Line(gma_50[0]), plot.Line(gma_53[0]), plot.Line(gma_56[0]), plot.Line(gma_59[0]), plot.Line(gma_62[0]), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill(), plot.Fill()

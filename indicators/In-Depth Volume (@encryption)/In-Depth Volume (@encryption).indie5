@@ -1,0 +1,40 @@
+# Copyright (c) 2026 @encryption. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import indicator, format, param, plot, color
+
+#  Meta
+@indicator("In-Depth Volume", format=format.VOLUME)
+@param.color("buy_win_color", default=color.GREEN, title="Buy Volume (buyers win)")
+@param.color("buy_lose_color", default=color.WHITE, title="Buy Volume (sellers win)")
+@param.color("sell_win_color", default=color.RED, title="Sell Volume (sellers win)")
+@param.color("sell_lose_color", default=color.WHITE, title="Sell Volume (buyers win)")
+@plot.columns(title="Buy Volume")
+@plot.columns(title="Sell Volume")
+
+# Main
+def Main(self, buy_win_color, buy_lose_color, sell_win_color, sell_lose_color):
+    # Variables
+    h = self.high[0]
+    l = self.low[0]
+    c = self.close[0]
+    v = self.volume[0]
+    rng = h - l
+
+    # Main
+    buy_ratio = (c - l) / rng if rng != 0 else 0.5
+    buy_volume = v * buy_ratio
+    sell_volume = v * (1 - buy_ratio)
+
+    buyer_won = buy_ratio > 0.5
+
+    buy_color = buy_win_color if buyer_won else buy_lose_color
+    sell_color = sell_lose_color if buyer_won else sell_win_color
+
+    return (
+        plot.Columns(value=buy_volume, color=buy_color),
+        plot.Columns(value=-sell_volume, color=sell_color),
+    )

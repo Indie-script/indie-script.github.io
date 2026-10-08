@@ -1,0 +1,77 @@
+# indie:lang_version = 5
+# Originally created by ChrisMoody for Pine Script (10/20/2014).
+# Converted to Indie for the TakeProfit platform.
+# Features:
+#   - Tenkan-Sen (9), Kijun-Sen (26), Chinkou Span, Senkou Span A/B (cloud)
+#   - Cloud color flips with the trend (green when Span A >= Span B, red otherwise)
+#   - Per-line visibility toggles
+#   - Optional Tenkan/Kijun cross arrows
+
+from math import nan
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Donchian
+from indie.math import cross_over, cross_under
+
+
+@indicator('Enhanced Ichimoku Cloud 5', overlay_main_pane=True)
+@param.int('turning_periods',  default=9,  min=1, title='Tenkan-Sen')
+@param.int('standard_periods', default=26, min=1, title='Kijun-Sen')
+@param.int('span_b_periods',   default=52, min=1, title='Senkou Span B')
+@param.int('displacement',     default=26, min=1, title='-ChinkouSpan / +SenkouSpan A')
+@param.bool('sts', default=True,  title='Show Tenkan-Sen (9 Period)?')
+@param.bool('sks', default=True,  title='Show Kijun-Sen (26 Period)?')
+@param.bool('sll', default=True,  title='Show Chinkou Span (Lagging Line)?')
+@param.bool('sc',  default=True,  title='Show Cloud?')
+@param.bool('cr1', default=False, title='Show Tenkan/Kijun cross arrows?')
+@plot.line('tenkan',  color=color.LIME,    line_width=2, title='Tenkan-Sen (9 Period)')
+@plot.line('kijun',   color=color.FUCHSIA, line_width=2, title='Kijun-Sen (26 Period)')
+@plot.line('chinkou', color=color.AQUA,    line_width=2, title='Chinkou Span (Lagging Line)')
+@plot.line('span_a',  color=color.LIME,    line_width=1, title='Senkou Span A (26 Period)')
+@plot.line('span_b',  color=color.RED,     line_width=1, title='Senkou Span B (52 Period)')
+@plot.fill('span_a', 'span_b', title='Kumo (Cloud)')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW,
+             color=color.YELLOW, size=3, title='Tenkan/Kijun Cross Up')
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE,
+             color=color.YELLOW, size=3, title='Tenkan/Kijun Cross Down')
+def Main(self, turning_periods, standard_periods, span_b_periods, displacement,
+         sts, sks, sll, sc, cr1):
+    # --- Ichimoku core series ---
+    # Pine's `donchian(len) => avg(lowest(len), highest(len))` is exactly indie.algorithms.Donchian.
+    turning  = Donchian.new(turning_periods)                       # Tenkan-Sen (9)
+    standard = Donchian.new(standard_periods)                      # Kijun-Sen  (26)
+    span_a   = MutSeriesF.new((turning[0] + standard[0]) / 2)      # Senkou Span A
+    span_b   = Donchian.new(span_b_periods)                        # Senkou Span B (52)
+
+    # --- Visibility toggles (use nan to hide a plot) ---
+    tenkan_val  = turning[0]    if sts else nan
+    kijun_val   = standard[0]   if sks else nan
+    chinkou_val = self.close[0] if sll else nan
+    span_a_val  = span_a[0]     if sc  else nan
+    span_b_val  = span_b[0]     if sc  else nan
+
+    # --- Cloud color: green when bullish (Span A >= Span B), red when bearish ---
+    cloud_color = color.LIME(0.3) if span_a[0] >= span_b[0] else color.RED(0.3)
+
+    # --- Tenkan/Kijun cross detection ---
+    cu = cross_over(turning, standard)
+    cd = cross_under(turning, standard)
+    cross_up_val = self.low[0]  if (cr1 and cu) else nan
+    cross_dn_val = self.high[0] if (cr1 and cd) else nan
+
+    return (
+        plot.Line(tenkan_val),
+        plot.Line(kijun_val),
+        plot.Line(chinkou_val, offset=-displacement),
+        plot.Line(span_a_val,  offset=displacement),
+        plot.Line(span_b_val,  offset=displacement),
+        plot.Fill(color=cloud_color, offset=displacement),
+        plot.Marker(cross_up_val, text='▲'),
+        plot.Marker(cross_dn_val, text='▼'),
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "CM Enhanced Ichimoku Cloud V5 by ChrisMoody" (TradingView).
+# ---------------------------------------------------------------------------

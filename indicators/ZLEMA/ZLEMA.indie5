@@ -1,0 +1,47 @@
+# Copyright (c) 2024 Zvonimir Mostarac. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from math import isnan, nan
+from indie import indicator, algorithm, param, source, SeriesF, MutSeriesF, plot
+from indie.algorithms import Ema
+
+# Define the ZLEMA algorithm
+@algorithm
+def Zlema(self, src: SeriesF, period: int = 26) -> SeriesF:
+    '''Zero Lag Exponential Moving Average (ZLEMA)'''
+
+    # Calculate the lag and ensure it's an integer
+    lag = int((period - 1) / 2)
+    adjusted_src = MutSeriesF.new(init=0)
+    
+    # Adjust the source series to remove lag
+    if isnan(src[0]):
+        adjusted_src[0] = nan
+    else:
+        adjusted_src[0] = src[0] + (src[0] - src[lag] if lag < len(src) else 0)
+    
+    # Calculate the ZLEMA using the adjusted source
+    zlema = Ema.new(adjusted_src, period)
+    
+    return zlema
+
+# Define the indicator based on ZLEMA
+@indicator('ZLEMA', overlay_main_pane=True)
+@param.int('length', default=26, min=1, title='ZLEMA Period')
+@param.source('src', default=source.CLOSE, title='Source')
+@plot.line(id='#plot_0')
+def Main(self, src: SeriesF, length: int) -> float:
+    """ZLEMA is an abbreviation of Zero Lag Exponential Moving Average.
+    It was developed by John Ehlers and Rick Way.
+    ZLEMA is a kind of Exponential moving average,
+    but its main idea is to eliminate the lag arising from the very nature of the moving averages
+    and other trend following indicators. As it follows price closer,
+    it also provides better price averaging and responds better to price swings.
+    """
+
+    # Create a new ZLEMA calculation based on the selected source and period
+    zlema = Zlema.new(src, length)
+    return zlema[0]  # Return the current ZLEMA value for plotting

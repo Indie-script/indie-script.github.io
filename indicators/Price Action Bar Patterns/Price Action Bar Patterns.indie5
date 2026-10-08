@@ -1,0 +1,54 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color, Optional, Color
+from indie.algorithms import Lowest, Highest
+from indie.color import rgba
+
+@indicator('Price Action Bar Patterns', overlay_main_pane=True)
+@param.int('pct_p', default=66, min=1, max=99, title='Percentage Input For PBars, What % The Wick Of Candle Has To Be')
+@param.int('pblb', default=6, min=1, max=100, title='PBars Look Back Period To Define The Trend of Highs and Lows')
+@param.int('pct_s', default=5, min=1, max=99, title='Percentage Input For Shaved Bars, Percent of Range it Has To Close On The Lows or Highs')
+@param.bool('spb', default=True, title='Show Pin Bars?')
+@param.bool('ssb', default=True, title='Show Shaved Bars?')
+@param.bool('sib', default=True, title='Show Inside Bars?')
+@param.bool('sob', default=True, title='Show Outside Bars?')
+@param.bool('sgb', default=False, title='Check Box To Turn Bars Gray?')
+@plot.bar_color()
+def Main(self, pct_p, pblb, pct_s, spb, ssb, sib, sob, sgb):
+    pct_cp = pct_p * 0.01
+    pct_cpo = 1.0 - pct_cp
+    pct_cs = pct_s * 0.01
+
+    rng = self.high[0] - self.low[0]
+
+    lowest_low = Lowest.new(self.low, pblb)
+    highest_high = Highest.new(self.high, pblb)
+
+    # PinBars
+    p_bar_up = spb and self.open[0] > self.high[0] - (rng * pct_cpo) and self.close[0] > self.high[0] - (rng * pct_cpo) and self.low[0] <= lowest_low[0]
+    p_bar_dn = spb and self.open[0] < self.high[0] - (rng * pct_cp) and self.close[0] < self.high[0] - (rng * pct_cp) and self.high[0] >= highest_high[0]
+
+    # Shaved Bars
+    s_bar_up = ssb and self.close[0] >= (self.high[0] - (rng * pct_cs))
+    s_bar_down = ssb and self.close[0] <= (self.low[0] + (rng * pct_cs))
+
+    # Inside / Outside Bars
+    inside_bar = sib and self.high[0] <= self.high[1] and self.low[0] >= self.low[1]
+    outside_bar = sob and self.high[0] > self.high[1] and self.low[0] < self.low[1]
+
+    bar_clr: Optional[Color] = None
+    if p_bar_up:
+        bar_clr = rgba(0, 191, 255, 1.0)      # deep sky blue
+    if p_bar_dn:
+        bar_clr = rgba(255, 255, 255, 1.0)    # white
+    if s_bar_down:
+        bar_clr = color.FUCHSIA
+    if s_bar_up:
+        bar_clr = color.AQUA
+    if inside_bar:
+        bar_clr = color.YELLOW
+    if outside_bar:
+        bar_clr = rgba(220, 20, 60, 1.0)      # crimson
+    if sgb:
+        bar_clr = color.GRAY
+
+    return plot.BarColor(bar_clr)

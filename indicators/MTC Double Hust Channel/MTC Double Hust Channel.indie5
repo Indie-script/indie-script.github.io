@@ -1,0 +1,34 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Ema, Atr
+
+@indicator('Combined Hust Channel Corrected', overlay_main_pane=True)
+@param.int('length_short', default=10, min=1, title='Short EMA Length')
+@param.float('multiplier_short', default=1.0, min=0.1, max=10.0, title='Short Multiplier for ATR')
+@param.int('length_long', default=30, min=1, title='Long EMA Length')
+@param.float('multiplier_long', default=3.0, min=0.1, max=10.0, title='Long Multiplier for ATR')
+@plot.line('lower_short', color=color.BLUE)
+@plot.line('middle_short', color=color.RED)
+@plot.line('upper_short', color=color.BLUE)
+@plot.line('lower_long', color=color.GREEN)
+@plot.line('middle_long', color=color.YELLOW)  # Gelb statt Orange
+@plot.line('upper_long', color=color.GREEN)
+def Main(self, length_short, multiplier_short, length_long, multiplier_long):
+    middle_band_short = Ema.new(self.close, length_short)[0]  # Accessing the current EMA value
+    atr_value_short = Atr.new(length_short)[0]  # Accessing the current ATR value
+    upper_band_short = middle_band_short + multiplier_short * atr_value_short
+    lower_band_short = middle_band_short - multiplier_short * atr_value_short
+
+    middle_band_long = Ema.new(self.close, length_long)[0]  # Accessing the current EMA value
+    atr_value_long = Atr.new(length_long)[0]  # Accessing the current ATR value
+    upper_band_long = middle_band_long + multiplier_long * atr_value_long
+    lower_band_long = middle_band_long - multiplier_long * atr_value_long
+
+    return (
+        plot.Line(lower_band_short),
+        plot.Line(middle_band_short),
+        plot.Line(upper_band_short),
+        plot.Line(lower_band_long),
+        plot.Line(middle_band_long),
+        plot.Line(upper_band_long)
+    )

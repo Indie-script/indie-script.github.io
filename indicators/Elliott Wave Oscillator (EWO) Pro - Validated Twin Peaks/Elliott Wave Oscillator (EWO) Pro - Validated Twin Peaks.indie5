@@ -1,0 +1,168 @@
+# indie:lang_version = 5
+from indie import indicator, param, plot, source, level, line_style, SeriesF, MutSeriesF
+from indie.color import RED, GREEN, GRAY, AQUA, LIME, MAROON, TEAL, ORANGE, FUCHSIA, TRANSPARENT
+from indie.algorithms import Ema, Sma
+
+@indicator('Elliott Wave Oscillator Pro')
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('fast_length', default=5, min=1, title='Fast Length')
+@param.int('slow_length', default=35, min=1, title='Slow Length')
+@param.bool('use_sma', default=False, title='Use SMA instead of EMA')
+@param.bool('use_percent', default=False, title='Show as Percent of Price')
+@param.bool('show_signal', default=True, title='Show Signal Line')
+@param.int('signal_length', default=5, min=1, title='Signal Length')
+@param.bool('show_ac', default=False, title='Show Accelerator (AC)')
+@param.int('ac_length', default=5, min=1, title='AC Smoothing Length')
+@param.bool('show_saucer', default=True, title='Show Saucer Patterns')
+@param.bool('show_twin_peaks', default=True, title='Show Validated Twin Peaks')
+@param.int('twin_lookback', default=100, min=10, max=500, title='Twin Peaks Lookback')
+@param.int('twin_min_dist', default=5, min=3, max=50, title='Twin Peaks Min Distance')
+@plot.histogram(id='ewo', title='EWO')
+@plot.line(id='signal', title='Signal', color=AQUA, line_width=2)
+@plot.histogram(id='ac', title='Accelerator')
+@plot.marker(title='Saucer', style=plot.marker_style.CIRCLE, size=6)
+@plot.marker(title='Twin Peaks', style=plot.marker_style.LABEL, size=7)
+@level(value=0, title='Zero', line_color=GRAY, line_style=line_style.DASHED, line_width=1)
+def Main(self, src: SeriesF, fast_length: int, slow_length: int, use_sma: bool, use_percent: bool,
+         show_signal: bool, signal_length: int, show_ac: bool, ac_length: int,
+         show_saucer: bool, show_twin_peaks: bool, twin_lookback: int, twin_min_dist: int):
+    
+    # Calculate EWO
+    fast_ema = Ema.new(src, fast_length)
+    slow_ema = Ema.new(src, slow_length)
+    fast_sma = Sma.new(src, fast_length)
+    slow_sma = Sma.new(src, slow_length)
+    
+    fast_val = fast_sma[0] if use_sma else fast_ema[0]
+    slow_val = slow_sma[0] if use_sma else slow_ema[0]
+    
+    diff = fast_val - slow_val
+    ewo_value = (diff / src[0]) * 100 if use_percent else diff
+    
+    # Store EWO in series for further calculations
+    ewo_series = MutSeriesF.new(ewo_value)
+    
+    # Determine histogram color (4-color scheme)
+    ewo_prev = ewo_series[1] if len(ewo_series) > 1 else ewo_value
+    is_rising = ewo_value > ewo_prev
+    bar_color = LIME if ewo_value > 0 and is_rising else GREEN if ewo_value > 0 else MAROON if ewo_value < 0 and not is_rising else RED
+    
+    # Signal line (SMA of EWO)
+    signal_line = Sma.new(ewo_series, signal_length)
+    signal_val = signal_line[0] if show_signal else 0.0
+    signal_color = AQUA if show_signal else TRANSPARENT
+    
+    # Accelerator Oscillator (EWO - SMA(EWO))
+    ac_sma = Sma.new(ewo_series, ac_length)
+    ac_value = ewo_value - ac_sma[0]
+    ac_series = MutSeriesF.new(ac_value)
+    ac_prev = ac_series[1] if len(ac_series) > 1 else ac_value
+    ac_rising = ac_value > ac_prev
+    ac_color = TEAL if ac_rising else ORANGE
+    ac_display = ac_value if show_ac else 0.0
+    ac_final_color = ac_color if show_ac else TRANSPARENT
+    
+    # Saucer pattern detection
+    saucer_color = TRANSPARENT
+    saucer_val = 0.0
+    
+    if show_saucer and len(ewo_series) > 2:
+        prev1 = ewo_series[1]
+        prev2 = ewo_series[2]
+        
+        # Bullish Saucer: above zero, was falling, now rising
+        bullish_saucer = ewo_value > 0 and prev1 > 0 and prev2 > prev1 and ewo_value > prev1
+        
+        # Bearish Saucer: below zero, was rising, now falling
+        bearish_saucer = ewo_value < 0 and prev1 < 0 and prev2 < prev1 and ewo_value < prev1
+        
+        if bullish_saucer:
+            saucer_color = LIME
+            saucer_val = ewo_value
+        elif bearish_saucer:
+            saucer_color = RED
+            saucer_val = ewo_value
+    
+    # Validated Twin Peaks with Momentum Confirmation
+    twin_color = TRANSPARENT
+    twin_val = 0.0
+    twin_text = ''
+    
+    if show_twin_peaks and len(ewo_series) > twin_lookback and len(ac_series) > twin_lookback:
+        # Check if current bar is a local extremum (need 2 bars on each side for confirmation)
+        is_local_min = ewo_series[1] < ewo_series[2] and ewo_series[1] < ewo_series[0]
+        is_local_max = ewo_series[1] > ewo_series[2] and ewo_series[1] > ewo_series[0]
+        
+        # Values at peak1 (current confirmed peak at index 1)
+        peak2_ewo = ewo_series[1]
+        peak2_ac = ac_series[1]
+        
+        # Bullish Twin Peaks: two lows below zero, second higher, momentum weakening
+        if is_local_min and peak2_ewo < 0:
+            # Search for previous local minimum
+            for i in range(twin_min_dist, twin_lookback):
+                # Check if bar i is a local minimum
+                is_prev_min = ewo_series[i] < ewo_series[i-1] and ewo_series[i] < ewo_series[i+1]
+                
+                if is_prev_min and ewo_series[i] < 0:
+                    peak1_ewo = ewo_series[i]
+                    peak1_ac = ac_series[i]
+                    
+                    # Condition 1: Both peaks below zero (already checked)
+                    # Condition 2: Second peak higher than first (closer to zero)
+                    second_higher = peak2_ewo > peak1_ewo
+                    
+                    # Condition 3: Momentum deceleration (AC weakening)
+                    momentum_weakening = abs(peak2_ac) < abs(peak1_ac)
+                    
+                    # Condition 4: No zero-line cross between peaks
+                    zero_crossed = False
+                    for j in range(1, i):
+                        if ewo_series[j] >= 0:
+                            zero_crossed = True
+                            break
+                    
+                    if second_higher and momentum_weakening and not zero_crossed:
+                        twin_color = LIME
+                        twin_val = peak2_ewo
+                        twin_text = 'TP+'
+                    break
+        
+        # Bearish Twin Peaks: two highs above zero, second lower, momentum weakening
+        if is_local_max and peak2_ewo > 0:
+            # Search for previous local maximum
+            for i in range(twin_min_dist, twin_lookback):
+                # Check if bar i is a local maximum
+                is_prev_max = ewo_series[i] > ewo_series[i-1] and ewo_series[i] > ewo_series[i+1]
+                
+                if is_prev_max and ewo_series[i] > 0:
+                    peak1_ewo = ewo_series[i]
+                    peak1_ac = ac_series[i]
+                    
+                    # Condition 1: Both peaks above zero (already checked)
+                    # Condition 2: Second peak lower than first (closer to zero)
+                    second_lower = peak2_ewo < peak1_ewo
+                    
+                    # Condition 3: Momentum deceleration (AC weakening)
+                    momentum_weakening = abs(peak2_ac) < abs(peak1_ac)
+                    
+                    # Condition 4: No zero-line cross between peaks
+                    zero_crossed = False
+                    for j in range(1, i):
+                        if ewo_series[j] <= 0:
+                            zero_crossed = True
+                            break
+                    
+                    if second_lower and momentum_weakening and not zero_crossed:
+                        twin_color = FUCHSIA
+                        twin_val = peak2_ewo
+                        twin_text = 'TP-'
+                    break
+    
+    return (
+        plot.Histogram(value=ewo_value, color=bar_color),
+        plot.Line(value=signal_val, color=signal_color),
+        plot.Histogram(value=ac_display, color=ac_final_color),
+        plot.Marker(value=saucer_val, color=saucer_color),
+        plot.Marker(value=twin_val, color=twin_color, text=twin_text)
+    )

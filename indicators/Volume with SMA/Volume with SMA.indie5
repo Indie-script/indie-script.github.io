@@ -1,0 +1,13 @@
+# indie:lang_version = 5
+from indie import indicator, format, param, level, color, plot
+from indie.algorithms import Sma
+from indie.math import divide
+
+@indicator('SMA on Volume', format=format.PRICE)  # Volume Oscillator  # TODO: format=format.PERCENT
+@param.int('sma_len', default=200, min=1, title='SMA')
+@plot.columns(rel_width=0.9, title='VOL')
+@plot.line(color=color.YELLOW, title='SMA')
+def Main(self, sma_len):
+    sma = Sma.new(self.volume, sma_len)
+    vol_color = color.GREEN(0.5) if self.close[0] > self.open[0] else color.RED(0.5) if self.close[0] < self.open[0] else color.GRAY(0.5)
+    return plot.Columns(self.volume[0], color=vol_color), sma[0]

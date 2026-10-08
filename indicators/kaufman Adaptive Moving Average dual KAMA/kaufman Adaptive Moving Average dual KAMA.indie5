@@ -1,0 +1,106 @@
+# Copyright (c) 2026 @sukunabtc. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import indicator, param, source, color, plot, MainContext, SeriesF
+from indie.algorithms import Sma
+from math import pow
+
+@indicator('Kaufman Adaptive Moving Average (KAMA)', overlay_main_pane=True)
+@param.int('fast_er', default=10, min=1, title='Fast KAMA ER Period')
+@param.int('fast_sc_fast', default=2, min=1, title='Fast KAMA Fast EMA')
+@param.int('fast_sc_slow', default=20, min=1, title='Fast KAMA Slow EMA')
+@param.int('slow_er', default=15, min=1, title='Slow KAMA ER Period')
+@param.int('slow_sc_fast', default=3, min=1, title='Slow KAMA Fast EMA')
+@param.int('slow_sc_slow', default=30, min=1, title='Slow KAMA Slow EMA')
+@param.source('src', default=source.CLOSE)
+@plot.line('Fast KAMA', color=color.AQUA)
+@plot.line('Slow KAMA', color=color.BLUE)
+class Main(MainContext):
+    def __init__(self):
+        self.volatility_sum_fast: float = 0.0
+        self.kama_fast: float = 0.0
+        self.volatility_sum_slow: float = 0.0
+        self.kama_slow: float = 0.0
+
+    def calc(self, fast_er: int, fast_sc_fast: int, fast_sc_slow: int,
+             slow_er: int, slow_sc_fast: int, slow_sc_slow: int,
+             src: SeriesF) -> tuple[float, float]:
+        bar_index = self.bar_count - 1
+        
+        # Initialize variables before if blocks
+        fast_kama = 0.0
+        slow_kama = 0.0
+        
+        # --- Fast KAMA calculation ---
+        if bar_index >= fast_er:
+            price_change = abs(src[0] - src[fast_er])
+            if bar_index == fast_er:
+                # first bar: calculate SMA as initial KAMA
+                volatility_sum = 0.0
+                for i in range(0, fast_er):
+                    volatility_sum += abs(src[i] - src[i + 1])
+                self.volatility_sum_fast = volatility_sum
+                self.kama_fast = Sma.new(src, fast_er)[0]
+                fast_kama = self.kama_fast
+            else:
+                # update volatility sum: add latest change, subtract oldest
+                self.volatility_sum_fast += abs(src[0] - src[1])
+                self.volatility_sum_fast -= abs(src[fast_er] - src[fast_er + 1])
+                er = 0.0
+                if self.volatility_sum_fast != 0.0:
+                    er = price_change / self.volatility_sum_fast
+                
+                fast_sc = 2.0 / (float(fast_sc_fast) + 1.0)
+                slow_sc = 2.0 / (float(fast_sc_slow) + 1.0)
+                sc = pow(er * (fast_sc - slow_sc) + slow_sc, 2.0)
+                if sc > 1.0:
+                    sc = 1.0
+                elif sc < 0.0:
+                    sc = 0.0
+                
+                self.kama_fast = self.kama_fast + sc * (src[0] - self.kama_fast)
+                fast_kama = self.kama_fast
+        else:
+            # not enough bars: use SMA or source value
+            if bar_index == fast_er - 1:
+                fast_kama = src[0]
+            else:
+                fast_kama = 0.0
+        
+        # --- Slow KAMA calculation (same logic, different parameters) ---
+        if bar_index >= slow_er:
+            price_change = abs(src[0] - src[slow_er])
+            if bar_index == slow_er:
+                volatility_sum = 0.0
+                for i in range(0, slow_er):
+                    volatility_sum += abs(src[i] - src[i + 1])
+                self.volatility_sum_slow = volatility_sum
+                self.kama_slow = Sma.new(src, slow_er)[0]
+                slow_kama = self.kama_slow
+            else:
+                self.volatility_sum_slow += abs(src[0] - src[1])
+                self.volatility_sum_slow -= abs(src[slow_er] - src[slow_er + 1])
+                er = 0.0
+                if self.volatility_sum_slow != 0.0:
+                    er = price_change / self.volatility_sum_slow
+                
+                fast_sc = 2.0 / (float(slow_sc_fast) + 1.0)
+                slow_sc = 2.0 / (float(slow_sc_slow) + 1.0)
+                sc = pow(er * (fast_sc - slow_sc) + slow_sc, 2.0)
+                if sc > 1.0:
+                    sc = 1.0
+                elif sc < 0.0:
+                    sc = 0.0
+                
+                self.kama_slow = self.kama_slow + sc * (src[0] - self.kama_slow)
+                slow_kama = self.kama_slow
+        else:
+            if bar_index == slow_er - 1:
+                slow_kama = src[0]
+            else:
+                slow_kama = 0.0
+        
+        return fast_kama, slow_kama

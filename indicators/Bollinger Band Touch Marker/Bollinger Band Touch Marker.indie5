@@ -1,0 +1,54 @@
+# indie:lang_version = 5
+from indie import (
+    indicator,
+    param,
+    plot,
+    source,
+    MainContext,
+    color
+)
+from indie.algorithms import Sma
+
+@indicator('Bollinger Bands Pro', overlay_main_pane=True)
+@param.source('src', default=source.CLOSE)
+@param.int('length', default=20, title='Perioden', min=1, max=100)
+@param.float('mult', default=2.0, title='Multiplikator', min=0.5, max=3.0)
+@plot.line('Basis', color=color.rgba(128, 128, 128, 1))
+@plot.line('Oberes Band')
+@plot.line('Unteres Band')
+@plot.fill('Basis', 'Oberes Band', id='#fill_3')
+@plot.fill('Basis', 'Unteres Band', id='#fill_4')
+class Main(MainContext):
+    def __init__(self, src, length, mult):
+        self.src = src
+        self.length = length
+        self.mult = mult
+        self.std_dev = self.new_mut_series_f()
+
+    def calc(self):
+        # SMA-Berechnung
+        sma = Sma.new(self.src, self.length)
+        basis = sma[0]
+
+        # Standardabweichung
+        sum_sq = 0.0
+        for i in range(self.length):
+            diff = self.src[i] - basis
+            sum_sq += diff * diff
+        stdev = (sum_sq / self.length) ** 0.5
+
+        # Bänder berechnen
+        upper = basis + self.mult * stdev
+        lower = basis - self.mult * stdev
+
+        # Farbwechsel-Logik
+        upper_color = color.RED if self.high[0] >= upper else color.GRAY
+        lower_color = color.GREEN if self.low[0] <= lower else color.GRAY
+
+        return (
+            basis,
+            plot.Line(upper, color=upper_color),
+            plot.Line(lower, color=lower_color),
+            plot.Fill(color=color.BLACK(0.1)),
+            plot.Fill(color=color.BLACK(0.1))
+        )

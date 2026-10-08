@@ -1,0 +1,138 @@
+# indie:lang_version = 5
+from math import nan
+from indie import (
+    indicator, MainContext, sec_context,
+    param, plot, color, Color, Optional, format
+)
+from indie.algorithms import Sma, Stoch
+
+
+@sec_context
+def StochDataCtx(self):
+    """Returns close, low, high from this context's timeframe for MTF stoch."""
+    return self.close[0], self.low[0], self.high[0]
+
+
+@indicator('MTF Stochastic Signals', format=format.PRICE)
+# ─ Main stoch ──────────────────────────────────────────────────────────────────
+@param.int('len', default=14, min=1, title='Length for Main Stochastic')
+@param.int('smooth_k', default=3, min=1, title='SmoothK for Main Stochastic')
+@param.int('smooth_d', default=3, min=1, title='SmoothD for Main Stochastic')
+@param.int('up_line', default=80, min=50, max=90, title='Upper Line Value')
+@param.int('low_line', default=20, min=10, max=50, title='Lower Line Value')
+# ─ Visibility toggles ──────────────────────────────────────────────────────────
+@param.bool('show_mid_line', default=True, title='Show Mid Line?')
+@param.bool('show_bg_above_below', default=False, title='BG When Stoch Is Above/Below Band?')
+@param.bool('show_bg_strict', default=True, title='BG on Strict Cross (K in OB/OS zone)?')
+@param.bool('show_labels_strict', default=True, title='Show B/S Labels on Strict Cross?')
+@param.bool('show_bg_any', default=False, title='BG on Any K/D Cross?')
+@param.bool('show_labels_any', default=False, title='Show B/S Labels on Any K/D Cross?')
+# ─ Main stoch timeframe ────────────────────────────────────────────────────────
+@param.time_frame('main_tf', default='1h', title='Main Stoch Timeframe')
+# ─ 2nd stoch ───────────────────────────────────────────────────────────────────
+@param.bool('show_2nd', default=False, title='Show 2nd Stochastic?')
+@param.time_frame('stoch2_tf', default='1D', title='2nd Stoch Timeframe')
+@param.int('len2', default=14, min=1, title='2nd Stoch Length')
+@param.int('smooth_k2', default=3, min=1, title='SmoothK for 2nd Stoch')
+@param.int('smooth_d2', default=3, min=1, title='SmoothD for 2nd Stoch')
+# ─ Main K / D lines ────────────────────────────────────────────────────────────
+@plot.line('k', color=color.LIME, line_width=3, title='Stoch K')
+@plot.line('d', color=color.RED, line_width=3, title='Stoch D')
+# ─ 2nd stoch K / D lines ───────────────────────────────────────────────────────
+@plot.line(color=color.ORANGE, line_width=3, title='2nd Stoch K')
+@plot.line(color=color.YELLOW, line_width=3, title='2nd Stoch D')
+# ─ Band lines + fill ───────────────────────────────────────────────────────────
+@plot.line('upper', color=color.RED, line_width=3, title='Upper Line')
+@plot.line('lower', color=color.LIME, line_width=3, title='Lower Line')
+@plot.fill('upper', 'lower', color=color.GRAY(0.25), title='Band Fill')
+# ─ Mid line ────────────────────────────────────────────────────────────────────
+@plot.line(color=color.GRAY, title='Mid Line')
+# ─ Single combined background ──────────────────────────────────────────────────
+# Strict cross → highest priority; above/below → lowest priority; any cross → middle
+@plot.background(title='Signal BG')
+# ─ Buy / Sell label markers ────────────────────────────────────────────────────
+@plot.marker(color=color.LIME, style=plot.marker_style.LABEL,
+             position=plot.marker_position.BELOW, size=3, title='Buy Label (Strict)')
+@plot.marker(color=color.RED, style=plot.marker_style.LABEL,
+             position=plot.marker_position.ABOVE, size=3, title='Sell Label (Strict)')
+@plot.marker(color=color.LIME, style=plot.marker_style.LABEL,
+             position=plot.marker_position.BELOW, size=3, title='Buy Label (Any Cross)')
+@plot.marker(color=color.RED, style=plot.marker_style.LABEL,
+             position=plot.marker_position.ABOVE, size=3, title='Sell Label (Any Cross)')
+class Main(MainContext):
+    def __init__(self, main_tf, stoch2_tf):
+        self._c1, self._l1, self._h1 = self.calc_on(StochDataCtx, time_frame=main_tf)
+        self._c2, self._l2, self._h2 = self.calc_on(StochDataCtx, time_frame=stoch2_tf)
+
+    def calc(self, len, smooth_k, smooth_d, up_line, low_line,
+             show_mid_line, show_bg_above_below, show_bg_strict,
+             show_labels_strict, show_bg_any, show_labels_any,
+             show_2nd, len2, smooth_k2, smooth_d2):
+
+        # ── Main stochastic ────────────────────────────────────────────────
+        k = Sma.new(Stoch.new(self._c1, self._l1, self._h1, len), smooth_k)
+        d = Sma.new(k, smooth_d)
+        out_k = k[0]
+        out_d = d[0]
+
+        # ── 2nd stochastic ─────────────────────────────────────────────────
+        k2 = Sma.new(Stoch.new(self._c2, self._l2, self._h2, len2), smooth_k2)
+        d2 = Sma.new(k2, smooth_d2)
+        out_k2 = k2[0] if show_2nd else nan
+        out_d2 = d2[0] if show_2nd else nan
+
+        # ── Signal conditions ──────────────────────────────────────────────
+        above_line = out_k > up_line
+        below_line = out_k < low_line
+
+        cross_up = (k[1] < d[1] and k[1] < low_line) and out_k > out_d
+        cross_dn = (k[1] > d[1] and k[1] > up_line) and out_k < out_d
+
+        cross_up_all = k[1] < d[1] and out_k > out_d
+        cross_dn_all = k[1] > d[1] and out_k < out_d
+
+        # ── Combined background (one plot, priority-ordered) ───────────────
+        bg: Optional[Color] = None
+        if show_bg_strict and cross_up:
+            bg = color.GREEN(0.20)
+        elif show_bg_strict and cross_dn:
+            bg = color.RED(0.20)
+        elif show_bg_above_below and above_line:
+            bg = color.RED(0.10)
+        elif show_bg_above_below and below_line:
+            bg = color.GREEN(0.10)
+        elif show_bg_any and cross_up_all:
+            bg = color.GREEN(0.20)
+        elif show_bg_any and cross_dn_all:
+            bg = color.RED(0.20)
+
+        # ── Markers ────────────────────────────────────────────────────────
+        b_strict = out_k if (show_labels_strict and cross_up) else nan
+        s_strict = out_k if (show_labels_strict and cross_dn) else nan
+        b_any    = out_k if (show_labels_any and cross_up_all) else nan
+        s_any    = out_k if (show_labels_any and cross_dn_all) else nan
+
+        mid = 50.0 if show_mid_line else nan
+
+        return (
+            out_k,                                   # K line
+            out_d,                                   # D line
+            out_k2,                                  # 2nd K line
+            out_d2,                                  # 2nd D line
+            float(up_line),                          # Upper band line
+            float(low_line),                         # Lower band line
+            plot.Fill(),                             # Band fill
+            mid,                                     # Mid line at 50
+            plot.Background(bg),                     # Combined signal BG
+            plot.Marker(value=b_strict, text='B'),   # Buy label strict
+            plot.Marker(value=s_strict, text='S'),   # Sell label strict
+            plot.Marker(value=b_any, text='B'),      # Buy label any
+            plot.Marker(value=s_any, text='S'),      # Sell label any
+        )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "CM Stochastic Multi-TimeFrame by ChrisMoody" (TradingView).
+# ---------------------------------------------------------------------------

@@ -1,0 +1,63 @@
+# Copyright (c) 2025 @juan. All rights reserved.
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import algorithm, band, color, indicator, line_style, MutSeriesF, param, plot, SeriesF, source
+from indie.algorithms import Ema, FixNan, NanToZero, Stoch
+from math import nan
+from indie.plot import marker_position
+
+@algorithm
+def SeriesDif(self, serie1: SeriesF, serie2: SeriesF) -> SeriesF:
+    return MutSeriesF.new(serie1[0] - serie2[0])
+
+@indicator('Schaff Trend Cycle', overlay_main_pane=False)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.int('fastLength', default=23, min=1, title='MACD Fast Length')
+@param.int('slowLength', default=50, min=1, title='MACD Slow Length')
+@param.int('cycleLength', default=10, min=1, title='Cycle Length')
+@param.int('d1Length', default=3, min=1, title='1st %D Length')
+@param.int('d2Length', default=3, min=1, title='2nd %D Length')
+@param.bool('showSignals', default=True, title='Show signals?')
+@param.bool('highlightBreakouts', default=True, title='Highlight Breakouts?')
+@param.float('upperband', default=75, title='Upper Band')
+@param.float('lowerband', default=25, title='Lower Band')
+#@band(25, 75, line_color=color.GRAY, line_style=line_style.DASHED)
+@plot.line('upperline', line_style=line_style.DOTTED, color=color.GRAY(0.4), title='Upper band')
+@plot.line('lowerline', line_style=line_style.DOTTED, color=color.GRAY(0.4), title='Lower band')
+@plot.fill('upperline', 'lowerline', color=color.PURPLE(0.05), title='Fill color')
+@plot.line('stcLine', title='STC line')
+@plot.fill('stcLine', 'upperline')
+@plot.fill('lowerline', 'stcLine')
+@plot.marker(title='Buy', style=plot.marker_style.CIRCLE, position=marker_position.CENTER, size=7)
+@plot.marker(title='Sell', style=plot.marker_style.CIRCLE, position=marker_position.CENTER, size=7)
+def Main(self,
+         src,
+         fastLength,
+         slowLength,
+         cycleLength,
+         d1Length,
+         d2Length,
+         upperband,
+         lowerband,
+         showSignals,
+         highlightBreakouts):
+    macd = SeriesDif.new(Ema.new(src, fastLength), Ema.new(src, slowLength))
+    k = NanToZero.new(FixNan.new((Stoch.new(macd, macd, macd, cycleLength))))
+    d = Ema.new(k, d1Length)
+    kd = NanToZero.new(FixNan.new(Stoch.new(d, d, d, cycleLength)))
+    stc = Ema.new(kd, d2Length)
+    stcVal = max(min(stc[0], 100), 0)
+    stcColor1 =  color.GREEN if stcVal > stc[1] else color.RED
+    stcColor2 =  color.GREEN if stcVal > upperband else color.RED if stc[0] <= lowerband else color.rgba(255, 165, 0, 1)
+    stcColor = stcColor2 if highlightBreakouts else stcColor1
+    return upperband,\
+        lowerband,\
+        plot.Fill(),\
+        plot.Line(stc[0], color=stcColor),\
+        plot.Fill(color=color.GREEN(0.1 if stc[0] > upperband else 0)),\
+        plot.Fill(color=color.RED(0.1 if stc[0] < lowerband else 0)),\
+        plot.Marker(value=upperband if (showSignals and (stc[1] < lowerband and stc[0] > lowerband)) else nan, color=color.GREEN),\
+        plot.Marker(value=lowerband if (showSignals and (stc[1] > upperband and stc[0] < upperband)) else nan, color=color.RED)

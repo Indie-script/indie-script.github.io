@@ -1,0 +1,51 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, param, plot, color
+from indie.algorithms import Supertrend
+
+
+@indicator('2x Supertrend', overlay_main_pane=True)
+
+# Supertrend 1
+@param.int('atr_period_1', default=10, min=1)
+@param.float('factor_1', default=2.0)
+@param.str('ma_algorithm_1', default='RMA', options=['RMA', 'SMA', 'EMA', 'WMA'])
+
+# Supertrend 2
+@param.int('atr_period_2', default=20, min=1)
+@param.float('factor_2', default=8.5)
+@param.str('ma_algorithm_2', default='RMA', options=['RMA', 'SMA', 'EMA', 'WMA'])
+
+# ST1
+@plot.line('middle_1', color=color.GRAY(0.5), title='Body Middle 1')
+@plot.line('down_1', color=color.RED, title='Down Trend 1')
+@plot.line('up_1', color=color.GREEN, title='Up Trend 1')
+@plot.fill('down_1', 'middle_1', color=color.RED(0.1), title='Down-Middle Fill 1')
+@plot.fill('middle_1', 'up_1', color=color.GREEN(0.1), title='Middle-Up Fill 1')
+
+# ST2
+@plot.line('middle_2', color=color.GRAY(0.7), title='Body Middle 2')
+@plot.line('down_2', color=color.GRAY(0.4), title='Down Trend 2')
+@plot.line('up_2', color=color.GRAY(0.2), title='Up Trend 2')
+@plot.fill('down_2', 'middle_2', color=color.GRAY(0.08), title='Down-Middle Fill 2')
+@plot.fill('middle_2', 'up_2', color=color.GRAY(0.08), title='Middle-Up Fill 2')
+
+def Main(self, factor_1, atr_period_1, ma_algorithm_1,
+               factor_2, atr_period_2, ma_algorithm_2):
+
+    st1, direction1 = Supertrend.new(factor_1, atr_period_1, ma_algorithm_1)
+    st2, direction2 = Supertrend.new(factor_2, atr_period_2, ma_algorithm_2)
+
+    st1_down = st1[0] if direction1[0] > 0 else nan
+    st1_up   = st1[0] if direction1[0] < 0 else nan
+
+    st2_down = st2[0] if direction2[0] > 0 else nan
+    st2_up   = st2[0] if direction2[0] < 0 else nan
+
+    middle_1 = (self.open[0] + self.close[0]) / 2
+    middle_2 = middle_1
+
+    return (
+        middle_1, st1_down, st1_up, plot.Fill(), plot.Fill(),
+        middle_2, st2_down, st2_up, plot.Fill(), plot.Fill()
+    )

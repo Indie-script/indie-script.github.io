@@ -1,0 +1,140 @@
+# indie:lang_version = 5
+from math import nan, isnan
+from indie import indicator, param, plot, color, MutSeriesF
+from indie.algorithms import Tr, Rma, Sma
+
+# Port of Pine Script v4 "Supertrend" by KivancOzbilgic
+
+ 
+
+@indicator('Super Trend: Multi-Source', overlay_main_pane=True)
+@param.str('src_type', default='hl2', options=['close', 'hl2', 'hlc3', 'ohlc4'], title='Source')
+@param.int('atr_period', default=10, min=1, title='ATR Period')
+@param.float('factor', default=3.0, title='ATR Multiplier')
+@param.str('ma_algorithm', default='RMA', options=['RMA', 'SMA'],
+           title='ATR Method  (RMA = standard / SMA = alternate)')
+@param.bool('show_signals', default=True, title='Show Buy/Sell Signals?')
+@param.bool('highlighting', default=True, title='Highlighter On/Off?')
+# ── plot declarations (order matches return tuple) ─────────────────────────
+@plot.line('up_line', color=color.GREEN, line_width=2, title='Up Trend')
+@plot.line('down_line', color=color.RED, line_width=2, title='Down Trend')
+@plot.line('mid_line', color=color.TRANSPARENT, title='',
+           display_options=plot.LineDisplayOptions(pane=True, status_line=False, price_label=False))
+@plot.fill('mid_line', 'up_line', title='UpTrend Highlighter')
+@plot.fill('mid_line', 'down_line', title='DownTrend Highlighter')
+@plot.marker(style=plot.marker_style.CIRCLE, position=plot.marker_position.CENTER,
+             size=7, color=color.GREEN, title='UpTrend Begins',
+             display_options=plot.MarkerDisplayOptions(pane=True, status_line=False, price_label=False))
+@plot.marker(style=plot.marker_style.CIRCLE, position=plot.marker_position.CENTER,
+             size=7, color=color.RED, title='DownTrend Begins',
+             display_options=plot.MarkerDisplayOptions(pane=True, status_line=False, price_label=False))
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.BELOW,
+             size=7, color=color.GREEN, title='Buy',
+             display_options=plot.MarkerDisplayOptions(pane=True, status_line=False, price_label=False))
+@plot.marker(style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE,
+             size=7, color=color.RED, title='Sell',
+             display_options=plot.MarkerDisplayOptions(pane=True, status_line=False, price_label=False))
+def Main(self, src_type, atr_period, factor, ma_algorithm, show_signals, highlighting):
+
+    # ── 1. Source routing ────────────────────────────────────────────────────
+    # src_val must be declared before the if-chain; Indie variable scope ends at indentation.
+    src_val = (self.high[0] + self.low[0]) / 2   # default: hl2
+    if src_type == 'close':
+        src_val = self.close[0]
+    elif src_type == 'hlc3':
+        src_val = (self.high[0] + self.low[0] + self.close[0]) / 3
+    elif src_type == 'ohlc4':
+        src_val = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4
+
+    # ── 2. ATR ───────────────────────────────────────────────────────────────
+    # Tr(handle_na=True) returns NaN on the first bar (no prev close yet),
+    # matching Pine's tr behaviour inside atr() and sma(tr, n).
+    tr = Tr.new(True)
+    atr = Rma.new(tr, atr_period) if ma_algorithm == 'RMA' else Sma.new(tr, atr_period)
+
+    # ── 3. Basic bands ───────────────────────────────────────────────────────
+    basic_up = src_val - factor * atr[0]   # candidate support  (lower band)
+    basic_dn = src_val + factor * atr[0]   # candidate resistance (upper band)
+
+    # ── 4. Clamped bands (MutSeriesF carries adjusted value to the next bar) ─
+    # Pine:
+    #   up1 = nz(up[1], up)
+    #   up  := close[1] > up1 ? max(up, up1) : up
+    #   dn1 = nz(dn[1], dn)
+    #   dn  := close[1] < dn1 ? min(dn, dn1) : dn
+    final_up = MutSeriesF.new(basic_up)   # [0] writable; [1] = prev bar's adjusted value
+    final_dn = MutSeriesF.new(basic_dn)
+
+    prev_close = self.close[1]
+    prev_up = final_up[1] if not isnan(final_up[1]) else basic_up   # nz(up[1], up)
+    prev_dn = final_dn[1] if not isnan(final_dn[1]) else basic_dn   # nz(dn[1], dn)
+
+    if not isnan(prev_close) and prev_close > prev_up:
+        final_up[0] = max(basic_up, prev_up)
+    else:
+        final_up[0] = basic_up
+
+    if not isnan(prev_close) and prev_close < prev_dn:
+        final_dn[0] = min(basic_dn, prev_dn)
+    else:
+        final_dn[0] = basic_dn
+
+    # ── 5. Trend direction (Pine convention: 1 = uptrend, −1 = downtrend) ───
+    # Pine:
+    #   trend := trend[1] == -1 and close > dn1 ?  1
+    #          : trend[1] ==  1 and close < up1 ? -1
+    #          : nz(trend[1], 1)
+    trend = MutSeriesF.new(1.0)
+    prev_trend = trend[1] if not isnan(trend[1]) else 1.0
+
+    if prev_trend == -1.0 and self.close[0] > prev_dn:
+        trend[0] = 1.0
+    elif prev_trend == 1.0 and self.close[0] < prev_up:
+        trend[0] = -1.0
+    else:
+        trend[0] = prev_trend
+
+    # ── 6. Wrap outputs as MutSeriesF for [0]/[1] access in the visual block ─
+    # Direction convention kept from the original port:
+    #   trend ==  1 (uptrend)   → direction = -1  (is_uptrend   = direction < 0)
+    #   trend == -1 (downtrend) → direction = +1  (is_downtrend = direction > 0)
+    st = MutSeriesF.new(final_up[0] if trend[0] == 1.0 else final_dn[0])
+    direction = MutSeriesF.new(-1.0 if trend[0] == 1.0 else 1.0)
+
+    # ── Visual block (unchanged from original port) ───────────────────────────
+    is_uptrend = direction[0] < 0
+    is_downtrend = direction[0] > 0
+
+    st_up = st[0] if is_uptrend else nan
+    st_down = st[0] if is_downtrend else nan
+
+    ohlc4 = (self.open[0] + self.high[0] + self.low[0] + self.close[0]) / 4
+
+    buy_signal = is_uptrend and direction[1] > 0
+    sell_signal = is_downtrend and direction[1] < 0
+
+    up_fill_color = color.GREEN(0.1) if highlighting else color.TRANSPARENT
+    down_fill_color = color.RED(0.1) if highlighting else color.TRANSPARENT
+
+    buy_circle_val = st[0] if buy_signal else nan
+    sell_circle_val = st[0] if sell_signal else nan
+
+    buy_label_val = st[0] if (buy_signal and show_signals) else nan
+    sell_label_val = st[0] if (sell_signal and show_signals) else nan
+
+    return (
+        st_up, st_down, ohlc4,
+        plot.Fill(color=up_fill_color),
+        plot.Fill(color=down_fill_color),
+        plot.Marker(value=buy_circle_val, color=color.GREEN),
+        plot.Marker(value=sell_circle_val, color=color.RED),
+        plot.Marker(value=buy_label_val, color=color.GREEN, text='Buy'),
+        plot.Marker(value=sell_label_val, color=color.RED, text='Sell'),
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "SuperTrend by KivancOzbilgic" (TradingView).
+# ---------------------------------------------------------------------------

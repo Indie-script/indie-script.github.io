@@ -1,0 +1,81 @@
+# Ported to Indie from https://www.tradingview.com/script/I4VXGe18-Saty-Pivot-Ribbon/ created by https://x.com/satymahajan
+
+# This work is licensed under the MIT License.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
+# indie:lang_version = 5
+from indie import indicator, param, plot, color
+from indie.algorithms import Ema
+from indie import MutSeriesF
+from math import nan
+
+@indicator('Pivot Ribbon [BLC]', overlay_main_pane=True)
+@param.int('fast_ema', default=8, title='Fast EMA Length')
+@param.int('pivot_ema', default=21, title='Pivot EMA Length')
+@param.bool('show_pivot_bias', default=True, title='Show Pivot Bias')
+@param.int('pivot_bias_ema', default=8, title='Pivot Bias EMA Length')
+@param.int('slow_ema', default=48, title='Slow EMA Length')
+@param.bool('show_long_term_ema', default=True, title='Show Long-Term EMA')
+@param.int('long_term_ema', default=200, title='Long-term EMA Length')
+@param.bool('show_long_term_bias', default=True, title='Show Long-term Bias')
+@param.int('long_term_bias_ema', default=21, title='Long-term Bias EMA Length')
+@param.color('bullish_fast_cloud_color', default=color.GREEN, title='Bullish Fast Cloud Color')
+@param.color('bearish_fast_cloud_color', default=color.RED, title='Bearish Fast Cloud Color')
+@param.color('bullish_slow_cloud_color', default=color.AQUA, title='Bullish Slow Cloud Color')
+@param.color('bearish_slow_cloud_color', default=color.YELLOW, title='Bearish Slow Cloud Color')
+@param.int('cloud_transparency', default=60, title='Cloud Transparency (0-100)', min=0, max=100)
+@param.bool('show_fast_conviction_ema', default=False, title='Show Fast Conviction EMA')
+@param.int('fast_conviction_ema', default=13, title='Fast Conviction EMA Length')
+@param.color('fast_conviction_ema_color', default=color.SILVER, title='Fast Conviction EMA Color')
+@param.bool('show_slow_conviction_ema', default=False, title='Show Slow Conviction EMA')
+@param.int('slow_conviction_ema', default=48, title='Slow Conviction EMA Length')
+@param.color('slow_conviction_ema_color', default=color.YELLOW, title='Slow Conviction EMA Color')
+@plot.line(id='fast_ema')
+@plot.line(id='pivot_ema')
+@plot.line(id='slow_ema')
+@plot.line(id='long_term_ema')
+@plot.fill('fast_ema', 'pivot_ema')
+@plot.fill('pivot_ema', 'slow_ema')
+@plot.line(id='fast_conviction_ema')
+@plot.line(id='slow_conviction_ema')
+def Main(self, fast_ema: int, pivot_ema: int, show_pivot_bias: bool, pivot_bias_ema: int, slow_ema: int, show_long_term_ema: bool, long_term_ema: int, show_long_term_bias: bool, long_term_bias_ema: int, bullish_fast_cloud_color, bearish_fast_cloud_color, bullish_slow_cloud_color, bearish_slow_cloud_color, cloud_transparency: int, show_fast_conviction_ema: bool, fast_conviction_ema: int, fast_conviction_ema_color, show_slow_conviction_ema: bool, slow_conviction_ema: int, slow_conviction_ema_color):
+    alpha = (100 - cloud_transparency) / 100.0
+
+    fast_ema_value = Ema.new(self.close, fast_ema)[0]
+    pivot_ema_value = Ema.new(self.close, pivot_ema)[0]
+    pivot_bias_ema_value = Ema.new(self.close, pivot_bias_ema)[0]
+    slow_ema_value = Ema.new(self.close, slow_ema)[0]
+    long_term_ema_value = Ema.new(self.close, long_term_ema)[0] if show_long_term_ema else nan
+    long_term_bias_ema_value = Ema.new(self.close, long_term_bias_ema)[0] if show_long_term_ema else nan
+    fast_conviction_ema_value = Ema.new(self.close, fast_conviction_ema)[0]
+    slow_conviction_ema_value = Ema.new(self.close, slow_conviction_ema)[0]
+
+    # Line colors
+    fast_ema_color = color.WHITE
+    pivot_ema_color = color.GREEN if pivot_bias_ema_value >= pivot_ema_value else color.RED if show_pivot_bias else color.WHITE
+    slow_ema_color = color.WHITE
+    long_term_ema_color = color.AQUA if long_term_bias_ema_value >= long_term_ema_value else color.YELLOW if show_long_term_bias else color.WHITE
+    fast_conviction_color = fast_conviction_ema_color if show_fast_conviction_ema else color.WHITE
+    slow_conviction_color = slow_conviction_ema_color if show_slow_conviction_ema else color.WHITE
+
+    # Cloud colors
+    fast_cloud_color = bullish_fast_cloud_color(alpha) if fast_ema_value >= pivot_ema_value else bearish_fast_cloud_color(alpha)
+    slow_cloud_color = bullish_slow_cloud_color(alpha) if pivot_ema_value >= slow_ema_value else bearish_slow_cloud_color(alpha)
+
+    return (
+        plot.Line(fast_ema_value, color=fast_ema_color),
+        plot.Line(pivot_ema_value, color=pivot_ema_color),
+        plot.Line(slow_ema_value, color=slow_ema_color),
+        plot.Line(long_term_ema_value, color=long_term_ema_color),
+        plot.Fill(color=fast_cloud_color),
+        plot.Fill(color=slow_cloud_color),
+        plot.Line(fast_conviction_ema_value, color=fast_conviction_color),
+        plot.Line(slow_conviction_ema_value, color=slow_conviction_color)
+    )
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "Saty Pivot Ribbon by Saty Mahajan" (TradingView).
+# ---------------------------------------------------------------------------

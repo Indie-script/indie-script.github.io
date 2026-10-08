@@ -1,0 +1,35 @@
+# indie:lang_version = 5
+from math import nan
+from indie import indicator, format, param, source, band, color, level, plot
+from indie.algorithms import Rsi, Ma, StdDev
+from indie.math import cross_over, cross_under
+@indicator('RSI', format=format.PRICE) # Relative Strength Index
+@param.int('rsi_length', default=14, title='RSI Length', min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.str('ma_type', default='SMA', title='MA Type',
+ options=['SMA', 'Bollinger Bands', 'EMA', 'SMMA (RMA)', 'WMA', 'VWMA'])
+@param.int('ma_length', default=14, title='MA Length', min=1)
+@param.float('bb_mult', default=2.0, title='BB StdDev', min=0.001, max=50)
+@band(30, 70, line_color=color.GRAY, fill_color=color.PURPLE(0.1))
+@level(50, line_color=color.GRAY(0.5))
+@plot.line(color=color.YELLOW, title='RSI-based MA')
+@plot.line(color=color.PURPLE, title='RSI')
+@plot.line('bb_lower', color=color.GREEN, title='RSI Lower Band')
+@plot.line('bb_upper', color=color.GREEN, title='RSI Upper Band')
+@plot.fill('bb_lower', 'bb_upper', color=color.GREEN(0.1), title='Bollinger Bands Background Fill')
+@plot.line('overbought_alert', color=color.TRANSPARENT, title='RSI Overbought Alert')
+@plot.line('oversold_alert', color=color.TRANSPARENT, title='RSI Oversold Alert')
+def Main(self, rsi_length, src, ma_type, ma_length, bb_mult):
+ rsi = Rsi.new(src, rsi_length)
+ is_bb = ma_type == 'Bollinger Bands'
+ ma_algorithm = 'SMA' if is_bb else ma_type
+ rsi_ma = Ma.new(rsi, ma_length, ma_algorithm)
+ std_dev = StdDev.new(rsi, ma_length)
+ bb_lower = rsi_ma[0] - std_dev[0] * bb_mult if is_bb else nan
+ bb_upper = rsi_ma[0] + std_dev[0] * bb_mult if is_bb else nan
+ 
+ # Alert conditions for RSI crossovers
+ overbought_alert = 70.0 if cross_over(rsi, 70.0) else nan
+ oversold_alert = 30.0 if cross_under(rsi, 30.0) else nan
+ 
+ return rsi_ma[0], rsi[0], bb_lower, bb_upper, plot.Fill(), overbought_alert, oversold_alert

@@ -1,0 +1,39 @@
+# indie:lang_version = 5
+from indie import indicator, param, source, plot, color
+from indie.algorithms import Bb
+
+# Triple Bollinger Bands
+@indicator('Triple Bollinger Bands', overlay_main_pane=True)
+@param.int('length', default=20, min=1)
+@param.source('src', default=source.CLOSE, title='Source')
+@param.float('mult1', default=1.0, min=0.001, max=50.0, title='StdDev 1')
+@param.float('mult2', default=2.0, min=0.001, max=50.0, title='StdDev 2')
+@param.float('mult3', default=3.0, min=0.001, max=50.0, title='StdDev 3')
+@param.int('offset', default=0, min=-500, max=500)
+@plot.line('lower1', color=color.BLUE, title='Lower 1')
+@plot.line('middle1', color=color.RED, title='Basis 1')
+@plot.line('upper1', color=color.BLUE, title='Upper 1')
+@plot.line('lower2', color=color.YELLOW, title='Lower 2')
+@plot.line('middle2', color=color.RED, title='Basis 2')
+@plot.line('upper2', color=color.YELLOW, title='Upper 2')
+@plot.line('lower3', color=color.GREEN, title='Lower 3')
+@plot.line('middle3', color=color.RED, title='Basis 3')
+@plot.line('upper3', color=color.GREEN, title='Upper 3')
+@plot.fill('lower1', 'upper3', color=color.AQUA(0.05), title='Background', id='#fill_9')
+def Main(self, length, src, mult1, mult2, mult3, offset):
+    (lower1, middle1, upper1) = Bb.new(src, length, mult1)
+    (lower2, middle2, upper2) = Bb.new(src, length, mult2)
+    (lower3, middle3, upper3) = Bb.new(src, length, mult3)
+
+    return (
+        plot.Line(lower1[0], offset=offset),
+        plot.Line(middle1[0], offset=offset),
+        plot.Line(upper1[0], offset=offset),
+        plot.Line(lower2[0], offset=offset),
+        plot.Line(middle2[0], offset=offset),
+        plot.Line(upper2[0], offset=offset),
+        plot.Line(lower3[0], offset=offset),
+        plot.Line(middle3[0], offset=offset),
+        plot.Line(upper3[0], offset=offset),
+        plot.Fill(),
+    )

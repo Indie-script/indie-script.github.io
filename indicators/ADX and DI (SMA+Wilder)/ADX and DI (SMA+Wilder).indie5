@@ -1,0 +1,33 @@
+# indie:lang_version = 5
+from math import isnan
+from indie import indicator, format, param, plot, color, MutSeriesF
+from indie.algorithms import Adx, Sma
+
+
+@indicator('ADX and DI', format=format.PRICE)
+@param.int('length', default=14, min=1, title='Length')
+@param.int('th', default=20, min=1, title='Threshold')
+@param.str('adx_smoothing', default='SMA (Original)', options=['SMA (Original)', 'Wilder (Classic)'], title='ADX Smoothing Method')
+@plot.line(color=color.GREEN, title='DI+')
+@plot.line(color=color.RED, title='DI-')
+@plot.line(color=color.NAVY, title='ADX')
+@plot.line(color=color.BLACK, title='Threshold')
+def Main(self, length, th, adx_smoothing):
+    minus_di, classic_adx, plus_di = Adx.new(length, length)
+
+    denom = plus_di[0] + minus_di[0]
+    dx_val = 0.0 if (isnan(denom) or denom == 0.0) else abs(plus_di[0] - minus_di[0]) / denom * 100
+
+    dx_series = MutSeriesF.new(dx_val)
+    original_adx = Sma.new(dx_series, length)
+
+    final_adx_val = original_adx[0] if adx_smoothing == 'SMA (Original)' else classic_adx[0]
+
+    return plus_di[0], minus_di[0], final_adx_val, float(th)
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "ADX and DI by BeikabuOyaji" (TradingView).
+# ---------------------------------------------------------------------------

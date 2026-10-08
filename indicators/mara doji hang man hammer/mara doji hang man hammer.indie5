@@ -1,0 +1,52 @@
+# indie:lang_version = 5
+from indie import indicator, plot, color
+
+@indicator('Marubozu, Doji, Hammer, and Hanging Man Scanner', overlay_main_pane=False)
+@plot.columns(id='#plot_0')
+def Main(self):
+    # Farben für bullische, bärische Marubozu-Kerzen, Doji-Kerzen, Hammer und Hanging Man
+    color_bullish = color.GREEN
+    color_bearish = color.RED
+    color_doji = color.BLUE
+    color_hammer = color.PURPLE
+    color_hanging_man = color.YELLOW
+
+    # Ermittle die Eigenschaften der aktuellen Kerze
+    open_price = self.open[0]
+    close_price = self.close[0]
+    high_price = self.high[0]
+    low_price = self.low[0]
+
+    body_size = abs(close_price - open_price)
+    upper_shadow = high_price - max(open_price, close_price)
+    lower_shadow = min(open_price, close_price) - low_price
+    total_size = high_price - low_price
+
+    # Schwellenwerte für Schatten und Körper
+    shadow_threshold = total_size * 0.05
+    doji_threshold = total_size * 0.1
+    hammer_shadow_ratio = 2  # Schatten ist mindestens doppelt so lang wie der Körper
+
+    # Marubozu-Kerzen prüfen
+    if upper_shadow <= shadow_threshold and lower_shadow <= shadow_threshold:
+        if close_price > open_price:
+            return plot.Columns(1, color=color_bullish)
+        else:
+            return plot.Columns(1, color=color_bearish)
+
+    # Doji-Kerzen prüfen
+    if body_size <= doji_threshold:
+        return plot.Columns(1, color=color_doji)
+
+    # Hammer und Hanging Man prüfen
+    body_middle = min(open_price, close_price) + body_size / 2
+    if (lower_shadow >= hammer_shadow_ratio * body_size) or (upper_shadow >= hammer_shadow_ratio * body_size):
+        if body_middle < (low_price + total_size / 4):
+            # Hammer: Kleiner Körper am oberen Ende und langer unterer Schatten
+            return plot.Columns(1, color=color_hammer)
+        elif body_middle > (high_price - total_size / 4):
+            # Hanging Man: Kleiner Körper am unteren Ende und langer oberer Schatten
+            return plot.Columns(1, color=color_hanging_man)
+
+    # Standardfarbe, wenn kein spezielles Muster erkannt wird
+    return plot.Columns(1, color=color.GRAY)

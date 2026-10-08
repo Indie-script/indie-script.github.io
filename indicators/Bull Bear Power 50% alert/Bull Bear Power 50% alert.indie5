@@ -1,0 +1,59 @@
+# indie:lang_version = 5
+from indie import indicator, MainContext, param, plot, color, MutSeriesF, Var
+from indie.algorithms import Ema, Highest
+from indie.drawings import LabelAbs, AbsolutePosition
+from math import isnan
+
+@indicator('BBP Alert', overlay_main_pane=False)
+@param.int('length', default=13, min=1, title='EMA Length')
+@param.int('lookback', default=20, min=1, title='Peak Lookback Period')
+@param.bool('show_alerts', default=True, title='Show Alert Markers')
+@param.bool('show_threshold', default=True, title='Show 50% Threshold Line')
+@plot.line('bbp', color=color.BLUE, title='Bull Bear Power')
+@plot.line('threshold', color=color.RED, title='50% Threshold')
+@plot.marker('alert', color=color.RED, size=7)
+class Main(MainContext):
+    def __init__(self, length, lookback, show_alerts, show_threshold):
+        self._alert_triggered: bool = False  # Track if alert already triggered for current cycle
+        
+    def calc(self, length, lookback, show_alerts, show_threshold):
+        # Calculate Bull Bear Power
+        ema_close = Ema.new(self.close, length)
+        bear_power = self.low[0] - ema_close[0]
+        bull_power = self.high[0] - ema_close[0]
+        bbp = bull_power + bear_power
+        
+        # Store BBP in a series for peak tracking
+        bbp_series = MutSeriesF.new(bbp)
+        
+        # Find the recent peak over lookback period
+        recent_peak = Highest.new(bbp_series, lookback)[0]
+        
+        # Calculate 50% threshold
+        threshold_50pct = recent_peak * 0.5
+        
+        # Check alert condition: current BBP < 50% of recent peak
+        alert_condition = False
+        if not isnan(recent_peak) and not isnan(bbp) and recent_peak > 0:
+            if bbp < threshold_50pct and not self._alert_triggered:
+                alert_condition = True
+                self._alert_triggered = True
+        
+        # Reset alert flag when BBP recovers above 75% of peak (hysteresis to avoid spam)
+        if not isnan(recent_peak) and not isnan(bbp) and recent_peak > 0:
+            if bbp > recent_peak * 0.75:
+                self._alert_triggered = False
+        
+        # Prepare return values
+        bbp_value = bbp
+        threshold_value = threshold_50pct if show_threshold and not isnan(threshold_50pct) else 0.0
+        alert_marker = bbp if (alert_condition and show_alerts) else 0.0
+        
+        # Draw alert label when condition is met
+        if alert_condition and show_alerts:
+            pos = AbsolutePosition(time=self.time[0], price=bbp)
+            label = LabelAbs('ALERT: Bull Power Weakened', pos, 
+                           font_size=12, text_color=color.WHITE, bg_color=color.RED)
+            self.chart.draw(label)
+        
+        return bbp_value, threshold_value, alert_marker

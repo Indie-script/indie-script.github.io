@@ -1,0 +1,313 @@
+# indie:lang_version = 5
+# Support Resistance Channels — Indie port of LonesomeTheBlue's Pine v6 script
+from math import isnan
+from indie import (
+    indicator, param, plot, color, Color, MainContext, Optional, Var,
+    SeriesF, MutSeriesF,
+)
+from indie.algorithms import Sma, Ema, Highest, Lowest, PivotHighLow
+from indie.drawings import Rectangle, LabelAbs, AbsolutePosition, callout_position
+
+# Colors (Indie has no color input params, so these are fixed; alpha = opacity 0..1)
+RES_COL = color.RED(0.25)
+SUP_COL = color.LIME(0.25)
+INCH_COL = color.GRAY(0.25)
+
+# How far back (in bars) to anchor the left edge of each channel. Anchored to
+# real bars (offsets misbehave), and 4999 is the engine's hard max series
+# look-back, so this is the practical "extend.both" limit: the band always
+# covers this much history regardless of zoom/scroll.
+DRAW_LOOKBACK = 4999
+
+
+@indicator('Support Resistance Channels', overlay_main_pane=True)
+@plot.line(color=color.BLUE, title='MA 1')
+@plot.line(color=color.RED, title='MA 2')
+@plot.marker(title='Resistance Broken', color=color.LIME, text='^',
+             style=plot.marker_style.LABEL, position=plot.marker_position.BELOW, size=3)
+@plot.marker(title='Support Broken', color=color.RED, text='v',
+             style=plot.marker_style.LABEL, position=plot.marker_position.ABOVE, size=3)
+@param.int('prd', default=10, min=4, max=30, title='Pivot Period')
+@param.str('ppsrc', default='High/Low', options=['High/Low', 'Close/Open'], title='Source')
+@param.int('channel_w', default=5, min=1, max=8, title='Maximum Channel Width %')
+@param.int('min_strength', default=1, min=1, title='Minimum Strength')
+@param.int('max_num_sr', default=6, min=1, max=10, title='Maximum Number of S/R')
+@param.int('loopback', default=290, min=100, max=400, title='Loopback Period')
+@param.bool('show_pp', default=False, title='Show Pivot Points')
+@param.bool('show_sr_broken', default=False, title='Show Broken Support/Resistance')
+@param.bool('ma1_en', default=False, title='MA 1 on')
+@param.int('ma1_len', default=50, min=1, title='MA 1 Length')
+@param.str('ma1_type', default='SMA', options=['SMA', 'EMA'], title='MA 1 Type')
+@param.bool('ma2_en', default=False, title='MA 2 on')
+@param.int('ma2_len', default=200, min=1, title='MA 2 Length')
+@param.str('ma2_type', default='SMA', options=['SMA', 'EMA'], title='MA 2 Type')
+class Main(MainContext):
+    def __init__(self):
+        self._pivotvals: list[float] = []
+        self._pivotlocs: list[int] = []
+
+        # current S/R channels: flat list of (hi, lo) pairs -> 10 channels * 2
+        sr: list[float] = []
+        stren: list[float] = []
+        i = 0
+        while i < 20:
+            sr.append(0.0)
+            i += 1
+        i = 0
+        while i < 10:
+            stren.append(0.0)
+            i += 1
+        self._sr = sr
+        self._stren = stren
+
+        # one persistent box-var per channel slot (erase-first redraw pattern)
+        none_rect: Optional[Rectangle] = None
+        boxes: list[Var[Optional[Rectangle]]] = []
+        i = 0
+        while i < 10:
+            boxes.append(self.new_var(none_rect))
+            i += 1
+        self._boxes = boxes
+
+        self._last_bar = -1
+
+    def _get_sr_vals(self, ind: int, cwidth: float) -> tuple[float, float, int]:
+        lo = self._pivotvals[ind]
+        hi = lo
+        numpp = 0
+        n = len(self._pivotvals)
+        y = 0
+        while y < n:
+            cpp = self._pivotvals[y]
+            wdth = (hi - cpp) if cpp <= hi else (cpp - lo)
+            if wdth <= cwidth:
+                if cpp <= hi:
+                    lo = min(lo, cpp)
+                else:
+                    hi = max(hi, cpp)
+                numpp += 20
+            y += 1
+        return hi, lo, numpp
+
+    def _changeit(self, x: int, y: int) -> None:
+        tmp = self._sr[y * 2]
+        self._sr[y * 2] = self._sr[x * 2]
+        self._sr[x * 2] = tmp
+        tmp = self._sr[y * 2 + 1]
+        self._sr[y * 2 + 1] = self._sr[x * 2 + 1]
+        self._sr[x * 2 + 1] = tmp
+
+    def _level_color(self, hi: float, lo: float, cl: float) -> Color:
+        if hi > cl and lo > cl:
+            return RES_COL
+        elif hi < cl and lo < cl:
+            return SUP_COL
+        return INCH_COL
+
+    def calc(self, prd, ppsrc, channel_w, min_strength, max_num_sr, loopback,
+             show_pp, show_sr_broken, ma1_en, ma1_len, ma1_type, ma2_en, ma2_len, ma2_type):
+        # --- Moving averages (optional) ---
+        ma1: float = float('nan')
+        if ma1_en:
+            if ma1_type == 'SMA':
+                ma1 = Sma.new(self.close, ma1_len)[0]
+            else:
+                ma1 = Ema.new(self.close, ma1_len)[0]
+        ma2: float = float('nan')
+        if ma2_en:
+            if ma2_type == 'SMA':
+                ma2 = Sma.new(self.close, ma2_len)[0]
+            else:
+                ma2 = Ema.new(self.close, ma2_len)[0]
+
+        # --- Pivot sources ---
+        use_hl = ppsrc == 'High/Low'
+        src1: SeriesF = self.high if use_hl else MutSeriesF.new(max(self.close[0], self.open[0]))
+        src2: SeriesF = self.low if use_hl else MutSeriesF.new(min(self.close[0], self.open[0]))
+
+        ph, _ = PivotHighLow.new(src1, left_bars=prd, right_bars=prd)
+        _, pl = PivotHighLow.new(src2, left_bars=prd, right_bars=prd)
+        has_ph = not isnan(ph[0])
+        has_pl = not isnan(pl[0])
+
+        # --- Maximum S/R channel width (Highest/Lowest over 300 bars) ---
+        cwidth = (Highest.new(self.high, 300)[0] - Lowest.new(self.low, 300)[0]) * float(channel_w) / 100.0
+
+        # --- Update pivot store and recompute channels once per new bar ---
+        if self.bar_index != self._last_bar:
+            self._last_bar = self.bar_index
+
+            if has_ph or has_pl:
+                pv = ph[0] if has_ph else pl[0]
+                self._pivotvals.insert(0, pv)
+                self._pivotlocs.insert(0, self.bar_index)
+                # drop pivots older than loopback (kept at the tail)
+                while len(self._pivotvals) > 0 and \
+                        self.bar_index - self._pivotlocs[len(self._pivotlocs) - 1] > loopback:
+                    self._pivotvals.pop()
+                    self._pivotlocs.pop()
+
+                self._recompute_sr(cwidth, min_strength, loopback)
+
+        # --- Pivot point markers (drawn at the actual pivot bar) ---
+        if show_pp:
+            if has_ph:
+                self.chart.draw(LabelAbs(
+                    'H', AbsolutePosition(self.time[prd], ph[0]),
+                    text_color=color.RED, bg_color=color.TRANSPARENT,
+                    callout_position=callout_position.BOTTOM_LEFT, font_size=11,
+                ))
+            if has_pl:
+                self.chart.draw(LabelAbs(
+                    'L', AbsolutePosition(self.time[prd], pl[0]),
+                    text_color=color.LIME, bg_color=color.TRANSPARENT,
+                    callout_position=callout_position.TOP_RIGHT, font_size=11,
+                ))
+
+        # --- Draw S/R channel boxes (erase-first each bar) ---
+        max_sr = max_num_sr - 1
+        last_idx = min(9, max_sr)
+        span = min(self.bar_index, DRAW_LOOKBACK)
+        left_time = self.time[span]
+        right_time = self.time[0]
+        cl = self.close[0]
+        x = 0
+        while x < 10:
+            box_var = self._boxes[x]
+            if box_var.get() is not None:
+                self.chart.erase(box_var.get().value())
+                box_var.set(None)
+            if x <= last_idx and self._sr[x * 2] != 0.0:
+                hi = self._sr[x * 2]
+                lo = self._sr[x * 2 + 1]
+                col = self._level_color(hi, lo, cl)
+                # Anchored to real bars; left edge sits DRAW_LOOKBACK bars back so
+                # the band keeps covering history when zoomed out / scrolled left.
+                rect = Rectangle(
+                    AbsolutePosition(left_time, hi),
+                    AbsolutePosition(right_time, lo),
+                    line_color=col, line_width=1, bg_color=col,
+                )
+                box_var.set(rect)
+                self.chart.draw(rect)
+            x += 1
+
+        # --- Broken support/resistance detection ---
+        not_in_channel = True
+        x = 0
+        while x <= last_idx:
+            if cl <= self._sr[x * 2] and cl >= self._sr[x * 2 + 1]:
+                not_in_channel = False
+            x += 1
+
+        res_broken = False
+        sup_broken = False
+        if not_in_channel:
+            prev_cl = self.close[1]
+            x = 0
+            while x <= last_idx:
+                if prev_cl <= self._sr[x * 2] and cl > self._sr[x * 2]:
+                    res_broken = True
+                if prev_cl >= self._sr[x * 2 + 1] and cl < self._sr[x * 2 + 1]:
+                    sup_broken = True
+                x += 1
+
+        res_color = color.LIME if (show_sr_broken and res_broken) else color.TRANSPARENT
+        sup_color = color.RED if (show_sr_broken and sup_broken) else color.TRANSPARENT
+
+        return (
+            ma1,
+            ma2,
+            plot.Marker(value=self.low[0], color=res_color),
+            plot.Marker(value=self.high[0], color=sup_color),
+        )
+
+    def _recompute_sr(self, cwidth: float, min_strength: int, loopback: int) -> None:
+        n = len(self._pivotvals)
+
+        # build (strength, hi, lo) triples for every pivot
+        supres: list[float] = []
+        x = 0
+        while x < n:
+            hi, lo, strength = self._get_sr_vals(x, cwidth)
+            supres.append(float(strength))
+            supres.append(hi)
+            supres.append(lo)
+            x += 1
+
+        # add to each channel's strength the count of bars touching it
+        x = 0
+        while x < n:
+            h = supres[x * 3 + 1]
+            l = supres[x * 3 + 2]
+            s = 0
+            y = 0
+            while y <= loopback:
+                hy = self.high[y]
+                ly = self.low[y]
+                if (hy <= h and hy >= l) or (ly <= h and ly >= l):
+                    s += 1
+                y += 1
+            supres[x * 3] = supres[x * 3] + float(s)
+            x += 1
+
+        # reset current channels
+        i = 0
+        while i < 20:
+            self._sr[i] = 0.0
+            i += 1
+        i = 0
+        while i < 10:
+            self._stren[i] = 0.0
+            i += 1
+
+        # greedily pick the strongest non-overlapping channels
+        thr = float(min_strength * 20)
+        src_cnt = 0
+        x = 0
+        while x < n:
+            stv = -1.0
+            stl = -1
+            y = 0
+            while y < n:
+                if supres[y * 3] > stv and supres[y * 3] >= thr:
+                    stv = supres[y * 3]
+                    stl = y
+                y += 1
+            if stl >= 0:
+                hh = supres[stl * 3 + 1]
+                ll = supres[stl * 3 + 2]
+                self._sr[src_cnt * 2] = hh
+                self._sr[src_cnt * 2 + 1] = ll
+                self._stren[src_cnt] = supres[stl * 3]
+                # zero out every pivot already covered by this channel
+                y = 0
+                while y < n:
+                    if (supres[y * 3 + 1] <= hh and supres[y * 3 + 1] >= ll) or \
+                            (supres[y * 3 + 2] <= hh and supres[y * 3 + 2] >= ll):
+                        supres[y * 3] = -1.0
+                    y += 1
+                src_cnt += 1
+                if src_cnt >= 10:
+                    break
+            x += 1
+
+        # sort channels by strength (descending)
+        x = 0
+        while x < 9:
+            y = x + 1
+            while y < 10:
+                if self._stren[y] > self._stren[x]:
+                    tmp = self._stren[y]
+                    self._stren[y] = self._stren[x]
+                    self._stren[x] = tmp
+                    self._changeit(x, y)
+                y += 1
+            x += 1
+
+# ---------------------------------------------------------------------------
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/
+# Derived from "Support Resistance Channels by LonesomeTheBlue" (TradingView).
+# ---------------------------------------------------------------------------
