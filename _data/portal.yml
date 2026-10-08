@@ -61,6 +61,11 @@ docs:
     icon: graph
     tab: true
     summary: TakeProfit vs TradingView - pricing, scripting, alerts, data and migration considerations.
+  - file: whats-new-in-indie-v5-19.md
+    label: Indie v5.19 release
+    group: Guides
+    icon: tag
+    summary: Candles plots, live data feeds and hex colors with compiled examples and a runnable feed server.
 
 doc_groups:
   - Get started
