@@ -1,5 +1,5 @@
 {%- comment -%} Command palette, shortcuts dialog, image lightbox. Page-independent (include_cached). {%- endcomment -%}
-<div class="palette" id="palette" hidden data-index="{{ '/assets/search.json' | relative_url }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
+<div class="palette" id="palette" hidden data-index="{{ '/assets/search.json' | relative_url }}?v={{ site.github.build_revision | default: "1" | slice: 0, 7 }}">
   <div class="overlay-backdrop" data-palette-close></div>
   <div class="palette-panel" role="dialog" aria-modal="true" aria-label="Search">
     <div class="palette-input">

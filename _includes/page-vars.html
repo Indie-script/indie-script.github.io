@@ -57,4 +57,4 @@
 {%- endif -%}
 {%- assign src_path = page.path | uri_escape -%}
 {%- assign canonical = page.url | absolute_url -%}
-{%- assign asset_v = site.time | date: "%Y%m%d%H%M" -%}
+{%- assign asset_v = site.github.build_revision | default: "1" | slice: 0, 7 -%}

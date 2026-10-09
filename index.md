@@ -68,7 +68,7 @@ Platform guides live in the [official TakeProfit docs](https://takeprofit.com/do
 * **Server-side.** Your code runs sandboxed on TakeProfit servers, so a heavy indicator over a long history never freezes the browser tab, and alerts keep watching with every tab closed.
 * **Indicator- and strategy-first.** Plot, mark, draw, place orders and backtest from one language.
 * **Typed series.** A single value (`float`) and a series with history (`SeriesF`, `MutSeriesF`) are different types, which keeps bar-by-bar logic explicit.
-* **Moving fast.** The language is versioned: this site is checked against **Indie v5.19** (October 2026). See the [changelog](https://takeprofit.com/docs/indie/Changelog) for what changed.
+* **Moving fast.** The language is versioned: this site is checked against **Indie v5.19**. See the [changelog](https://takeprofit.com/docs/indie/Changelog) for what changed.
 
 ## Key features
 

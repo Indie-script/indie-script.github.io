@@ -1,5 +1,4 @@
 {%- comment -%} Site footer. Page-independent: rendered once via include_cached. {%- endcomment -%}
-{%- assign rev = site.github.build_revision | default: "" | slice: 0, 7 -%}
 <footer class="foot">
   <div class="container">
     <div class="foot-grid">
@@ -9,11 +8,6 @@
           <span class="brand-name">{{ portal.name | escape }}</span>
         </a>
         <p>Docs, migration guides and open-source indicators for the Indie language.</p>
-        <p class="foot-build">
-          {% include icon.html name="git-commit" %}
-          {%- if rev != "" %}<a href="{{ repo_url }}/commit/{{ site.github.build_revision }}" rel="nofollow noopener"><code>{{ rev }}</code></a>{% endif %}
-          <span>built <time datetime="{{ site.time | date_to_xmlschema }}" data-reltime>{{ site.time | date: "%b %-d, %Y" }}</time></span>
-        </p>
       </div>
       <nav class="foot-col" aria-label="Docs">
         <h2>Docs</h2>
@@ -49,9 +43,6 @@
         <ul>
           <li><a href="{{ repo_url }}" rel="noopener">GitHub repository</a></li>
           <li><a href="{{ repo_url }}/issues" rel="nofollow noopener">Report an issue</a></li>
-          <li><a href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener">Changelog</a></li>
-          <li><a href="{{ '/feed.xml' | relative_url }}">Atom feed</a></li>
-          <li><a href="{{ '/sitemap.xml' | relative_url }}">Sitemap</a></li>
         </ul>
       </nav>
     </div>

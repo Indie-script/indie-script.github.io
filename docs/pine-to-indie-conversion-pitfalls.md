@@ -228,4 +228,3 @@ Write every skipped item into the header of the port. The next person must be ab
 
 *This page grows with every conversion. Found something that is not here? Open an issue or a pull request in the repository.*
 
-*Last updated: 6 October 2026*

@@ -40,13 +40,11 @@
       <div class="doc-meta">
         <span class="doc-meta-item">{% include icon.html name="clock" %}{{ mins }} min read</span>
         <span class="doc-meta-item">{% include icon.html name="file" %}<span data-num>{{ words }}</span> words</span>
-        <span class="doc-meta-item">{% include icon.html name="check-circle" %}Verified {{ portal.verified }}</span>
         <div class="doc-actions">
           <button class="btn btn-sm btn-icon" type="button" data-wide-toggle title="Toggle wide layout (w)" aria-label="Toggle wide layout">{% include icon.html name="screen-full" %}</button>
           <div class="btn-group">
             <a class="btn btn-sm" href="{{ repo_url }}/blob/{{ portal.branch }}/{{ src_path }}?plain=1" rel="nofollow noopener" title="View markdown source">{% include icon.html name="code" %}<span>Source</span></a>
             <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
-            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
           </div>
         </div>
       </div>

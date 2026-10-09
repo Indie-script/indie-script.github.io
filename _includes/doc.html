@@ -43,11 +43,9 @@
           <div class="btn-group">
             <a class="btn btn-sm" href="{{ repo_url }}/blob/{{ portal.branch }}/{{ src_path }}?plain=1" rel="nofollow noopener" title="View markdown source">{% include icon.html name="code" %}<span>Source</span></a>
             <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
-            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
           </div>
         </div>
       </header>
-      <div class="commitbar" data-commit-path="{{ page.path | escape }}" hidden></div>
       <details class="toc-inline" data-toc-inline hidden>
         <summary>{% include icon.html name="list-unordered" %}<span>On this page</span>{% include icon.html name="chevron-down" class="chev" px=12 %}</summary>
         <nav class="toc" aria-label="On this page"></nav>

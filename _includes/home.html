@@ -87,7 +87,6 @@ plot(stddev, color=color.yellow, title="StdDev")</code></pre>
       <div class="stat"><dt>{% include icon.html name="apps" %}Categories</dt><dd>{{ cat_n }}</dd></div>
       <div class="stat"><dt>{% include icon.html name="file-code" %}Source files</dt><dd>{{ code_n }}</dd></div>
       <div class="stat"><dt>{% include icon.html name="book" %}Docs &amp; guides</dt><dd>{{ docs.size }}</dd></div>
-      <div class="stat stat-commit" data-gh-latest hidden><dt>{% include icon.html name="git-commit" %}Latest update</dt><dd><a href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener" data-gh-latest-link></a></dd></div>
     </dl>
   </div>
 </section>
@@ -156,7 +155,6 @@ plot(stddev, color=color.yellow, title="StdDev")</code></pre>
         <div class="filebox-actions">
           <div class="btn-group">
             <a class="btn btn-sm" href="{{ repo_url }}/edit/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Edit this page on GitHub">{% include icon.html name="pencil" %}<span>Edit</span></a>
-            <a class="btn btn-sm" href="{{ repo_url }}/commits/{{ portal.branch }}/{{ src_path }}" rel="nofollow noopener" title="Page history">{% include icon.html name="history" %}<span>History</span></a>
           </div>
         </div>
       </header>
@@ -180,7 +178,6 @@ plot(stddev, color=color.yellow, title="StdDev")</code></pre>
         <li><span>{% include icon.html name="law" %}MIT license</span></li>
         <li><a href="{{ '/indicators/' | relative_url }}">{% include icon.html name="package" %}<strong>{{ indicators.size }}</strong> indicators</a></li>
         <li><a href="{{ '/indicators/' | relative_url }}">{% include icon.html name="file-code" %}<strong>{{ code_n }}</strong> source files</a></li>
-        <li><a href="{{ '/feed.xml' | relative_url }}">{% include icon.html name="rss" %}Atom feed</a></li>
       </ul>
     </div>
 
@@ -198,12 +195,6 @@ plot(stddev, color=color.yellow, title="StdDev")</code></pre>
       <p class="side-note muted">Share of source files in the indicator library.</p>
     </div>
     {%- endif %}
-
-    <div class="side-box" data-gh-activity hidden>
-      <h2>Recent activity</h2>
-      <ul class="activity" data-gh-activity-list></ul>
-      <a class="rail-more" href="{{ repo_url }}/commits/{{ portal.branch }}" rel="nofollow noopener">All commits{% include icon.html name="arrow-right" %}</a>
-    </div>
 
     <div class="side-box">
       <h2>Official resources</h2>

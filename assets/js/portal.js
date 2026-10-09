@@ -724,7 +724,7 @@
   $$('[data-shortcuts-open]').forEach(function (b) { on(b, 'click', function () { modal(true); }); });
   $$('[data-shortcuts-close]').forEach(function (b) { on(b, 'click', function () { modal(false); }); });
 
-  /* ---------- GitHub data (latest commit, counters, activity) ---------- */
+  /* ---------- GitHub data (repo counters) ---------- */
   (function () {
     if (!P.repo || !window.fetch) return;
     var API = 'https://api.github.com/repos/' + P.repo, TTL = 6 * 3600 * 1000;
@@ -741,19 +741,6 @@
       return { sha: c.sha, url: c.html_url, msg: (c.commit.message || '').split('\n')[0], date: c.commit.author && c.commit.author.date, who: (c.author && c.author.login) || (c.commit.author && c.commit.author.name) || '' };
     }
 
-    var bar = $('[data-commit-path]');
-    if (bar) {
-      var path = bar.getAttribute('data-commit-path');
-      gh('c:' + path, API + '/commits?per_page=1&sha=' + encodeURIComponent(P.branch) + '&path=' + encodeURIComponent(path)).then(function (d) {
-        var c = Array.isArray(d) ? (d[0] && d[0].commit ? cache('c:' + path, slim(d[0])) : null) : d;
-        if (!c || !c.sha) return;
-        bar.innerHTML = icon('git-commit') + (c.who ? '<strong>' + esc(c.who) + '</strong>' : '') +
-          '<a class="commitbar-msg" href="' + esc(c.url) + '" rel="nofollow noopener">' + esc(c.msg) + '</a>' +
-          '<span class="commitbar-right"><code>' + esc(c.sha.slice(0, 7)) + '</code><span>\u00b7</span><time datetime="' + esc(c.date) + '" title="' + esc(new Date(c.date).toLocaleString()) + '">' + esc(relTime(c.date)) + '</time></span>';
-        bar.hidden = false;
-      }).catch(function () {});
-    }
-
     var counters = $$('[data-gh]');
     if (counters.length) {
       gh('repo', API).then(function (d) {
@@ -762,24 +749,6 @@
       }).catch(function () {});
     }
 
-    var act = $('[data-gh-activity]'), latest = $('[data-gh-latest]');
-    if (act || latest) {
-      gh('log', API + '/commits?per_page=5&sha=' + encodeURIComponent(P.branch)).then(function (d) {
-        var list = (d.length && d[0].commit) ? cache('log', d.map(slim)) : d;
-        if (!list || !list.length) return;
-        if (latest) {
-          var a = $('[data-gh-latest-link]', latest);
-          a.href = list[0].url; a.textContent = relTime(list[0].date) + ' \u00b7 ' + list[0].msg; a.title = list[0].msg;
-          latest.hidden = false;
-        }
-        if (act) {
-          $('[data-gh-activity-list]', act).innerHTML = list.map(function (c) {
-            return '<li><a href="' + esc(c.url) + '" rel="nofollow noopener" title="' + esc(c.msg) + '">' + esc(c.msg) + '</a><small><code>' + esc(c.sha.slice(0, 7)) + '</code> \u00b7 ' + esc(c.who) + ' \u00b7 ' + esc(relTime(c.date)) + '</small></li>';
-          }).join('');
-          act.hidden = false;
-        }
-      }).catch(function () {});
-    }
   })();
 
   /* ---------- keyboard ---------- */

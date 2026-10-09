@@ -4,10 +4,10 @@ description: "Indie v5.19.0 adds candles plots, live data feeds (sources.DataFee
 
 # What's new in Indie v5.19: candles plots, live data feeds and hex colors
 
-Indie v5.19.0 (7 October 2026) lets an indicator draw its own candles next to the chart candles, read live records from a WebSocket or SSE server through `sources.DataFeed`, and build colors from `#RRGGBB` strings with `color.hex()`. This page walks through each feature with a complete script you can paste into the IDE, plus a runnable feed server in Python.
+Indie v5.19.0 lets an indicator draw its own candles next to the chart candles, read live records from a WebSocket or SSE server through `sources.DataFeed`, and build colors from `#RRGGBB` strings with `color.hex()`. This page walks through each feature with a complete script you can paste into the IDE, plus a runnable feed server in Python.
 
 > [!NOTE]
-> The source of record is the official [Indie changelog](https://takeprofit.com/docs/indie/Changelog). Every listing below was compiled on the platform on 8 October 2026. What exactly was checked, and what was not, is listed in [How this was checked](#how-this-was-checked).
+> The source of record is the official [Indie changelog](https://takeprofit.com/docs/indie/Changelog). Every listing below was compiled on the platform. What exactly was checked, and what was not, is listed in [How this was checked](#how-this-was-checked).
 
 ---
 
@@ -273,8 +273,7 @@ Reference: [Live data from a feed](https://takeprofit.com/docs/indie/External-da
 - **Listings 1 and 2** (Heikin Ashi, Bollinger Bands with hex colors) compiled on the platform and ran on 5,000 candles without errors; the second reported three lines and one fill. The Heikin Ashi values were not compared bar by bar with another implementation.
 - **Listing 3** (the feed indicator) was compiled only. A feed needs a public HTTPS address, so the full path from the platform to a live server was not exercised here.
 - **The server** was run locally and queried with `curl` in every form of the protocol: live only, `replay_count`, a `replay_from_time` and `replay_to_time` window (answered, then closed), an empty window (`replay_done` alone) and `replay_from_time` alone. Timestamps came out strictly increasing and unique, with `replay_done` after the replayed records.
-- **Docs version:** Indie v5.19.0, as published on 8 October 2026.
+- **Docs version:** Indie v5.19.0.
 
 Related pages: [Indie quickstart](/docs/complete-guide-to-indie-quickstart.html), [Pine → Indie conversion pitfalls](/docs/pine-to-indie-conversion-pitfalls.html), [FAQ & solutions](/docs/indie-FAQ.html).
 
-*Last updated: 8 October 2026*
